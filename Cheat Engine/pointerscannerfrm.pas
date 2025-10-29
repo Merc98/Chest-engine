@@ -1339,6 +1339,7 @@ var
   ptrid: string;
   i: integer;
   j: qword;
+  address: ptrUint;
   resultidcolumnsave: boolean;
 
   p: PPointerscanResult;
@@ -1418,12 +1419,12 @@ begin
 
        if messagedlg(rsPSExportToDatabaseBiggerSizeOrNot, mtConfirmation, [mbyes, mbno], 0) = mryes then
        begin
-         sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer, offsetcount integer, moduleid integer, moduleoffset bigint '+offsetlist+', primary key (ptrid, resultid) );');
+         sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer, offsetcount integer, moduleid integer, moduleoffset bigint, pointsto bigint '+offsetlist+', primary key (ptrid, resultid) );');
          sqlite3.ExecuteDirect('CREATE INDEX "ptr_res_id_idx" ON "results"( ptrid, resultid );');
          sqlite3.ExecuteDirect('CREATE INDEX "modid_modoff_idx" ON "results"( moduleid, moduleoffset );');
        end
        else
-         sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer, offsetcount integer, moduleid integer, moduleoffset bigint '+offsetlist+');');
+         sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer, offsetcount integer, moduleid integer, moduleoffset bigint, pointsto bigint '+offsetlist+');');
       end
       else
       begin
@@ -1434,6 +1435,9 @@ begin
         for i:=1 to pointerscanresults.offsetCount do
           if fieldnames.indexof('offset'+inttostr(i))=-1 then
             sqlite3.ExecuteDirect('ALTER TABLE results ADD COLUMN offset'+inttostr(i)+' integer');
+
+        if fieldnames.indexof('pointsto')=-1 then
+          sqlite3.ExecuteDirect('ALTER TABLE results ADD COLUMN pointsto bigint');
 
         fieldnames.free;
       end;
@@ -1534,7 +1538,7 @@ begin
       begin
         offsetlist:='';
         offsetvalues:='';
-        p:=Pointerscanresults.getPointer(j);
+        p:=Pointerscanresults.getPointer(j, address);
 
         for i:=1 to p.offsetcount-Pointerscanresults.EndsWithOffsetListCount do
         begin
@@ -1543,9 +1547,9 @@ begin
         end;
 
         if resultidcolumnsave then
-          s:='INSERT INTO results(ptrid, resultid, offsetcount, moduleid, moduleoffset'+offsetlist+') values ('+ptrid+','+inttostr(j)+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+offsetvalues+')'
-        else 
-          s:='INSERT INTO results(ptrid, offsetcount, moduleid, moduleoffset'+offsetlist+') values ('+ptrid+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+offsetvalues+')';
+          s:='INSERT INTO results(ptrid, resultid, offsetcount, moduleid, moduleoffset, pointsto'+offsetlist+') values ('+ptrid+','+inttostr(j)+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+','+inttostr(address)+offsetvalues+')'
+        else
+          s:='INSERT INTO results(ptrid, offsetcount, moduleid, moduleoffset, pointsto'+offsetlist+') values ('+ptrid+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+','+inttostr(address)+offsetvalues+')';
 
         sqlite3.ExecuteDirect(s);
 
