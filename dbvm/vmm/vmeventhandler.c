@@ -1924,88 +1924,184 @@ int handleCPUID(VMRegisters *vmregisters)
 {
 //  sendstring("handling CPUID\n\r");
 
-  //UINT64 oldeax=vmregisters->rax;
+  UINT64 oldeax=vmregisters->rax;
   RFLAGS flags;
-  flags.value=vmread(vm_guest_rflags);
-
-  if (flags.TF==1)
+  
+  if (isAMD)
   {
-    vmwrite(vm_pending_debug_exceptions,0x4000);
+    pcpuinfo currentcpuinfo=getcpuinfo();
+    flags.value=currentcpuinfo->vmcb->RFLAGS;
+  }
+  else
+  {
+    flags.value=vmread(vm_guest_rflags);
+    
+    if (flags.TF==1)
+    {
+      vmwrite(vm_pending_debug_exceptions,0x4000);
+    }
   }
 
 
   _cpuid(&(vmregisters->rax),&(vmregisters->rbx),&(vmregisters->rcx),&(vmregisters->rdx));
-
-  /*
-  if (oldeax==1)
+  
+  // Spoof AMD as Intel
+  if (isAMD)
   {
-    //remove the hypervisor active bit (bit 31 in ecx)
-    vmregisters->rcx=vmregisters->rcx & (~(1 << 31));
+    if (oldeax==0)
+    {
+      // CPUID function 0: Vendor ID
+      // Change "AuthenticAMD" to "GenuineIntel"
+      char *x;
+      x=(char *)&(vmregisters->rbx);
+      x[0]='G';
+      x[1]='e';
+      x[2]='n';
+      x[3]='u';
 
-    if ((vmregisters->rcx & (1<<26)) && (vmread(vm_guest_cr4) & CR4_OSXSAVE)) //doe sit have OSXSave capabilities and is it enabled ?
-      vmregisters->rcx=vmregisters->rcx | (1 << 27); //the guest has activated osxsave , represent that in cpuid
-  }*/
+      x=(char *)&(vmregisters->rdx);
+      x[0]='i';
+      x[1]='n';
+      x[2]='e';
+      x[3]='I';
 
+      x=(char *)&(vmregisters->rcx);
+      x[0]='n';
+      x[1]='t';
+      x[2]='e';
+      x[3]='l';
+    }
+    
+    if (oldeax==1)
+    {
+      // CPUID function 1: Processor Info and Feature Bits
+      // Mask out AMD-specific features and adjust for Intel
+      
+      // EDX: Standard feature flags
+      // Clear AMD-specific bits if needed
+      
+      // ECX: Extended feature flags  
+      // Set bit 5 (VMX) to 0 to hide virtualization from guest
+      vmregisters->rcx = vmregisters->rcx & (~(1 << 5));
+      
+      // Clear hypervisor present bit (bit 31 in ECX)
+      vmregisters->rcx = vmregisters->rcx & (~(1 << 31));
+      
+      // Handle OSXSAVE
+      pcpuinfo currentcpuinfo=getcpuinfo();
+      UINT64 guest_cr4 = currentcpuinfo->vmcb->CR4;
+      if ((vmregisters->rcx & (1<<26)) && (guest_cr4 & CR4_OSXSAVE))
+        vmregisters->rcx = vmregisters->rcx | (1 << 27);
+    }
+    
+    if (oldeax==0x80000001)
+    {
+      // Extended Processor Info and Feature Bits
+      // Clear AMD-specific extended features
+      // Bit 19 (TLB 1GB Pages) and bit 13 in EDX
+      vmregisters->rdx = vmregisters->rdx & (~((1<<19) | (1<<13)));
+    }
+    
+    if (oldeax==0x80000002)
+    {
+      // Processor Brand String (part 1)
+      char *x;
+      x=(char *)&(vmregisters->rax);
+      x[0]='I';
+      x[1]='n';
+      x[2]='t';
+      x[3]='e';
 
-  /*
-  if (oldeax==1)
-  {
-    //remove vmx capability in ecx
-    vmregisters->rcx=vmregisters->rcx & (~(1 << 5)); //set bit 5 to 0
-  }*/
+      x=(char *)&(vmregisters->rbx);
+      x[0]='l';
+      x[1]='(';
+      x[2]='R';
+      x[3]=')';
 
-  //if (oldeax==0x80000001)
-  //{
-//    vmregisters->edx = vmregisters->edx & (0xffffffff ^ ((1<<19) | (1<<13)));
+      x=(char *)&(vmregisters->rcx);
+      x[0]=' ';
+      x[1]='C';
+      x[2]='o';
+      x[3]='r';
 
-  //}
+      x=(char *)&(vmregisters->rdx);
+      x[0]='e';
+      x[1]='(';
+      x[2]='T';
+      x[3]='M';
+    }
 
-  /*
-  if (oldeax==0x80000002)
-  {
-    char *x;
-    x=(char *)&(vmregisters->rax);
-    x[0]='I';
-    x[1]='n';
-    x[2]='t';
-    x[3]='e';
+    if (oldeax==0x80000003)
+    {
+      // Processor Brand String (part 2)
+      char *x;
+      x=(char *)&(vmregisters->rax);
+      x[0]=')';
+      x[1]=' ';
+      x[2]='i';
+      x[3]='7';
 
-    x=(char *)&(vmregisters->rbx);
-    x[0]='l';
-    x[1]='(';
-    x[2]='R';
-    x[3]=')';
+      x=(char *)&(vmregisters->rbx);
+      x[0]='-';
+      x[1]='7';
+      x[2]='7';
+      x[3]='0';
 
-    x=(char *)&(vmregisters->rcx);
-    x[0]=' ';
-    x[1]='F';
-    x[2]='u';
-    x[3]='c';
+      x=(char *)&(vmregisters->rcx);
+      x[0]='0';
+      x[1]='K';
+      x[2]=' ';
+      x[3]='C';
 
-    x=(char *)&(vmregisters->rdx);
-    x[0]='k';
-    x[1]='(';
-    x[2]='T';
-    x[3]='M';
+      x=(char *)&(vmregisters->rdx);
+      x[0]='P';
+      x[1]='U';
+      x[2]=' ';
+      x[3]='@';
+    }
+    
+    if (oldeax==0x80000004)
+    {
+      // Processor Brand String (part 3)
+      char *x;
+      x=(char *)&(vmregisters->rax);
+      x[0]=' ';
+      x[1]='3';
+      x[2]='.';
+      x[3]='6';
+
+      x=(char *)&(vmregisters->rbx);
+      x[0]='0';
+      x[1]='G';
+      x[2]='H';
+      x[3]='z';
+
+      x=(char *)&(vmregisters->rcx);
+      x[0]=' ';
+      x[1]=' ';
+      x[2]=' ';
+      x[3]=' ';
+
+      x=(char *)&(vmregisters->rdx);
+      x[0]=' ';
+      x[1]=' ';
+      x[2]=' ';
+      x[3]=' ';
+    }
   }
-
-  if (oldeax==0x80000003)
+  else
   {
-    char *x;
-    x=(char *)&(vmregisters->rax);
-    x[0]=')';
-    x[1]='1';
-    x[2]='6';
-    x[3]=' ';
-
-    x=(char *)&(vmregisters->rbx);
-    x[0]='C';
-    x[1]='P';
-    x[2]='U';
-    x[3]=' ';
-
-  }*/
-
+    // Intel CPU - apply standard filtering
+    if (oldeax==1)
+    {
+      // Clear hypervisor present bit (bit 31 in ECX)
+      vmregisters->rcx = vmregisters->rcx & (~(1 << 31));
+      
+      // Handle OSXSAVE
+      if ((vmregisters->rcx & (1<<26)) && (vmread(vm_guest_cr4) & CR4_OSXSAVE))
+        vmregisters->rcx = vmregisters->rcx | (1 << 27);
+    }
+  }
 
   //lower the TSC
 
@@ -2015,7 +2111,10 @@ int handleCPUID(VMRegisters *vmregisters)
 
   //TSCOffset+=cpuidTime;
 
-  incrementRIP(vmread(vm_exit_instructionlength));
+  if (!isAMD)
+  {
+    incrementRIP(vmread(vm_exit_instructionlength));
+  }
 
 
 

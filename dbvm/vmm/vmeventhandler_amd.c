@@ -1359,11 +1359,15 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
 
     case VMEXIT_CPUID:
     {
-      nosendchar[getAPICID()]=0;
-      sendstringf("!CPUID! %6->%6\n", currentcpuinfo->vmcb->RIP, currentcpuinfo->vmcb->nRIP);
+      // Handle CPUID with spoofing support
+      nosendchar[getAPICID()]=1;
+      
+      // Call the common CPUID handler which includes Intel spoofing
+      handleCPUID(vmregisters);
+      
+      // Update RIP to next instruction
       currentcpuinfo->vmcb->RIP=currentcpuinfo->vmcb->nRIP;
-
-      while (1);
+      
       return 0;
     }
 

@@ -59,6 +59,8 @@ int handleVMEvent(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE64 *f
 void setRegister(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, int general_purpose_register, UINT64 value);
 UINT64 getRegister(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, int general_purpose_register);
 
+int handleCPUID(VMRegisters *vmregisters);
+
 ULONG getSegmentLimit(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
 ULONG getSegmentBase(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector);
 UINT64 getSegmentBaseEx(PGDT_ENTRY gdt, PGDT_ENTRY ldt, ULONG selector, int expandto80bit);
