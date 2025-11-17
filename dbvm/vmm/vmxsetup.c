@@ -326,6 +326,32 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
   }
   currentcpuinfo->vmcb->MSRPM_BASE_PA=VirtualToPhysical((void *)MSRBitmap);
 
+  // ANTI-CHEAT FIX: Configure IOPM (I/O Permission Map) for AMD
+  // Intercept port 0xF1 (custom hypervisor backdoor) and VMware backdoor ports
+  if (IOBitmap==NULL)
+  {
+    sendstring("Allocating IOPM for AMD\n\r");
+    IOBitmap=allocateContiguousMemory(3); // 12KB for AMD IOPM (8KB + 4KB)
+    
+    if (IOBitmap==NULL)
+    {
+      sendstringf("allocateContiguousMemory failed. IOBitmap=NULL\n");
+      while(1);
+    }
+    
+    // Zero out the bitmap (0 = intercept, 1 = allow)
+    for (i=0; i<4096*3; i++)
+      IOBitmap[i]=0xff; // Allow all ports by default
+    
+    // Intercept port 0xF1 (AC detection stub at 0x970596 uses this)
+    IOBitmap[0xF1 / 8] &= ~(1 << (0xF1 % 8));
+    
+    // Intercept VMware backdoor ports 0x5658-0x5659 (AC stub at 0x970A27)
+    IOBitmap[0x5658 / 8] &= ~(1 << (0x5658 % 8));
+    IOBitmap[0x5659 / 8] &= ~(1 << (0x5659 % 8));
+  }
+  currentcpuinfo->vmcb->IOPM_BASE_PA=VirtualToPhysical((void *)IOBitmap);
+
   currentcpuinfo->guest_VM_HSAVE_PA=0;
 
 

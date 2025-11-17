@@ -1371,6 +1371,22 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
       return 0;
     }
 
+    case VMEXIT_IOIO:
+    {
+      // ANTI-CHEAT FIX: Handle I/O port access to prevent hypervisor detection
+      // AC uses port 0xF1 (stub 0x970596) and VMware ports 0x5658-0x5659 (stub 0x970A27)
+      nosendchar[getAPICID()]=1;
+      
+      // Call the common I/O handler which blocks detection ports
+      int result = handleIOAccess(currentcpuinfo, vmregisters);
+      
+      // Update RIP to next instruction if handled successfully
+      if (result == 0)
+        currentcpuinfo->vmcb->RIP=currentcpuinfo->vmcb->nRIP;
+      
+      return result;
+    }
+
     case VMEXIT_VINTR:
     {
       nosendchar[getAPICID()]=1;
