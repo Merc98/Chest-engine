@@ -1632,6 +1632,10 @@ void setupVMX(pcpuinfo currentcpuinfo)
     */
       #endif
     #endif
+    
+    // ANTI-CHEAT FIX: Intercept port 0xF1 to prevent Byfron AC detection
+    // The AC uses OUT 0xF1,EAX as a hypervisor backdoor probe
+    IOBitmap[0xF1 / 8] |= 1 << (0xF1 % 8);
   }
 
   //sendstring("Setting up realmode paging\n"); //also for loadedOS in case of some weird event

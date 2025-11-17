@@ -1438,6 +1438,38 @@ int handleIOAccess(VMRegisters *vmregisters UNUSED)
     return 1;
   }
 
+  // ANTI-CHEAT FIX: Intercept port 0xF1 to prevent DBVM detection
+  // Byfron AC uses "OUT 0xF1, EAX" as a hypervisor backdoor probe
+  if (iodata.portnr == 0xF1)
+  {
+    // Silently ignore the I/O operation and return success
+    // This prevents the AC from detecting DBVM's hypervisor interface
+    if (iodata.direction == 0) // OUT (write)
+    {
+      // Do nothing - don't let it reach any hypervisor handler
+      vmregisters->rax = vmregisters->rax; // No-op, just consume the instruction
+    }
+    else // IN (read)
+    {
+      // Return a safe value that doesn't indicate hypervisor presence
+      vmregisters->rax = (vmregisters->rax & 0xFFFFFFFFFFFFFF00ULL) | 0xFF;
+    }
+    return 0;
+  }
+  
+  // ANTI-CHEAT FIX: Intercept suspicious I/O port patterns
+  // AC stub at 0x970A27 uses repeated "OUT DX, AL" sequences (opcode 0xEE)
+  // to probe for hypervisor interfaces through various ports
+  // These ports are typically used as hypervisor backdoors (VMware uses 0x5658, etc)
+  if (iodata.portnr >= 0x5658 && iodata.portnr <= 0x5659)
+  {
+    // VMware backdoor ports - silently ignore
+    if (iodata.direction == 0)
+      vmregisters->rax = vmregisters->rax;
+    else
+      vmregisters->rax = (vmregisters->rax & 0xFFFFFFFFFFFFFF00ULL) | 0xFF;
+    return 0;
+  }
 
   vmregisters->rax=vmregisters->rax | 0xff;
   return 0;
@@ -1925,6 +1957,7 @@ int handleCPUID(VMRegisters *vmregisters)
 //  sendstring("handling CPUID\n\r");
 
   UINT64 oldeax=vmregisters->rax;
+  UINT64 oldecx=vmregisters->rcx;
   RFLAGS flags;
   
   if (isAMD)
@@ -1945,47 +1978,45 @@ int handleCPUID(VMRegisters *vmregisters)
 
   _cpuid(&(vmregisters->rax),&(vmregisters->rbx),&(vmregisters->rcx),&(vmregisters->rdx));
   
-  // Spoof AMD as Intel
-  if (isAMD)
+  // Handle hypervisor CPUID leaves (0x40000000 range) - spoof as non-hypervisor
+  if ((oldeax >= 0x40000000) && (oldeax <= 0x400000FF))
+  {
+    // Return zeros for all hypervisor leaves to hide DBVM/hypervisor presence
+    // This prevents detection via CPUID leaves 0x40000006, 0x4000000A, 0x4000001A
+    vmregisters->rax = 0;
+    vmregisters->rbx = 0;
+    vmregisters->rcx = 0;
+    vmregisters->rdx = 0;
+    
+    if (oldeax == 0x40000000)
+    {
+      // Some systems expect leaf 0x40000000 to return a vendor string
+      // Return 0s to indicate no hypervisor present
+      vmregisters->rax = 0; // Max hypervisor leaf = 0 (no hypervisor)
+      vmregisters->rbx = 0;
+      vmregisters->rcx = 0;
+      vmregisters->rdx = 0;
+    }
+  }
+  // For AMD: Keep as AMD but hide hypervisor/virtualization features
+  else if (isAMD)
   {
     if (oldeax==0)
     {
-      // CPUID function 0: Vendor ID
-      // Change "AuthenticAMD" to "GenuineIntel"
-      char *x;
-      x=(char *)&(vmregisters->rbx);
-      x[0]='G';
-      x[1]='e';
-      x[2]='n';
-      x[3]='u';
-
-      x=(char *)&(vmregisters->rdx);
-      x[0]='i';
-      x[1]='n';
-      x[2]='e';
-      x[3]='I';
-
-      x=(char *)&(vmregisters->rcx);
-      x[0]='n';
-      x[1]='t';
-      x[2]='e';
-      x[3]='l';
+      // KEEP AMD vendor string "AuthenticAMD" - AC expects real AMD
+      // Don't spoof to Intel - that would be suspicious
+      // The original CPUID already returned AuthenticAMD, keep it
     }
     
     if (oldeax==1)
     {
       // CPUID function 1: Processor Info and Feature Bits
-      // Mask out AMD-specific features and adjust for Intel
       
-      // EDX: Standard feature flags
-      // Clear AMD-specific bits if needed
+      // CRITICAL: Clear hypervisor present bit (bit 31 in ECX)
+      // This is the main hypervisor detection bit
+      vmregisters->rcx = vmregisters->rcx & (~(1ULL << 31));
       
-      // ECX: Extended feature flags  
-      // Set bit 5 (VMX) to 0 to hide virtualization from guest
-      vmregisters->rcx = vmregisters->rcx & (~(1 << 5));
-      
-      // Clear hypervisor present bit (bit 31 in ECX)
-      vmregisters->rcx = vmregisters->rcx & (~(1 << 31));
+      // Keep other AMD features intact - AC expects real AMD CPU
       
       // Handle OSXSAVE
       pcpuinfo currentcpuinfo=getcpuinfo();
@@ -1996,97 +2027,60 @@ int handleCPUID(VMRegisters *vmregisters)
     
     if (oldeax==0x80000001)
     {
-      // Extended Processor Info and Feature Bits
-      // Clear AMD-specific extended features
-      // Bit 19 (TLB 1GB Pages) and bit 13 in EDX
-      vmregisters->rdx = vmregisters->rdx & (~((1<<19) | (1<<13)));
+      // Extended Processor Info and Feature Bits (AMD-specific leaf)
+      // ECX bit 2 = SVM (Secure Virtual Machine) - MUST HIDE THIS
+      vmregisters->rcx = vmregisters->rcx & (~(1 << 2)); // Clear SVM bit
+      
+      // Keep other AMD extended features - AC expects real AMD CPU
     }
     
-    if (oldeax==0x80000002)
+    if (oldeax==4)
     {
-      // Processor Brand String (part 1)
-      char *x;
-      x=(char *)&(vmregisters->rax);
-      x[0]='I';
-      x[1]='n';
-      x[2]='t';
-      x[3]='e';
-
-      x=(char *)&(vmregisters->rbx);
-      x[0]='l';
-      x[1]='(';
-      x[2]='R';
-      x[3]=')';
-
-      x=(char *)&(vmregisters->rcx);
-      x[0]=' ';
-      x[1]='C';
-      x[2]='o';
-      x[3]='r';
-
-      x=(char *)&(vmregisters->rdx);
-      x[0]='e';
-      x[1]='(';
-      x[2]='T';
-      x[3]='M';
-    }
-
-    if (oldeax==0x80000003)
-    {
-      // Processor Brand String (part 2)
-      char *x;
-      x=(char *)&(vmregisters->rax);
-      x[0]=')';
-      x[1]=' ';
-      x[2]='i';
-      x[3]='7';
-
-      x=(char *)&(vmregisters->rbx);
-      x[0]='-';
-      x[1]='7';
-      x[2]='7';
-      x[3]='0';
-
-      x=(char *)&(vmregisters->rcx);
-      x[0]='0';
-      x[1]='K';
-      x[2]=' ';
-      x[3]='C';
-
-      x=(char *)&(vmregisters->rdx);
-      x[0]='P';
-      x[1]='U';
-      x[2]=' ';
-      x[3]='@';
+      // CPUID leaf 4 - Deterministic Cache Parameters
+      // AC uses this with sub-leaf in ECX to cross-check with PEB/TEB values
+      // Keep real values but ensure they look consistent with a non-virtualized system
+      // The AC compares these against constants stored at TEB+0x920 and similar offsets
+      
+      // Make sure cache topology looks like a real physical CPU
+      // Don't modify - let real CPUID values pass through
+      // This prevents inconsistencies that AC might detect
     }
     
-    if (oldeax==0x80000004)
+    if (oldeax==0x8000000A)
     {
-      // Processor Brand String (part 3)
-      char *x;
-      x=(char *)&(vmregisters->rax);
-      x[0]=' ';
-      x[1]='3';
-      x[2]='.';
-      x[3]='6';
-
-      x=(char *)&(vmregisters->rbx);
-      x[0]='0';
-      x[1]='G';
-      x[2]='H';
-      x[3]='z';
-
-      x=(char *)&(vmregisters->rcx);
-      x[0]=' ';
-      x[1]=' ';
-      x[2]=' ';
-      x[3]=' ';
-
-      x=(char *)&(vmregisters->rdx);
-      x[0]=' ';
-      x[1]=' ';
-      x[2]=' ';
-      x[3]=' ';
+      // AMD SVM Features - CRITICAL for AC detection
+      // This leaf exists ONLY on AMD with SVM support
+      // AC checks this heavily - must return safe values
+      
+      // EAX bits 0-7: SVM revision
+      // Return 0 or very low value to indicate no/minimal SVM
+      vmregisters->rax = 0;
+      
+      // EBX: Number of ASIDs (Address Space IDs)
+      // Return 0 to indicate no nested paging support
+      vmregisters->rbx = 0;
+      
+      // ECX: Reserved (should be 0)
+      vmregisters->rcx = 0;
+      
+      // EDX: SVM feature bits - ALL MUST BE 0
+      // bit 0: NP (Nested Paging)
+      // bit 1: LbrVirt
+      // bit 2: SVML (SVM Lock)
+      // bit 3: NRIPS
+      // etc.
+      vmregisters->rdx = 0;
+    }
+    
+    if (oldeax==0x80000000)
+    {
+      // AMD Extended Function CPUID Information
+      // Returns maximum extended CPUID function supported
+      // AC may check if this is consistent with other CPUID responses
+      
+      // If we return a value >= 0x8000000A, AC will query leaf 0x8000000A
+      // We already handle 0x8000000A to return zeros
+      // So keep the real value - we've neutered 0x8000000A already
     }
   }
   else
@@ -2094,8 +2088,11 @@ int handleCPUID(VMRegisters *vmregisters)
     // Intel CPU - apply standard filtering
     if (oldeax==1)
     {
-      // Clear hypervisor present bit (bit 31 in ECX)
-      vmregisters->rcx = vmregisters->rcx & (~(1 << 31));
+      // CRITICAL: Clear hypervisor present bit (bit 31 in ECX) for Intel
+      vmregisters->rcx = vmregisters->rcx & (~(1ULL << 31));
+      
+      // Also hide VMX capability (bit 5) to prevent VM detection
+      vmregisters->rcx = vmregisters->rcx & (~(1 << 5));
       
       // Handle OSXSAVE
       if ((vmregisters->rcx & (1<<26)) && (vmread(vm_guest_cr4) & CR4_OSXSAVE))
@@ -4071,6 +4068,10 @@ int handle_rdtsc(pcpuinfo currentcpuinfo, VMRegisters *vmregisters)
   QWORD lTSC=lowestTSC;
   QWORD realtime;
 
+  // ANTI-CHEAT NOTE: AC stub at 0xC1CE52 uses RDTSC with multiply/rotate/compare
+  // against constant 0x2C73B41 to detect VM overhead/timing anomalies
+  // The existing timing adjustment logic below helps mask VM overhead
+  // by keeping TSC increments small and consistent
 
   if (lTSC<currentcpuinfo->lowestTSC)
     lTSC=currentcpuinfo->lowestTSC;
