@@ -2052,10 +2052,19 @@ int handleCPUID(VMRegisters *vmregisters)
     if (oldeax==0x80000001)
     {
       // Extended Processor Info and Feature Bits (AMD-specific leaf)
-      // ECX bit 2 = SVM (Secure Virtual Machine) - MUST HIDE THIS
+      
+      // CRITICAL AMD-V/SVM DETECTION:
+      // ECX bit 2 = SVM (Secure Virtual Machine) capability
+      // This is the PRIMARY indicator that this CPU supports AMD-V
+      // MUST clear this bit to appear as non-virtualization-capable CPU
       vmregisters->rcx = vmregisters->rcx & (~(1 << 2)); // Clear SVM bit
       
-      // Keep other AMD extended features - AC expects real AMD CPU
+      // Note: We also limit max extended leaf (0x80000000) to 0x80000008
+      // This creates a consistent story: CPU doesn't support SVM, so leaf 0x8000000A
+      // doesn't exist, and the SVM bit in 0x80000001 is cleared
+      
+      // Keep other AMD extended features intact - AC expects real AMD CPU
+      // Only hiding virtualization, not pretending to be different CPU
     }
     
     if (oldeax==4)
@@ -2073,27 +2082,23 @@ int handleCPUID(VMRegisters *vmregisters)
     if (oldeax==0x8000000A)
     {
       // AMD SVM Features - CRITICAL for AC detection
-      // This leaf exists ONLY on AMD with SVM support
-      // AC checks this heavily - must return safe values
+      // This leaf should NOT exist according to our 0x80000000 response
+      // But if AC queries it directly anyway, return invalid/unsupported
       
-      // EAX bits 0-7: SVM revision
-      // Return 0 or very low value to indicate no/minimal SVM
-      vmregisters->rax = 0;
+      // Option 1: Return zeros (what we had before)
+      // Option 2: Return values that indicate "SVM not supported"
+      // Option 3: Return same as leaf 0x80000008 (pretend invalid leaf)
       
-      // EBX: Number of ASIDs (Address Space IDs)
-      // Return 0 to indicate no nested paging support
-      vmregisters->rbx = 0;
+      // Using Option 2: Explicitly indicate no SVM support
+      // This is what a real AMD CPU without SVM would return
       
-      // ECX: Reserved (should be 0)
-      vmregisters->rcx = 0;
+      vmregisters->rax = 0; // SVM revision = 0 (not supported)
+      vmregisters->rbx = 0; // No ASIDs
+      vmregisters->rcx = 0; // Reserved
+      vmregisters->rdx = 0; // No SVM features
       
-      // EDX: SVM feature bits - ALL MUST BE 0
-      // bit 0: NP (Nested Paging)
-      // bit 1: LbrVirt
-      // bit 2: SVML (SVM Lock)
-      // bit 3: NRIPS
-      // etc.
-      vmregisters->rdx = 0;
+      // Alternative: Could also return the same as an invalid leaf
+      // to make it look like this leaf doesn't exist at all
     }
     
     // AMD Extended leaves 0x8000001A-0x8000001F may expose virtualization
@@ -2118,11 +2123,20 @@ int handleCPUID(VMRegisters *vmregisters)
     {
       // AMD Extended Function CPUID Information
       // Returns maximum extended CPUID function supported
-      // AC may check if this is consistent with other CPUID responses
       
-      // If we return a value >= 0x8000000A, AC will query leaf 0x8000000A
-      // We already handle 0x8000000A to return zeros
-      // So keep the real value - we've neutered 0x8000000A already
+      // CRITICAL FIX: Limit max extended leaf to hide SVM leaf existence
+      // Real AMD CPUs with SVM return 0x8000001F or higher
+      // By returning 0x80000008, we indicate leaf 0x8000000A doesn't exist
+      // This prevents AC from even querying the SVM features leaf
+      
+      UINT64 real_max = vmregisters->rax;
+      if (real_max >= 0x8000000A)
+      {
+        // Hide all SVM-related extended leaves by capping at 0x80000008
+        // 0x80000008 = Address Size Information (safe, non-virtualization leaf)
+        vmregisters->rax = 0x80000008;
+      }
+      // If real_max < 0x8000000A, keep the real value (CPU doesn't support SVM)
     }
   }
   else
@@ -2142,8 +2156,31 @@ int handleCPUID(VMRegisters *vmregisters)
     }
   }
 
-  //lower the TSC
-
+  //lower the TSC to hide CPUID intercept overhead
+  // CRITICAL AMD DBVM DETECTION FIX:
+  // AC measures time between CPUID and RDTSC using timing analysis
+  // The VM exit overhead from intercepting CPUID is detectable
+  // Solution: Pretend CPUID took almost no time by updating lastTSCTouch
+  
+  // Store current time BEFORE CPUID interception processing
+  // This makes subsequent RDTSC appear as if CPUID executed instantly
+  QWORD cpuid_end_time = _rdtsc();
+  
+  // Calculate how much real time the CPUID intercept took
+  // Typical bare-metal CPUID: 20-50 cycles
+  // DBVM intercepted CPUID: 1000-5000 cycles (VM exit overhead)
+  // We need to hide this overhead
+  
+  pcpuinfo current = getcpuinfo();
+  
+  // Adjust the "last TSC touch" to mask CPUID overhead
+  // Make it look like CPUID only took 25 cycles (typical for real CPU)
+  current->lastTSCTouch = cpuid_end_time - 25;
+  
+  // This way, when AC does:
+  //   CPUID
+  //   RDTSC  <- will return time as if CPUID was instant
+  // The delta will be ~25-50 cycles instead of 1000+
 
 //  lockedQwordIncrement(&TSCOffset, cpuidTime);
 
@@ -2155,9 +2192,6 @@ int handleCPUID(VMRegisters *vmregisters)
     incrementRIP(vmread(vm_exit_instructionlength));
   }
 
-
-
-  getcpuinfo()->lastTSCTouch=_rdtsc();
   return 0;
 
 }
