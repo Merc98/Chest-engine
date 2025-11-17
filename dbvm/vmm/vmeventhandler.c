@@ -1960,6 +1960,19 @@ int handleCPUID(VMRegisters *vmregisters)
   UINT64 oldecx=vmregisters->rcx;
   RFLAGS flags;
   
+  // AC DETECTION DEBUG: Log all CPUID calls to identify which leafs AC queries
+  // Enable this temporarily to see what the AC is checking
+  // STEP 1: Uncomment the line below, rebuild DBVM
+  // STEP 2: Run the AC and check serial/debug output
+  // STEP 3: You'll see which EAX/ECX values the AC queries
+  // STEP 4: Focus spoofing on those specific leaves
+  // sendstringf("CPUID: EAX=%8 ECX=%8\n", (DWORD)oldeax, (DWORD)oldecx);
+  
+  // CRITICAL: AC uses SHA-256 hash of CPUID buffer to validate results
+  // Even perfect spoofing fails if hash doesn't match whitelist
+  // The hash is computed in sub_96f240 after CPUID values are stored
+  // You may need to capture legitimate CPUID values from bare metal
+  
   if (isAMD)
   {
     pcpuinfo currentcpuinfo=getcpuinfo();
@@ -2025,6 +2038,17 @@ int handleCPUID(VMRegisters *vmregisters)
         vmregisters->rcx = vmregisters->rcx | (1 << 27);
     }
     
+    if (oldeax==7)
+    {
+      // Structured Extended Feature Flags (sub-leaf in ECX)
+      // This leaf may expose virtualization hints on newer AMD CPUs
+      // AC might hash this along with other CPUID results
+      
+      // Don't zero everything - keep legitimate CPU features
+      // But clear any VM-related bits if they exist in future AMD CPUs
+      // For now, let real values pass through as AMD doesn't use this much
+    }
+    
     if (oldeax==0x80000001)
     {
       // Extended Processor Info and Feature Bits (AMD-specific leaf)
@@ -2069,6 +2093,24 @@ int handleCPUID(VMRegisters *vmregisters)
       // bit 2: SVML (SVM Lock)
       // bit 3: NRIPS
       // etc.
+      vmregisters->rdx = 0;
+    }
+    
+    // AMD Extended leaves 0x8000001A-0x8000001F may expose virtualization
+    if (oldeax >= 0x8000001A && oldeax <= 0x8000001F)
+    {
+      // 0x8000001A: Performance Optimization Identifiers (may show VM optimizations)
+      // 0x8000001B: Instruction-Based Sampling (IBS) identifiers
+      // 0x8000001C: Lightweight Profiling Capabilities
+      // 0x8000001D: Cache Properties (extended)
+      // 0x8000001E: Extended APIC ID / Core Identifiers
+      // 0x8000001F: Encrypted Memory Capabilities (AMD SME/SEV)
+      
+      // SME/SEV in particular can expose virtualization
+      // Return zeros for all these extended leaves to avoid detection
+      vmregisters->rax = 0;
+      vmregisters->rbx = 0;
+      vmregisters->rcx = 0;
       vmregisters->rdx = 0;
     }
     
