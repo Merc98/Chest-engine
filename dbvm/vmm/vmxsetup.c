@@ -100,6 +100,16 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
   {
     sendstringf("setupVMX_AMD for AP cpu\n");
   }
+  else
+  {
+    // S3 SLEEP FIX: Reset global pointers on CPU 0 to prevent reuse of stale memory
+    // after S3 sleep/resume cycle. Without this, DBVM reload after S3 will crash.
+    MSRBitmap = NULL;
+    IOBitmap = NULL;
+    VMREADBitmap = NULL;
+    VMWRITEBitmap = NULL;
+    globals_have_been_configured = 0;
+  }
 
 #ifdef AMDNP
   //nested paging, works. But using it for memory cloak is not as fast as on Intel (at best like stealthedit plugin on windows, which can be unstable)
@@ -1566,6 +1576,16 @@ void setupVMX(pcpuinfo currentcpuinfo)
 
 
   csEnter(&setupVMX_lock);
+
+  // S3 SLEEP FIX: Reset global pointers on first CPU to prevent reuse of stale memory
+  // after S3 sleep/resume cycle. Without this, DBVM reload after S3 will crash.
+  if (currentcpuinfo->cpunr == 0 && globals_have_been_configured == 0)
+  {
+    MSRBitmap = NULL;
+    IOBitmap = NULL;
+    VMREADBitmap = NULL;
+    VMWRITEBitmap = NULL;
+  }
 
   char *eptcsname=malloc(32);
   snprintf(eptcsname,64,"EPTPML4CS %d", currentcpuinfo->cpunr);
