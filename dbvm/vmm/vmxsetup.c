@@ -330,6 +330,7 @@ void setupVMX_AMD(pcpuinfo currentcpuinfo)
   // Intercept port 0xF1 (custom hypervisor backdoor) and VMware backdoor ports
   if (IOBitmap==NULL)
   {
+    int i;
     sendstring("Allocating IOPM for AMD\n\r");
     IOBitmap=allocateContiguousMemory(3); // 12KB for AMD IOPM (8KB + 4KB)
     
