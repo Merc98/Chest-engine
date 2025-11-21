@@ -24,6 +24,12 @@ Cheat Engine is a development environment focused on modding games and applicati
   * [Forum (alternate)](https://fearlessrevolution.com/index.php)
   * [Wiki](https://wiki.cheatengine.org/index.php?title=Main_Page)
 
+## Usage Guide
+
+### Video Guide  
+[Click here to watch the guide](https://www.youtube.com/watch?v=FY-mE5DoImE)
+
+
 ## Social Media
 
   * [Reddit](https://reddit.com/r/cheatengine)
