@@ -47,10 +47,9 @@ efiusb: install
 	cp vmdisk.img /media/eric/EC9B-5AFC/
 	sync
 
-qemu: install
-	cp vmdisk.img /mntx
-	sync
-	@echo "copied files to /mntx"
+qemu: clean install
+	@echo "Starting QEMU with DBVM image..."
+	qemu-system-x86_64 -machine q35 -m 512 -fda vmdisk.img -serial stdio
 		
 disk: install
 	dd if=vmdisk.img of=/dev/fd0
@@ -62,13 +61,19 @@ net: install
 	sync
 
 cdimage: install
-	-mkdir iso
-	-mkdir iso/boot  
+	-mkdir -p iso/boot  
 	cp vmdisk144.img iso/boot
-	cd iso
-	mkisofs -r -b boot/vmdisk144.img -c boot/boot.catalog -o vmcd.iso iso/
-	
+	mkisofs -r -b boot/vmdisk144.img -c boot/boot.catalog -no-emul-boot -o vmcd.iso iso/
 
+qemu-cdimage: clean cdimage
+	@echo "Starting QEMU with DBVM CD image..."
+	qemu-system-x86_64 -machine q35 -m 5120 -cdrom vmcd.iso -boot d -serial stdio
+
+qemu-debug: clean
+	@echo "Building DBVM with serial debugging enabled..."
+	make install SERIALPORT=0x3f8 DISPLAYDEBUG=0
+	@echo "Starting QEMU with DBVM image and serial debugging..."
+	qemu-system-x86_64 -machine q35 -m 5120 -fda vmdisk.img -serial stdio
 	
 
 release: clean install cdimage

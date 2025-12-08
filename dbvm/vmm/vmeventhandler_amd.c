@@ -481,8 +481,6 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
         currentcpuinfo->vmcb->inject_Valid=1;
         currentcpuinfo->vmcb->inject_EV=0;
 
-        if (isFault) //set the RF flag in rflags
-          ((PRFLAGS)(&currentcpuinfo->vmcb->RFLAGS))->RF=1;
 
         return 0;
       }
@@ -889,6 +887,8 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
 
       return 0;
     }
+
+
 
     case VMEXIT_RDTSC:
     {
@@ -1366,6 +1366,37 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
       while (1);
       return 0;
     }
+    
+    case VMEXIT_ICEBP:
+    {
+      nosendchar[getAPICID()]=1;
+
+      currentcpuinfo->vmcb->RIP=currentcpuinfo->vmcb->nRIP;
+
+      if (((PRFLAGS)(&currentcpuinfo->vmcb->RFLAGS))->TF) {
+         ((PregDR6)(&currentcpuinfo->vmcb->DR6))->BS = 1;
+         currentcpuinfo->vmcb->VMCB_CLEAN_BITS &= ~(1<<6);
+      }
+
+      ((PRFLAGS)(&currentcpuinfo->vmcb->RFLAGS))->RF = 0;
+
+      if ((int1redirection_idtbypass==0) || (ISREALMODE(currentcpuinfo))) {
+        // #DB
+        currentcpuinfo->vmcb->inject_Vector=1;
+        currentcpuinfo->vmcb->inject_Type=3; // Exception
+        currentcpuinfo->vmcb->inject_EV=0;
+        currentcpuinfo->vmcb->inject_Valid=1;
+      }
+      else {
+        emulateExceptionInterrupt(currentcpuinfo, vmregisters, int1redirection_idtbypass_cs, int1redirection_idtbypass_rip, 0, 0, 1); // isFault=1 (Fault)
+      }
+
+      // idk if i need this
+      //currentcpuinfo->vmcb->VMCB_CLEAN_BITS=0; // Mark everything as dirty to be safe
+
+      return 0;
+    }
+
 
     case VMEXIT_VINTR:
     {
@@ -1702,5 +1733,4 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
   //still here
   return 1;
 }
-
 

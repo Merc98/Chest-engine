@@ -15,7 +15,7 @@ typedef UINT16 WORD, *PWORD;
 typedef void *PVOID;
 
 
-UINT64 password1=0x76543210;
+UINT64 password1=0x6e4a60f5;
 DWORD password2=0x3ed33519;
 UINT64 password3=0xa3c97742;
 
@@ -667,14 +667,14 @@ void LaunchDBVM()
       vmcallinfo.level2pass=0x3ed33519;
       vmcallinfo.command=0; //VMCALL_GETVERSION
 
-      UINT64 dbvmversion=dovmcall(&vmcallinfo, 0x76543210);
+      UINT64 dbvmversion=dovmcall(&vmcallinfo, 0x6e4a60f5);
       int r;
 
       vmcallinfo.structsize=sizeof(vmcallinfo);
       vmcallinfo.level2pass=0x3ed33519;
       vmcallinfo.command=38; //VMCALL_GETMEM
       UINT64 freemem,fullpages;
-      dovmcall2(&vmcallinfo, 0x76543210, &freemem,&fullpages);
+      dovmcall2(&vmcallinfo, 0x6e4a60f5, &freemem,&fullpages);
 
 
 
@@ -702,7 +702,7 @@ void LaunchDBVM()
       vmcallinfo.structsize=sizeof(vmcallinfo);
       vmcallinfo.level2pass=0x3ed33519;
       vmcallinfo.command=79; //HIDE DBVM MEMORY local cpu
-      dovmcall(&vmcallinfo, 0x76543210);
+      dovmcall(&vmcallinfo, 0x6e4a60f5);
 
 
 

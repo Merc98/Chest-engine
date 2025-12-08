@@ -351,8 +351,6 @@ int emulateExceptionInterrupt(pcpuinfo currentcpuinfo, VMRegisters *vmregisters,
   sendstringf("newRSP=%6\n", newRSP);
 
 
-  if (isFault)
-    prflags->RF=1; //Set RF to 1 so it gets pushed in the stack's rflags
 
   //this is now up to the caller to se
 
@@ -534,10 +532,13 @@ int emulateExceptionInterrupt(pcpuinfo currentcpuinfo, VMRegisters *vmregisters,
   prflags->RF=0;
   prflags->NT=0;
 
+
+
   if (isAMD)
-    currentcpuinfo->vmcb->RFLAGS=2;
+    currentcpuinfo->vmcb->RFLAGS=rflags;
   else
-    vmwrite(vm_guest_rflags,2/*rflags*/);
+    vmwrite(vm_guest_rflags,rflags);
+  //vmwrite(vm_guest_rflags, rflags);
 
   if (privilege_level_changed)
   {

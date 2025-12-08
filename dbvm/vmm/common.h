@@ -321,11 +321,11 @@ typedef struct textvideo {
 
 typedef TEXTVIDEO TEXTVIDEOLINE[80];
 
-unsigned char nosendchar[256];
+extern unsigned char nosendchar[256];
 
-int emergencyOutputOnly;
-int emergencyOutputLevel;
-unsigned char emergencyOutputAPICID;
+extern int emergencyOutputOnly;
+extern int emergencyOutputLevel;
+extern unsigned char emergencyOutputAPICID;
 
 
 

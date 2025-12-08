@@ -1056,9 +1056,9 @@ begin
   if (vmx_password1=0) and (vmx_password2=0) and (vmx_password3=0) then
   begin
     //set the password if it was not set
-    vmx_password1:=$0000000076543210;
-    vmx_password2:=$fedcba98;
-    vmx_password3:=$0000000090909090;
+    vmx_password1:=$000000006e4a60f5;
+    vmx_password2:=$3ed33519;
+    vmx_password3:=$00000000a3c97742;
   end;
 
 
@@ -3364,9 +3364,9 @@ begin
     if dbvm_version=0 then
     begin
       OutputDebugString('configure_vmx failed. Invalid initial state. Trying default');
-      vmx_password1:=$76543210;
-      vmx_password2:=$fedcba98;
-      vmx_password3:=$90909090;
+      vmx_password1:=$6e4a60f5;
+      vmx_password2:=$3ed33519;
+      vmx_password3:=$a3c97742;
 
       if dbvm_version=0 then
       begin
