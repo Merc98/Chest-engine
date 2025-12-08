@@ -1,6 +1,8 @@
 ASM = yasm
 LD = ld
 CC = gcc
+SERIALPORT=0x3f8
+DISPLAYDEBUG=0
 AFLAGS = -gDWARF2 -f elf64 -DSERIALPORT=${SERIALPORT} -DDISPLAYDEBUG=${DISPLAYDEBUG} #-DJTAG
 CFLAGS = -O0 -W -Wall -DSERIALPORT=${SERIALPORT} -DDISPLAYDEBUG=${DISPLAYDEBUG} -DSUPPORT_64BIT_OFFSET -DDARKBYTESFUCKEDUPCROSSCOMPILER -fno-builtin-floor -fno-builtin-ceil -fno-builtin-strspn -fno-builtin-memcpy -fno-builtin-strcpy -fno-builtin-strlen -fno-builtin-strcat -fno-builtin-malloc -fno-builtin-snprintf -fno-builtin-memset -fno-stack-protector  -g
 LDFLAGS = -static -T vmm.lnk -Map vmm.map 

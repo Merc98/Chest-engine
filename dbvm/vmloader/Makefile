@@ -2,7 +2,7 @@ ASM = yasm
 CC = gcc -m32 -fno-stack-protector -o0 -g
 LD = ld -melf_i386
 AFLAGS = -gDWARF2 -f elf32
-LDFLAGS = -T kernel.lnk
+LDFLAGS = -z muldefs --no-warn-rwx-segments -T kernel.lnk
 EXTRA_INC = -I ../common
 
 all:

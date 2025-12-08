@@ -8533,9 +8533,9 @@ begin
   //not yet loaded/initialized
   if (vmx_password1=0) and (vmx_password2=0) and (vmx_password3=0) then
   begin
-    vmx_password1:=$76543210;
-    vmx_password2:=$fedcba98;
-    vmx_password3:=$90909090;
+    vmx_password1:=$6e4a60f5;
+    vmx_password2:=$3ed33519;
+    vmx_password3:=$a3c97742;
   end;
 
 

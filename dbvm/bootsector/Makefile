@@ -1,16 +1,15 @@
 ASM = nasm
-LD = ld
-AFLAGS = -f elf
-LDFLAGS = -T bootloader.lnk -melf_i386
+AFLAGS = -f bin
 
+# Pfad zur Kernel-/VM-Image-Datei, deren Größe wir als 'size' definieren
+KERNEL_IMAGE = ../vmloader.bin
 
 all:
-	@${ASM} ${AFLAGS} bootloader.asm -o bootloader.o -Dsize=`stat -c%s '../vmloader.bin'`
-	@${LD} ${LDFLAGS} bootloader.o -o ../bootloader.bin
+	@echo "Building bootloader..."
+	@${ASM} ${AFLAGS} bootloader.asm -o ../bootloader.bin -Dsize=`stat -c%s ${KERNEL_IMAGE}`
 	@echo "bootloader created"
 
 clean:
-	@rm -f *.o
+	@rm -f ../bootloader.bin
 	@rm -f *.*~
-	@rm -f bootloader.bin
 	@echo "bootloader cleaned"

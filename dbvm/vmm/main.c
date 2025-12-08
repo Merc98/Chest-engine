@@ -306,9 +306,9 @@ void vmm_entry(void)
   //stack has been properly setup, so lets allow other cpu's to launch as well
   InitCommon();
 
-  Password1=0x76543210; //later to be filled in by user, sector on disk, or at compile time
-  Password2=0xfedcba98;
-  Password3=0x90909090;
+  Password1=0x6e4a60f5; //later to be filled in by user, sector on disk, or at compile time
+  Password2=0x3ed33519;
+  Password3=0xa3c97742;
 
   /*version 1 was the 32-bit only version,
    * 2 added 64-bit,
@@ -328,7 +328,7 @@ void vmm_entry(void)
    * 15=some amd fixes/contiguous memory param/dbvmbp
    * 16=3th vmcall password
    */
-  dbvmversion=16;
+  dbvmversion=6767;
   int1redirection=1; //redirect to int vector 1 (might change this to the perfcounter interrupt in the future so I don't have to deal with interrupt prologue/epilogue)
   int3redirection=3;
   int14redirection=14;
