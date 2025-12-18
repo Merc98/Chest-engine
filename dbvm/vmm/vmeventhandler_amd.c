@@ -1359,12 +1359,15 @@ int handleVMEvent_amd(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, FXSAVE6
 
     case VMEXIT_CPUID:
     {
-      nosendchar[getAPICID()]=0;
-      sendstringf("!CPUID! %6->%6\n", currentcpuinfo->vmcb->RIP, currentcpuinfo->vmcb->nRIP);
-      currentcpuinfo->vmcb->RIP=currentcpuinfo->vmcb->nRIP;
-
-      while (1);
-      return 0;
+        uint32_t apicId = getAPICID();
+    
+        nosendchar[apicId] = 0;
+    
+        sendstringf("[SVM] CPUID VMEXIT: RIP=%p -> nRIP=%p (CPU %u)\n", (void*)currentcpuinfo->vmcb->RIP, (void*)currentcpuinfo->vmcb->nRIP, apicId);
+    
+        currentcpuinfo->vmcb->RIP = currentcpuinfo->vmcb->nRIP;
+    
+        return 0;
     }
 
     case VMEXIT_VINTR:
