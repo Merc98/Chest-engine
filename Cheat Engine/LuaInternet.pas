@@ -9,7 +9,7 @@ interface
 
 uses
   Classes, SysUtils
-  {$ifdef windows}, wininet
+  {$ifdef windows}, wininet, Winsock2, windows
   {$else}
   , fphttpclient,opensslsockets,openssl, StringHashList
 
@@ -26,6 +26,9 @@ type
     {$ifdef windows}
     internet: HINTERNET;
     fheader: string;
+    
+    function IPv6Broken(hostname: string): boolean;
+    function GetIPv4Address(hostname: string): string;
     {$else}
     fname: string;
     internet: TFPHTTPClient;
@@ -58,6 +61,98 @@ uses {$ifdef darwin}macport, registry,{$endif}{$ifndef standalone}MainUnit2, lua
 {$ifndef windows}
 var cookies: tstringhashlist;
 {$endif}
+
+{$ifdef windows}
+// Helper to check if IPv6 is broken (Happy Eyeballs-ish)
+function TWinInternet.IPv6Broken(hostname: string): boolean;
+var
+  hints: TAddrInfoW;
+  addr: PAddrInfoW;
+  ptr: PAddrInfoW;
+  sock: TSocket;
+  res: integer;
+  mode: u_long;
+  fd_set_write: TFDSet;
+  tv: TIMEVAL;
+  hasIPv6: boolean;
+begin
+  result := false;
+  hasIPv6 := false;
+
+  FillChar(hints, SizeOf(hints), 0);
+  hints.ai_family := AF_INET6;
+  hints.ai_socktype := SOCK_STREAM;
+  hints.ai_protocol := IPPROTO_TCP;
+
+  // Resolve hostname for IPv6
+  if GetAddrInfoW(PWideChar(WideString(hostname)), nil, @hints, addr) = 0 then
+  begin
+    ptr := addr;
+    while ptr <> nil do
+    begin
+      hasIPv6 := true;
+      
+      // Try to connect with a short timeout
+      sock := socket(ptr^.ai_family, ptr^.ai_socktype, ptr^.ai_protocol);
+      if sock <> INVALID_SOCKET then
+      begin
+        // Set non-blocking
+        mode := 1;
+        ioctlsocket(sock, FIONBIO, @mode);
+
+        connect(sock, ptr^.ai_addr, ptr^.ai_addrlen);
+
+        FD_ZERO(fd_set_write);
+        FD_SET(sock, fd_set_write);
+
+        tv.tv_sec := 0;
+        tv.tv_usec := 500000; // 500ms timeout
+
+        res := select(0, nil, @fd_set_write, nil, @tv);
+        
+        closesocket(sock);
+
+        if res > 0 then
+        begin
+          // Connection succeeded (or at least writable), IPv6 is likely working
+          FreeAddrInfoW(addr);
+          exit(false); 
+        end;
+      end;
+      
+      ptr := ptr^.ai_next;
+    end;
+    FreeAddrInfoW(addr);
+  end;
+
+  // If we found IPv6 addresses but none connected, assumed broken
+  if hasIPv6 then
+    result := true;
+end;
+
+function TWinInternet.GetIPv4Address(hostname: string): string;
+var
+  hints: TAddrInfoW;
+  addr: PAddrInfoW;
+  sockAddrIn: PSockAddrIn;
+begin
+  result := '';
+  FillChar(hints, SizeOf(hints), 0);
+  hints.ai_family := AF_INET;
+  hints.ai_socktype := SOCK_STREAM;
+
+  if GetAddrInfoW(PWideChar(WideString(hostname)), nil, @hints, addr) = 0 then
+  begin
+    if addr <> nil then
+    begin
+      sockAddrIn := PSockAddrIn(addr^.ai_addr);
+      result := string(inet_ntoa(sockAddrIn^.sin_addr));
+    end;
+    FreeAddrInfoW(addr);
+  end;
+end;
+{$endif}
+
 
 {$ifndef windows}
 procedure TWinInternet.setHeader(s: string);
@@ -293,14 +388,50 @@ var url: HINTERNET;
   available,actualread: dword;
 
   buf: PByteArray;
+  
+  u: TURI;
+  ipv4: string;
+  useFallback: boolean;
+  finalUrl: string;
+  flags: dword;
+  headersToSend: string;
 begin
   result:=false;
+  useFallback := false;
+  finalUrl := urlstring;
+  headersToSend := fheader;
+  flags := INTERNET_FLAG_PRAGMA_NOCACHE or INTERNET_FLAG_RESYNCHRONIZE or INTERNET_FLAG_DONT_CACHE;
+
   if internet<>nil then
   begin
-    if header='' then
-      url:=InternetOpenUrl(internet, pchar(urlstring),nil,0,INTERNET_FLAG_PRAGMA_NOCACHE or INTERNET_FLAG_RESYNCHRONIZE or INTERNET_FLAG_DONT_CACHE, 0)
+    u := ParseURI(urlstring);
+    // Check if we need to fallback to IPv4
+    if IPv6Broken(u.Host) then
+    begin
+      ipv4 := GetIPv4Address(u.Host);
+      if ipv4 <> '' then
+      begin
+        useFallback := true;
+        // Reconstruct URL with IPv4
+        finalUrl := StringReplace(urlstring, u.Host, ipv4, [rfIgnoreCase]);
+        
+        // Add Host header if not already present
+        if Pos('Host:', headersToSend) = 0 then
+        begin
+          if headersToSend <> '' then
+            headersToSend := headersToSend + #13#10;
+          headersToSend := headersToSend + 'Host: ' + u.Host;
+        end;
+        
+        // Allow invalid CN because IP won't match cert
+        flags := flags or INTERNET_FLAG_IGNORE_CERT_CN_INVALID or INTERNET_FLAG_IGNORE_CERT_DATE_INVALID;
+      end;
+    end;
+  
+    if headersToSend='' then
+      url:=InternetOpenUrl(internet, pchar(finalUrl),nil,0,flags, 0)
     else
-      url:=InternetOpenUrl(internet, pchar(urlstring), @fheader[1], length(fheader), INTERNET_FLAG_PRAGMA_NOCACHE or INTERNET_FLAG_RESYNCHRONIZE or INTERNET_FLAG_DONT_CACHE,0);
+      url:=InternetOpenUrl(internet, pchar(finalUrl), @headersToSend[1], length(headersToSend), flags,0);
 
     if url=nil then exit;
 
