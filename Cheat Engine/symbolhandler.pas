@@ -1056,6 +1056,12 @@ begin
         x:=0;
         if SymGetTypeInfo(h, ModBase, index, TI_GET_BASETYPE, @x) then
         begin
+	  if (x < ord(low(TBasicType))) or (x > ord(high(TBasicType))) then
+	  begin
+             result:='BasicType'+inttostr(x);
+	     exit;
+	  end;
+
           case TBasicType(x) of
             btNoType: result:='NoType';
             btVoid: result:='VOID';
@@ -1067,7 +1073,8 @@ begin
             btBCD: result:='BCD';
             btBool: result:='BOOL';
             btLong: result:='LONG';
-            btULong: result:='ULONG';
+            btULong: result:='ULONG';    
+	    btInt2: Result := 'INT2';
             btCurrency: result:='CURRENCY';
             btDate: result:='DATE';
             btVariant: result:='VARIANT';

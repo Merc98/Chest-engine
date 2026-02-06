@@ -8899,10 +8899,13 @@ function TMemScan.DeleteFolder(dir: string) : boolean;
 var
   DirInfo: TSearchRec;
   r : Integer;
-begin
+begin     
+
+  if dir = '' then exit;
  // OutputDebugString('TMemScan.DeleteFolder('+dir+')');
   ZeroMemory(@DirInfo,sizeof(TSearchRec));
   result := true;
+
 
   while dir[length(dir)]=pathdelim do //cut of \
     dir:=copy(dir,1,length(dir)-1);
