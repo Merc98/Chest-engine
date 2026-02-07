@@ -2318,6 +2318,13 @@ begin
     MAXPHYADDRMASKPB:=MAXPHYADDRMASK and qword($fffffffffffff000);
 
     MAXLINEARADDR:=(cpuidr.eax shr 8) and $ff;
+	{$ifdef cpu64}
+    // Fix for Windows 11 ARM64 (Prism Emulator) incorrectly reporting CPUID capabilities.
+    // The emulator might report < 48 bits, causing CE to ignore valid high memory addresses.
+    // Standard x64 architecture supports at least 48 bits of virtual address space.
+    if MAXLINEARADDR < 48 then
+      MAXLINEARADDR := 48;
+    {$endif}
     MAXLINEARADDRMASK:=qword($ffffffffffffffff);
     MAXLINEARADDRMASK:=MAXLINEARADDRMASK shr MAXLINEARADDR;
     MAXLINEARADDRMASK:=MAXLINEARADDRMASK shl MAXLINEARADDR;
@@ -2591,3 +2598,4 @@ initialization
 finalization
 
 end.
+
