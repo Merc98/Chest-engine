@@ -6842,7 +6842,7 @@ begin
         begin
           if (opcodes[j].paramtype3=par_noparam) and (parameter3='') then
           begin
-            if vtype=16 then
+            if (vtype=16) or (opcodes[j].signed and (signedvtype>8)) then
             begin
               //perhaps there is a r/m16,imm16
               k:=startoflist;
