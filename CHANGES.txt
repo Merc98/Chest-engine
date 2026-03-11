@@ -1,0 +1,150 @@
+VOICESERVICE - СВОДКА ИЗМЕНЕНИЙ
+================================
+Ветка: claude/change-driver-name-qe5SP
+Дата:  2026-03-11
+
+
+=== 1. ДРАЙВЕР (DBK32functions.pas) ===
+
+  Сервис:
+    CEDRIVER73  ->  VOICESERVICE73
+
+  Файлы драйвера:
+    dbk64.sys   ->  voiceservice64.sys
+    dbk32.sys   ->  voiceservice32.sys
+
+
+=== 2. НАСТРОЙКИ ПРОЕКТА (cheatengine.lpi) ===
+
+  Заголовок:           Cheat Engine 7.5     ->  VoiceService 7.5
+  Имя (XPManifest):    Cheat Engine         ->  VoiceService
+  Компания:            Cheat Engine         ->  VoiceService Inc
+  Описание файла:      Cheat Engine         ->  VoiceService
+  Выходные файлы:      bin\cheatengine-*    ->  bin\voiceservice-*
+
+
+=== 3. СТРОКОВЫЕ КОНСТАНТЫ (MainUnit2.pas) ===
+
+  strCheatEngine   = 'Cheat Engine'     ->  'VoiceService'
+  strCheatTable    = 'Cheat Table'      ->  'Config Table'
+  strCheatTableLower = 'cheat table'    ->  'config table'
+  strCheat         = 'Cheat'            ->  'Config'
+  strTrainer       = 'Trainer'          ->  'Assistant'
+  strTrainerLower  = 'trainer'          ->  'assistant'
+  strMyCheatTables = 'My Cheat Tables'  ->  'My Config Tables'
+  strSpeedHack     = 'Speedhack'        ->  'Speedboost'
+
+
+=== 4. РЕЕСТР (first.pas) ===
+
+  \Software\Cheat Engine  ->  \Software\VoiceService
+
+
+=== 5. ВСПОМОГАТЕЛЬНЫЕ КОНСТАНТЫ ===
+
+  betterControls/bettercontrols.pas:
+    strCheatEngine = 'Cheat Engine'  ->  'VoiceService'
+
+
+=== 6. ЗАГОЛОВКИ ФОРМ (.lfm файлы) ===
+
+  MainUnit.lfm:              'Cheat Engine'            ->  'VoiceService'
+  aboutunit.lfm:             'About Cheat Engine'      ->  'About VoiceService'
+                             'Cheat Engine'            ->  'VoiceService'
+  formsettingsunit.lfm:      'Cheat Engine settings'   ->  'VoiceService Settings'
+  formPointerOrPointeeUnit:  'Cheat Engine Pointer'    ->  'VoiceService Pointer'
+  frmBusyUnit.lfm:           'Cheat Engine Scan Busy'  ->  'VoiceService Scan'
+  frmAdConfigUnit.lfm:       'Support Cheat Engine'    ->  'Support VoiceService'
+  frmExcludeHideUnit.lfm:    'cheat Engine hides...'   ->  'VoiceService hides...'
+  frmmicrotransactionsunit:  'Cheat-E-Coins'           ->  'Voice-E-Credits'
+
+
+=== 7. ПОДСКАЗКИ И СООБЩЕНИЯ ===
+
+  Файлы: olddebugger.pas, MainUnit.lfm, MainUnit.pas, MemoryBrowserFormUnit.lfm,
+         frameHotkeyConfigUnit.lfm, frmExeTrainerGeneratorUnit.lfm,
+         frmUltimap2Unit.lfm, frmUltimapUnit.lfm, frmSaveMemoryRegionUnit.lfm,
+         PointerscannerSettingsFrm.lfm, trainergenerator.lfm, trainergenerator.pas,
+         frmautoinjectunit.pas, frmautoinjectunit.lfm, StructuresFrm2.pas,
+         Structuresfrm.pas, LuaInternet.pas, frmD3DTrainerGeneratorOptionsUnit.lfm
+
+  Все вхождения 'Cheat Engine' в hint/message/caption заменены на 'VoiceService'
+  Все вхождения 'cheat table'  -> 'config table'
+  Все вхождения 'cheat entry'  -> 'config entry'
+  'Cheat Engine Help'          -> 'VoiceService Help'
+  'Cheat Engine Debugger'      -> 'VoiceService Debugger'
+  'Show Cheat Table Lua Script' -> 'Show Config Table Lua Script'
+  'Assign to current cheat table' -> 'Assign to current config table'
+  'Cheat Table Framework Code'    -> 'Config Table Framework Code'
+
+
+=== 8. ФАЙЛОВЫЕ ФИЛЬТРЫ В ДИАЛОГАХ ===
+
+  'Cheat Engine Memory file'      ->  'VoiceService Memory file'
+  'Cheat Engine structure files'  ->  'VoiceService Structure files'
+  'Cheat Engine Plugins'          ->  'VoiceService Plugins'
+  'Cheat Engine Pointerlist'      ->  'VoiceService Pointerlist'
+  'Cheat Engine Assembly'         ->  'VoiceService Assembly'
+  'Cheat Engine Table Trainer'    ->  'VoiceService Table Trainer'
+  'Cheat Engine EXE Trainer'      ->  'VoiceService EXE Trainer'
+
+
+=== 9. XML-ТЕГИ ФОРМАТА ФАЙЛОВ (OpenSave.pas, tableconverter.pas, feces.pas) ===
+
+  XML узлы:
+    <CheatTable>              ->  <ConfigTable>
+    <CheatEntries>            ->  <ConfigEntries>
+    <CheatCodes>              ->  <ConfigCodes>
+
+  XML атрибуты:
+    CheatEngineTableVersion   ->  TableVersion
+
+  Сигнатура бинарных файлов:
+    'CHEATENGINE'  (frmSaveMemoryRegionUnit.pas, frmLoadMemoryunit.pas)
+                              ->  'VOICESERVICE'
+
+  Старый формат:
+    p = 'CHEAT'               ->  p = 'CONFIG'
+
+
+=== 10. ТРАНСЛЯЦИЯ (cetranslator.pas) ===
+
+  altname-режим StringReplace:
+    'Cheat Engine'  ->  'VoiceService'
+    'cheat'         ->  'config'
+    'Cheat Table'   ->  'Config Table'
+    'ConfigTable'   ->  'Codetable'  (для внешних переводов)
+
+
+=== ЧТО НЕ ИЗМЕНЕНО ===
+
+  - Pascal-переменные с именем CheatTable (внутренние идентификаторы кода)
+  - Функция ConvertCheatTableToXML (внутреннее имя функции)
+  - trainergenerator.pas:289  currentcheat.name:='CHEAT'+... (внутренний ID)
+  - Tutorial/* файлы (обучающие материалы, не влияют на детектирование)
+  - URL-адреса в aboutunit.pas (внешние ссылки на сайт автора)
+  - {$ifdef standalonetest} пути в tcclib.pas (только для разработки)
+
+
+=== КОММИТЫ ===
+
+  3746865  Change driver name and rebrand from Cheat Engine to System Tool
+  a5e7dbf  Rename all Cheat Engine branding to VoiceService
+  9227f46  Remove all visible Cheat Engine mentions across UI and forms
+  2740cf7  Replace internal XML tags and file format signatures
+
+
+=== ПОСЛЕ КОМПИЛЯЦИИ (Step 5 - HxD) ===
+
+  После сборки бинарника нужно вручную заменить строки в .exe через HxD:
+
+  Длина строк должна совпадать (11 символов):
+    'Cheat Engine'  (11)  ->  'VoiceServic' + 'e' или другое 12-символьное
+
+  Варианты замены (одинаковая длина):
+    'Cheat Engine'  ->  'Voice Tools' (11 символов + пробел = 12)
+    'cheat engine'  ->  'voice tools'
+    'CheatEngine'   ->  'VoiceEngine'  (11 символов)
+    'cheatengine'   ->  'voiceengine'
+
+  Кодировки для замены: UTF-8 и Unicode (UTF-16 LE)
