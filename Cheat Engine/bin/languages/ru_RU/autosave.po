@@ -1,6 +1,6 @@
 #: autosave-AioC
-msgid "Another instance of Cheat Engine has crashed and it created an autosave.  Autosave disabled until you go to settings and click ok"
-msgstr "Другой экземпляр Cheat Engine потерпел крах и создал автосохранение. Автосохранение будет отключено, пока вы не перейдёте в настройки и не нажмёте «Подтвердить»"
+msgid "Another instance of VoiceService has crashed and it created an autosave.  Autosave disabled until you go to settings and click ok"
+msgstr "Другой экземпляр VoiceService потерпел крах и создал автосохранение. Автосохранение будет отключено, пока вы не перейдёте в настройки и не нажмёте «Подтвердить»"
 
 #: autosave-Ftoa
 msgid "Failure to obtain a location to save the autosave data"
@@ -35,5 +35,5 @@ msgid "Auto Save"
 msgstr "Автосохранение"
 
 #: autosave-CEdn
-msgid "Cheat Engine did not properly close last time. Do you wish to restore your work?"
-msgstr "Cheat Engine не закрылся должным образом в прошлый раз. Вы хотите восстановить работу?"
+msgid "VoiceService did not properly close last time. Do you wish to restore your work?"
+msgstr "VoiceService не закрылся должным образом в прошлый раз. Вы хотите восстановить работу?"

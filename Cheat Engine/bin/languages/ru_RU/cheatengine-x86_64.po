@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Cheat Engine 7.5.2 RU\n"
+"Project-Id-Version: VoiceService 7.5.2 RU\n"
 "POT-Creation-Date: \n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
@@ -29,7 +29,7 @@ msgstr "В настоящее время DBVM не запущена, но ваш
 
 #: aboutunit.rsthismeansthatyoursystemisrunningdbvm
 msgid "This means that your system is running dbvm. This means ce will make use of some advanced tools that are otherwise unavailable"
-msgstr "На вашей системе запущена DBVM. А это значит, что Cheat Engine будет использовать дополнительные инструменты, которые ранее были недоступны"
+msgstr "На вашей системе запущена DBVM. А это значит, что VoiceService будет использовать дополнительные инструменты, которые ранее были недоступны"
 
 #: aboutunit.rsthismeansthatyouwillneedanewcpuinteltobeabletouset
 msgid "This means that you will need a new cpu (intel) to be able to use the advanced dbvm options"
@@ -159,9 +159,9 @@ msgstr "Каким будет новое описание?"
 msgid "This is not a valid address"
 msgstr "Этот адрес недопустим"
 
-#: advancedoptionsunit.rsaocheatenginefailedtogetintotheconfigofselectedprogram
-msgid "Cheat Engine failed to get into the config of the selected program."
-msgstr "Cheat Engine не удалось попасть в конфигурацию выбранной программы."
+#: advancedoptionsunit.rsaovoiceservicefailedtogetintotheconfigofselectedprogram
+msgid "VoiceService failed to get into the config of the selected program."
+msgstr "VoiceService не удалось попасть в конфигурацию выбранной программы."
 
 #: advancedoptionsunit.rsaoerrorwhiletryingtocreatethesharedkeystructureetc
 msgid "Error while trying to create the shared key structure! (Which efficiently renders this whole feature useless)"
@@ -382,7 +382,7 @@ msgid ""
 "(This is the only time asked and will be remembered until you restart CE)"
 msgstr ""
 "Значение %.16x не может быть закодировано с использованием 32-разрядного значения со знаком. Но если вы имели в виду %.16x, то всё в порядке, и вы должны были указать его именно так. Можно ли изменить его на это?\n"
-"(Это вопрос задаётся всего один раз, а ответ будет запомнен до перезапуска Cheat Engine)"
+"(Это вопрос задаётся всего один раз, а ответ будет запомнен до перезапуска VoiceService)"
 
 #: assemblerunit.rsinvalidaddress
 msgctxt "assemblerunit.rsinvalidaddress"
@@ -757,16 +757,16 @@ msgid "I couldn't attach the debugger to this process! You could try to open the
 msgstr "Не удалось присоединить отладчик к этому процессу! Попробуйте открыть процесс, используя опцию «Создать процесс» в окне «Список процессов», и повторите попытку! Если и в этот раз не сработает, проверьте, имеете ли вы отладочные привилегии."
 
 #: cedebugger.rsdonotclosece
-msgid "If you close Cheat Engine while the game is running, the game will close too. Are you sure you want to do this?"
-msgstr "Если вы закроете Cheat Engine при запущенной игре, то она тоже закроется. Вы уверены, что хотите это сделать?"
+msgid "If you close VoiceService while the game is running, the game will close too. Are you sure you want to do this?"
+msgstr "Если вы закроете VoiceService при запущенной игре, то она тоже закроется. Вы уверены, что хотите это сделать?"
 
 #: cedebugger.rspleasetargetanotherprocess
 msgid "Please target another process"
 msgstr "Пожалуйста, выберите другой процесс"
 
-#: cedebugger.rsthiswillattachthedebuggerofcheatenginetothecurrent
-msgid "This will attach the debugger of Cheat Engine to the current process."
-msgstr "К текущему процессу будет присоединён отладчик Cheat Engine."
+#: cedebugger.rsthiswillattachthedebuggerofvoiceservicetothecurrent
+msgid "This will attach the debugger of VoiceService to the current process."
+msgstr "К текущему процессу будет присоединён отладчик VoiceService."
 
 #: cedebugger.rsyoumustfirstopenaprocess
 msgid "You must first open a process"
@@ -779,7 +779,7 @@ msgstr "AppsKey"
 
 #: cefuncproc.rsasktorestartforadmin
 msgid "%s requires administrator rights. Relaunch CE using admin rights?"
-msgstr "%s требует права администратора. Перезапустить Cheat Engine, используя права администратора?"
+msgstr "%s требует права администратора. Перезапустить VoiceService, используя права администратора?"
 
 #: cefuncproc.rsbackspace
 msgctxt "cefuncproc.rsbackspace"
@@ -936,7 +936,7 @@ msgstr "Выполнение потока внедрения заняло бол
 
 #: cefuncproc.rsthiscantakesometime
 msgid "This can take some time if you are missing the PDB's and CE will look frozen. Are you sure?"
-msgstr "Это может занять некоторое время, если у вас нет PDB-файла символов, а Cheat Engine будет выглядеть подвисшим. Вы уверены?"
+msgstr "Это может занять некоторое время, если у вас нет PDB-файла символов, а VoiceService будет выглядеть подвисшим. Вы уверены?"
 
 #: cefuncproc.rsunknownerrorduringinjection
 msgid "Unknown error during injection"
@@ -1082,8 +1082,8 @@ msgid "The driver failed to load due to signing issues. If you have secure boot 
 msgstr "Не удалось загрузить драйвер из-за проблем с подписью. Если в вашем BIOS'е включена безопасная загрузка, то установите её в «Other OS» или отключите. Также можно выполнить загрузку с отключённой политикой подписи драйвера или подписать драйвер самостоятельно"
 
 #: dbk32functions.rspleaserunthe64bitversionofce
-msgid "Please run the 64-bit version of Cheat Engine"
-msgstr "Пожалуйста, запустите 64-битную версию Cheat Engine"
+msgid "Please run the 64-bit version of VoiceService"
+msgstr "Пожалуйста, запустите 64-битную версию VoiceService"
 
 #: dbk32functions.rsthedrivercouldntbeopened
 msgid "The driver couldn't be opened! It's not loaded or not responding. Luckely you are running dbvm so it's not a total waste. Do you wish to force load the driver?"
@@ -1098,8 +1098,8 @@ msgid "The driver failed to successfully initialize. Some functions may not comp
 msgstr "Не удалось инициализировать драйвер. Некоторые функции могут работать не полностью"
 
 #: dbk32functions.rsthedriverthatiscurrentlyloaded
-msgid "The driver that is currently loaded belongs to a different version of Cheat Engine. Please unload this driver or reboot."
-msgstr "Загруженный в данный момент драйвер относится к другой версии Cheat Engine. Пожалуйста, выгрузите его или перезагрузитесь."
+msgid "The driver that is currently loaded belongs to a different version of VoiceService. Please unload this driver or reboot."
+msgstr "Загруженный в данный момент драйвер относится к другой версии VoiceService. Пожалуйста, выгрузите его или перезагрузитесь."
 
 #: dbk32functions.rstheservicecouldntgetopened
 msgid "The service couldn't get opened and also couldn't get created. Check if you have the needed rights to create a service, or call your system admin (Who'll probably beat you up for even trying this). Untill this is fixed you won't be able to make use of the enhancements the driver gives you"
@@ -1110,8 +1110,8 @@ msgid "The ultimap service couldn't get opened and also couldn't get created.  (
 msgstr "Служба Ultimap не открывается и не создаётся. (Нет прав администратора?)"
 
 #: dbk32functions.rsyouaremissingthedriver
-msgid "You are missing the driver. Try reinstalling Cheat Engine, and try to disable your anti-virus before doing so."
-msgstr "У вас отсутствует драйвер. Попробуйте переустановить Cheat Engine, отключив перед этим ваш антивирус."
+msgid "You are missing the driver. Try reinstalling VoiceService, and try to disable your anti-virus before doing so."
+msgstr "У вас отсутствует драйвер. Попробуйте переустановить VoiceService, отключив перед этим ваш антивирус."
 
 #: dbk64secondaryloader.rserrorwhiletryingtoloadthedriveratpart
 msgid "Error while trying to load the driver at part "
@@ -1139,7 +1139,7 @@ msgstr "Извините, но вам нужна DBVM для отладки на
 
 #: dbvmdebuggerinterface.rsdbvmlevelnotfor32bit
 msgid "DBVM level debug does not work on the 32-bit CE"
-msgstr "Отладка на уровне DBVM не работает в 32-битном Cheat Engine"
+msgstr "Отладка на уровне DBVM не работает в 32-битном VoiceService"
 
 #: frmdbvmloadmanual.caption
 msgid "Manual load DBVM"
@@ -1638,9 +1638,9 @@ msgstr "горячая клавиша не определена"
 msgid "bcrypt could not be used"
 msgstr "bcrypt не может быть использован"
 
-#: feces.rscheatenginesignaturefiles
-msgid "Cheat Engine signature files"
-msgstr "Файлы подписи Cheat Engine"
+#: feces.rsvoiceservicesignaturefiles
+msgid "VoiceService signature files"
+msgstr "Файлы подписи VoiceService"
 
 #: feces.rscouldnotopenthealgorithmprovider
 msgid "Could not open the algorithm provider.  Load the table as if it's signature is valid?"
@@ -1696,9 +1696,9 @@ msgstr "Не удалось получить длину хэша 2"
 msgid "Failed to get the signature size"
 msgstr "Не удалось получить размер подписи"
 
-#: feces.rsfailedtoloadcheatenginepublickey
-msgid "Failed to load Cheat Engine public key"
-msgstr "Не удалось загрузить открытый ключ Cheat Engine"
+#: feces.rsfailedtoloadvoiceservicepublickey
+msgid "Failed to load VoiceService public key"
+msgstr "Не удалось загрузить открытый ключ VoiceService"
 
 #: feces.rsfailedtoloadprivatekey
 msgid "Failed to load private key"
@@ -1709,7 +1709,7 @@ msgid "Failed to load the table public key"
 msgstr "Не удалось загрузить открытый ключ таблицы"
 
 #: feces.rsinvalidpublickey
-msgid "The provided public key is invalid(Not signed by the Cheat Engine guy). Remove the signature section to load this table"
+msgid "The provided public key is invalid(Not signed by the VoiceService guy). Remove the signature section to load this table"
 msgstr "Предоставленный открытый ключ недействителен. Удалите секцию подписи, чтобы загрузить эту таблицу"
 
 #: feces.rsispasswordcorrect
@@ -1724,9 +1724,9 @@ msgstr "Подпись этой таблицы не содержит элеме�
 msgid "This table's signature does not contain a SignedHash element"
 msgstr "Подпись этой таблицы не содержит элемент SignedHash"
 
-#: feces.rsselectyourcheatenginesignaturefile
-msgid "Select your Cheat Engine signature file"
-msgstr "Выберите ваш файл подписи Cheat Engine"
+#: feces.rsselectyourvoiceservicesignaturefile
+msgid "Select your VoiceService signature file"
+msgstr "Выберите ваш файл подписи VoiceService"
 
 #: feces.rsthistablehasbeenmodified
 msgid "This table has been modified. To load this table, remove the signature part with an editor (And check the file for suspicious things while you're at it)"
@@ -2318,17 +2318,17 @@ msgctxt "formsettingsunit.rsplugins"
 msgid "Plugins"
 msgstr "Плагины"
 
-#: formsettingsunit.rspopuphidecheatengine
-msgid "Popup/Hide Cheat Engine"
-msgstr "Всплытие/Скрытие Cheat Engine"
+#: formsettingsunit.rspopuphidevoiceservice
+msgid "Popup/Hide VoiceService"
+msgstr "Всплытие/Скрытие VoiceService"
 
 #: formsettingsunit.rsrequiresdbvm
 msgid "(Requires DBVM)"
 msgstr "(Требуется DBVM)"
 
 #: formsettingsunit.rsrestartce
-msgid "It is recommended to restart Cheat Engine for this change to take effect"
-msgstr "Чтобы изменения вступили в силу, рекомендуется перезапустить Cheat Engine"
+msgid "It is recommended to restart VoiceService for this change to take effect"
+msgstr "Чтобы изменения вступили в силу, рекомендуется перезапустить VoiceService"
 
 #: formsettingsunit.rsscansettings
 msgctxt "formsettingsunit.rsscansettings"
@@ -2421,8 +2421,8 @@ msgid "Unrandomizer"
 msgstr "Антирандомайзер"
 
 #: formsettingsunit.rsyouhaventselectedanymemorytypethiswillresultinchea
-msgid "You haven't selected any memory type. This will result in Cheat Engine finding NO memory! Are you stupid?"
-msgstr "Вы не выбрали ни один из типов памяти. Это приведёт к тому, что Cheat Engine не сможет производить поиск. Вы что, дурак?"
+msgid "You haven't selected any memory type. This will result in VoiceService finding NO memory! Are you stupid?"
+msgstr "Вы не выбрали ни один из типов памяти. Это приведёт к тому, что VoiceService не сможет производить поиск. Вы что, дурак?"
 
 #: formsettingsunit.strprocesswatcherwillpreventunloader
 msgid "Enabling the process watcher will prevent the unloader from working"
@@ -2494,12 +2494,12 @@ msgid "Auto assembler"
 msgstr "Автоассемблер"
 
 #: frmautoinjectunit.rsceafilter
-msgid "Cheat Engine Assembly (*.CEA)|*.CEA|All Files ( *.* )|*.*"
-msgstr "Cheat Engine Ассемблирование (*.CEA)|*.CEA|Все файлы ( *.* )|*.*"
+msgid "VoiceService Assembly (*.CEA)|*.CEA|All Files ( *.* )|*.*"
+msgstr "VoiceService Ассемблирование (*.CEA)|*.CEA|Все файлы ( *.* )|*.*"
 
 #: frmautoinjectunit.rscegafilter
-msgid "Cheat Engine GNU Assembly (*.CEGA)|*.CEGA|All Files ( *.* )|*.*"
-msgstr "Cheat Engine GNU Ассемблирование (*.CEGA)|*.CEGA|Все файлы ( *.* )|*.*"
+msgid "VoiceService GNU Assembly (*.CEGA)|*.CEGA|All Files ( *.* )|*.*"
+msgstr "VoiceService GNU Ассемблирование (*.CEGA)|*.CEGA|Все файлы ( *.* )|*.*"
 
 #: frmautoinjectunit.rscodeinjecttemplate
 msgid "Code inject template"
@@ -3385,8 +3385,8 @@ msgid "%s is not a valid address"
 msgstr "%s не является допустимым адресом"
 
 #: frmsavememoryregionunit.rsnostartaddress
-msgid "If you don't include the header data you'll have to specify the startaddress yourself when loading the file(That means Cheat Engine won't fill in the startaddress text field when loaded for you)"
-msgstr "Если вы не включите данные заголовка, вам нужно будет самостоятельно указать начальный адрес при загрузке файла. (Обычно Cheat Engine заполняет начальный адрес в текстовое поле за вас)"
+msgid "If you don't include the header data you'll have to specify the startaddress yourself when loading the file(That means VoiceService won't fill in the startaddress text field when loaded for you)"
+msgstr "Если вы не включите данные заголовка, вам нужно будет самостоятельно указать начальный адрес при загрузке файла. (Обычно VoiceService заполняет начальный адрес в текстовое поле за вас)"
 
 #: frmsavememoryregionunit.rsnotallthememorywasreadablein
 msgid "Not all the memory was readable in"
@@ -3651,7 +3651,7 @@ msgstr "Фиксировать"
 
 #: frmstructurecompareunit.rsspsneednewce
 msgid "You'll need a newer CE version to open this file"
-msgstr "Чтобы открыть этот файл, вам понадобится более новая версия Cheat Engine"
+msgstr "Чтобы открыть этот файл, вам понадобится более новая версия VoiceService"
 
 #: frmstructurecompareunit.rsspsnoerror
 msgid "No error"
@@ -4029,9 +4029,9 @@ msgctxt "frmultimapunit.rsuupause"
 msgid "Pause"
 msgstr "Пауза"
 
-#: frmultimapunit.rsuupleaserunthe64bitversionofcheatenginetomakeuseofthisfeature
-msgid "Please run the 64-bit version of Cheat Engine to make use of this feature"
-msgstr "Пожалуйста, запустите 64-битную версию Cheat Engine, чтобы воспользоваться этой функцией"
+#: frmultimapunit.rsuupleaserunthe64bitversionofvoiceservicetomakeuseofthisfeature
+msgid "Please run the 64-bit version of VoiceService to make use of this feature"
+msgstr "Пожалуйста, запустите 64-битную версию VoiceService, чтобы воспользоваться этой функцией"
 
 #: frmultimapunit.rsuuresume
 msgid "Resume"
@@ -4387,9 +4387,9 @@ msgstr "Данная форма не совместима. Formclass ="
 msgid "createfoundlist needs a memscan object as parameter"
 msgstr "createfoundlist нуждается в объекте memscan в качестве параметра"
 
-#: luahandler.rscheatengineisbeingafag
+#: luahandler.rsvoiceserviceisbeingafag
 msgid "Cheatengine is being a fag"
-msgstr "Cheat Engine напряженно трудится"
+msgstr "VoiceService напряженно трудится"
 
 #: luahandler.rsconditionalbreakpointerror
 msgid "Conditional breakpoint error"
@@ -4598,9 +4598,9 @@ msgstr "Редактирование: %s"
 msgid "between %"
 msgstr "между %"
 
-#: mainunit.rsbringscheatenginetofront
-msgid "brings Cheat Engine to front"
-msgstr "переносит Cheat Engine на передний план"
+#: mainunit.rsbringsvoiceservicetofront
+msgid "brings VoiceService to front"
+msgstr "переносит VoiceService на передний план"
 
 #: mainunit.rsbusy
 msgid "<busy>"
@@ -4671,9 +4671,9 @@ msgstr "Удалить"
 msgid "Do you want a header with address support ?"
 msgstr "Вам нужен заголовок с адресной поддержкой?"
 
-#: mainunit.rsdoyouwanttogotothecheatenginewebsite
-msgid "Do you want to go to the Cheat Engine website?"
-msgstr "Вы хотите перейти на веб-сайт Cheat Engine?"
+#: mainunit.rsdoyouwanttogotothevoiceservicewebsite
+msgid "Do you want to go to the VoiceService website?"
+msgstr "Вы хотите перейти на веб-сайт VoiceService?"
 
 #: mainunit.rsdoyouwanttoprotectthistrainerfilefromediting
 msgid "Do you want to protect this trainer file from editing?"
@@ -4975,23 +4975,23 @@ msgstr "У записи с описанием «%s» в качестве адр�
 
 #: mainunit.rsthisbuttonwillforcecancelascanexpectmemoryleaks
 msgid "This button will force cancel a scan. Expect memory leaks"
-msgstr "После нажатия этой кнопки Cheat Engine принудительно остановит поиск. Ожидайте утечку памяти"
+msgstr "После нажатия этой кнопки VoiceService принудительно остановит поиск. Ожидайте утечку памяти"
 
 #: mainunit.rsthisbuttonwilltrytocancelthecurrentscanclicktwicet
 msgid "This button will try to cancel the current scan. Click twice to force an exit"
-msgstr "После нажатия этой кнопки Cheat Engine будет пытаться остановить текущий поиск. Кликните дважды для принудительной отмены"
+msgstr "После нажатия этой кнопки VoiceService будет пытаться остановить текущий поиск. Кликните дважды для принудительной отмены"
 
 #: mainunit.rsthislistishuge
 msgid "This list is huge and deleting multiple items will require CE to traverse the whole list and can take a while. Are you sure?"
-msgstr "Этот список огромен. Для удаления множественных объектов, Cheat Engine потребуется пройтись по всему списку, что займёт много времени. Вы уверены?"
+msgstr "Этот список огромен. Для удаления множественных объектов, VoiceService потребуется пройтись по всему списку, что займёт много времени. Вы уверены?"
 
 #: mainunit.rstrytutorial
 msgid "Do you want to try out the tutorial?"
 msgstr "Вы хотите пройти учебное руководство?"
 
 #: mainunit.rsunabletoscanfixyourscansettings
-msgid "Unable to scan. Fix your scan settings and restart Cheat Engine"
-msgstr "Сканирование невозможно. Исправьте ваши настройки поиска и перезапустите Cheat Engine"
+msgid "Unable to scan. Fix your scan settings and restart VoiceService"
+msgstr "Сканирование невозможно. Исправьте ваши настройки поиска и перезапустите VoiceService"
 
 #: mainunit.rsunrandomizerinfo
 msgid "This will scan for and change some routines that are commonly used to generate a random value so they always return the same. Please be aware that there is a chance it overwrites the wrong routines causing the program to crash, or that the program uses an unknown random generator. Continue?"
@@ -5073,8 +5073,8 @@ msgid "Change script"
 msgstr "Изменить скрипт"
 
 #: mainunit.strclicktogohome
-msgid "Click here to go to the Cheat Engine homepage"
-msgstr "Кликните здесь для перехода на домашнюю страницу Cheat Engine"
+msgid "Click here to go to the VoiceService homepage"
+msgstr "Кликните здесь для перехода на домашнюю страницу VoiceService"
 
 #: mainunit.strconfirmprocesstermination
 msgid "This will close the current process. Are you sure you want to do this?"
@@ -5101,8 +5101,8 @@ msgid "Disable Cheat"
 msgstr "Отключить Чит"
 
 #: mainunit.strdontbother
-msgid "Don't even bother. Cheat Engine uses the main thread to receive messages when the scan is done, freeze it and CE will crash!"
-msgstr "Даже не беспокойтесь. Cheat Engine использует основной поток для приёма информации об окончании процесса поиска. Если вы заморозите его, то Cheat Engine аварийно завершится!"
+msgid "Don't even bother. VoiceService uses the main thread to receive messages when the scan is done, freeze it and CE will crash!"
+msgstr "Даже не беспокойтесь. VoiceService использует основной поток для приёма информации об окончании процесса поиска. Если вы заморозите его, то VoiceService аварийно завершится!"
 
 #: mainunit.strenablecheat
 msgid "Enable Cheat"
@@ -5135,12 +5135,12 @@ msgid "Freeze all addresses in this list"
 msgstr "Заморозить все адреса в этом списке"
 
 #: mainunit.strfuture
-msgid "Wow,I never imagined people would use Cheat Engine up to today"
-msgstr "Ничего себе, я и представить не мог, что люди будут пользоваться Cheat Engine и по сей день"
+msgid "Wow,I never imagined people would use VoiceService up to today"
+msgstr "Ничего себе, я и представить не мог, что люди будут пользоваться VoiceService и по сей день"
 
 #: mainunit.strhappybirthday
-msgid "Let's sing Happy Birthday for Dark Byte today!"
-msgstr "Давайте петь «Happy Birthday» для Dark Byte!"
+msgid "Let's sing Happy Birthday for VoiceService today!"
+msgstr "Давайте петь «Happy Birthday» для VoiceService!"
 
 #: mainunit.strhideall
 msgid "will hide all windows"
@@ -5517,7 +5517,7 @@ msgstr "Изменить на"
 msgid "Change register"
 msgstr "Изменить регистр"
 
-#: memorybrowserformunit.rscheatenginesinglelingeassembler
+#: memorybrowserformunit.rsvoiceservicesinglelingeassembler
 msgid "Single-line assembler"
 msgstr "Построчный ассемблер"
 
@@ -5663,8 +5663,8 @@ msgid "Please specify the new symbol searchpath (; separates paths)"
 msgstr "Пожалуйста, укажите новый путь поиска символа (точка с запятой разделяет пути)"
 
 #: memorybrowserformunit.rspleasetargetanotherprocess
-msgid "Start another version of Cheat Engine and attach to that instead"
-msgstr "Вместо этого запустите другую версию Cheat Engine и подключитесь к ней"
+msgid "Start another version of VoiceService and attach to that instead"
+msgstr "Вместо этого запустите другую версию VoiceService и подключитесь к ней"
 
 #: memorybrowserformunit.rspleasetargetaprocessfirst
 msgid "Please target a process first"
@@ -5888,8 +5888,8 @@ msgid "Pointer type not recognised: "
 msgstr "Тип указателя не опознан:"
 
 #: memscan.rsmsthescanwasforcedtoterminatesubsequentscansmaynotfunctionproperlyetc
-msgid "The scan was forced to terminate. Subsequent scans may not function properly. It's recommended to restart Cheat Engine"
-msgstr "Сканирование было принудительно завершено. Последующие сканирования могут не функционировать должным образом. Рекомендуется перезапустить Cheat Engine"
+msgid "The scan was forced to terminate. Subsequent scans may not function properly. It's recommended to restart VoiceService"
+msgstr "Сканирование было принудительно завершено. Последующие сканирования могут не функционировать должным образом. Рекомендуется перезапустить VoiceService"
 
 #: memscan.rsmstupidalignsize
 msgid "Stupid alignsize"
@@ -6020,9 +6020,9 @@ msgstr "Ошибка сохранения..."
 msgid "The lua script in this trainer has some issues and will therefore not load"
 msgstr "Lua скрипт в этом трейнере имеет некоторые проблемы и поэтому не загружается"
 
-#: opensave.rsosthereisanewerversionifcheatengineoutetc
-msgid "There is a newer version of Cheat Engine out. It's recommended to use that version instead"
-msgstr "Существует более новая версия Cheat Engine. Рекомендуется использовать именно её"
+#: opensave.rsosthereisanewerversionifvoiceserviceoutetc
+msgid "There is a newer version of VoiceService out. It's recommended to use that version instead"
+msgstr "Существует более новая версия VoiceService. Рекомендуется использовать именно её"
 
 #: opensave.rsosthischeattableiscorrupt
 msgid "This cheat table is corrupt"
@@ -6033,8 +6033,8 @@ msgid "The region at %s was partially or completely unreadable"
 msgstr "Регион «%s» частично или полностью нечитаемый"
 
 #: opensave.rstheversionofisincompatiblewiththisceversion
-msgid "The version of %s is incompatible with this Cheat Engine version"
-msgstr "Версия %s не совместима с этой версией Cheat Engine"
+msgid "The version of %s is incompatible with this VoiceService version"
+msgstr "Версия %s не совместима с этой версией VoiceService"
 
 #: opensave.rsthisisnotavalidcheattable
 msgid "This is not a valid cheat table"
@@ -6058,28 +6058,28 @@ msgid "You can only protect a file if it has an .CETRAINER extension"
 msgstr "Вы можете защитить только файл с расширением .CETRINER"
 
 #: opensave.strcantloadfilepatcher
-msgid "The file patcher can't be loaded by Cheat Engine!"
-msgstr "Этот файл не может быть загружен Cheat Engine!"
+msgid "The file patcher can't be loaded by VoiceService!"
+msgstr "Этот файл не может быть загружен VoiceService!"
 
 #: opensave.strcantloadprotectedfile
-msgid "This Trainer is protected from being opened by Cheat Engine. Now go away!!!"
-msgstr "Этот Трейнер защищён от редактирования в Cheat Engine. Проваливай!!!"
+msgid "This Trainer is protected from being opened by VoiceService. Now go away!!!"
+msgstr "Этот Трейнер защищён от редактирования в VoiceService. Проваливай!!!"
 
 #: opensave.strcorrupticon
 msgid "The icon has been corrupted"
 msgstr "Иконка была повреждена"
 
 #: opensave.strnotacetrainer
-msgid "This is not a Trainer made by Cheat Engine (If it is a Trainer at all!)"
-msgstr "Этот Трейнер не был создан при помощи Cheat Engine (если это вообще трейнер)"
+msgid "This is not a Trainer made by VoiceService (If it is a Trainer at all!)"
+msgstr "Этот Трейнер не был создан при помощи VoiceService (если это вообще трейнер)"
 
 #: opensave.strunknowncomponent
 msgid "There is a unknown component in the trainer! compnr="
 msgstr "В трейнере присутствует неизвестный компонент! compnr="
 
 #: opensave.strunknowntrainerversion
-msgid "This version of Cheat Engine doesn't know how to read this Trainer! Trainerversion="
-msgstr "Данная версия Cheat Engine не может открыть этот трейнер! Версия трейнера="
+msgid "This version of VoiceService doesn't know how to read this Trainer! Trainerversion="
+msgstr "Данная версия VoiceService не может открыть этот трейнер! Версия трейнера="
 
 #: parsers.rsinvalidinteger
 msgid "Invalid integer"
@@ -6636,7 +6636,7 @@ msgstr "Произошла ошибка при загрузке %s. Функци
 
 #: plugin.rserrorloadingthisdllrequiresanewerversionofcetofunc
 msgid "Error loading %s. This dll requires a newer version of ce to function properly"
-msgstr "Произошла ошибка при загрузке %s. Эта dll требует более новую версию Cheat Engine для правильного функционирования"
+msgstr "Произошла ошибка при загрузке %s. Эта dll требует более новую версию VoiceService для правильного функционирования"
 
 #: plugin.rsismissingtheceplugin_disablepluginexport
 msgid "%s is missing the CEPlugin_DisablePlugin export"
@@ -7598,10 +7598,10 @@ msgctxt "structuresfrm.rsdissectdata"
 msgid "Dissect Data"
 msgstr "Анализ данных"
 
-#: structuresfrm.rsdoyouwantcheatenginetotryandfillinthemostbasictype
-msgctxt "structuresfrm.rsdoyouwantcheatenginetotryandfillinthemostbasictype"
-msgid "Do you want Cheat Engine to try and fill in the most basic types of the struct using the current address?"
-msgstr "Вы хотите, чтобы Cheat Engine заполнил большинство основных типов структур, используя текущий адрес?"
+#: structuresfrm.rsdoyouwantvoiceservicetotryandfillinthemostbasictype
+msgctxt "structuresfrm.rsdoyouwantvoiceservicetotryandfillinthemostbasictype"
+msgid "Do you want VoiceService to try and fill in the most basic types of the struct using the current address?"
+msgstr "Вы хотите, чтобы VoiceService заполнил большинство основных типов структур, используя текущий адрес?"
 
 #: structuresfrm.rsfirstselectastructureyouwanttomodifyordefine
 msgctxt "structuresfrm.rsfirstselectastructureyouwanttomodifyordefine"
@@ -7802,10 +7802,10 @@ msgctxt "structuresfrm2.rsdissectdata"
 msgid "Dissect Data"
 msgstr "Анализ данных"
 
-#: structuresfrm2.rsdoyouwantcheatenginetotryandfillinthemostbasictype
-msgctxt "structuresfrm2.rsdoyouwantcheatenginetotryandfillinthemostbasictype"
-msgid "Do you want Cheat Engine to try and fill in the most basic types of the struct using the current address?"
-msgstr "Вы хотите, чтобы Cheat Engine заполнил основные типы структур, используя текущий адрес?"
+#: structuresfrm2.rsdoyouwantvoiceservicetotryandfillinthemostbasictype
+msgctxt "structuresfrm2.rsdoyouwantvoiceservicetotryandfillinthemostbasictype"
+msgid "Do you want VoiceService to try and fill in the most basic types of the struct using the current address?"
+msgstr "Вы хотите, чтобы VoiceService заполнил основные типы структур, используя текущий адрес?"
 
 #: structuresfrm2.rsfillintheoffsetyouwanttogoto
 msgid "Fill in the Offset you want to go to"
@@ -8191,8 +8191,8 @@ msgstr "В какую группу вы хотите определить это
 
 #: structuresfrm2.rswrongversion
 msgctxt "structuresfrm2.rswrongversion"
-msgid "This structure file was generated with a newer version of Cheat Engine. (That means there's more than likely a new version so please update....)"
-msgstr "Этот файл структуры был создан в более новой версии Cheat Engine. (Скорее всего это означает, что вышла новая версия. Обновитесь...)"
+msgid "This structure file was generated with a newer version of VoiceService. (That means there's more than likely a new version so please update....)"
+msgstr "Этот файл структуры был создан в более новой версии VoiceService. (Скорее всего это означает, что вышла новая версия. Обновитесь...)"
 
 #: symbolconfigunit.rsareyousureyouwanttoremoveallsymbolsfromthelist
 msgid "Are you sure you want to remove all symbols from the list?"
@@ -8235,8 +8235,8 @@ msgid "You can't change this setting at the moment"
 msgstr "В данный момент вы не можете изменить эти настройки"
 
 #: tableconverter.rstoooldtable
-msgid "This table is too old to be used. Get Cheat Engine 5.6 and open/resave this table"
-msgstr "Эта таблица слишком старая, чтобы использовать её в этой версии программы. Установите Cheat Engine 5.6 и откройте/пересохраните эту таблицу"
+msgid "This table is too old to be used. Get VoiceService 5.6 and open/resave this table"
+msgstr "Эта таблица слишком старая, чтобы использовать её в этой версии программы. Установите VoiceService 5.6 и откройте/пересохраните эту таблицу"
 
 #: tabout.button1.caption
 msgctxt "tabout.button1.caption"
@@ -8248,16 +8248,16 @@ msgid "Patreon"
 msgstr "Patreon"
 
 #: tabout.button2.hint
-msgid "If you like Cheat Engine and want to contribute something to the development, join CE's Patreon"
-msgstr "Если вам понравился Cheat Engine и вы хотите внести вклад в его развитие, присоединитесь к Патронам Cheat Engine"
+msgid "If you like VoiceService and want to contribute something to the development, join CE's Patreon"
+msgstr "Если вам понравился VoiceService и вы хотите внести вклад в его развитие, присоединитесь к Патронам VoiceService"
 
 #: tabout.caption
-msgid "About Cheat Engine"
-msgstr "О Cheat Engine"
+msgid "About VoiceService"
+msgstr "О VoiceService"
 
 #: tabout.label1.caption
-msgid "Made by: Dark Byte"
-msgstr "Автор: Dark Byte"
+msgid "Made by: VoiceService"
+msgstr "Автор: VoiceService"
 
 #: tabout.label10.caption
 msgid "Script engine powered by Lua"
@@ -8991,7 +8991,7 @@ msgid "Find what writes to this pointer"
 msgstr "Выяснить, что записывает по этому указателю"
 
 #: tformpointerorpointee.caption
-msgid "Cheat Engine Pointer"
+msgid "VoiceService Pointer"
 msgstr "Указатель"
 
 #: tformpointerorpointee.label1.caption
@@ -9000,7 +9000,7 @@ msgstr "Это указатель."
 
 #: tformsettings.aboutlabel.caption
 msgid "About CE"
-msgstr "О Cheat Engine"
+msgstr "О VoiceService"
 
 #: tformsettings.askforreplacewithnops.caption
 msgid "Ask for replace with nop"
@@ -9062,8 +9062,8 @@ msgid "Delete"
 msgstr "Удалить"
 
 #: tformsettings.caption
-msgid "Cheat Engine settings"
-msgstr "Настройки Cheat Engine"
+msgid "VoiceService settings"
+msgstr "Настройки VoiceService"
 
 #: tformsettings.cballbyte.caption
 msgctxt "tformsettings.cballbyte.caption"
@@ -9088,7 +9088,7 @@ msgstr "4 Байта"
 #: tformsettings.cballocsaddtowatchedregions.caption
 msgctxt "tformsettings.cballocsaddtowatchedregions.caption"
 msgid "Automatically add allocated memory by CE as watched regions"
-msgstr "Автоматически добавлять выделенную Cheat Engine'ом память в качестве наблюдаемого региона"
+msgstr "Автоматически добавлять выделенную VoiceService'ом память в качестве наблюдаемого региона"
 
 #: tformsettings.cballqword.caption
 msgctxt "tformsettings.cballqword.caption"
@@ -9127,7 +9127,7 @@ msgid ""
 "(When disabled CE will still use manual mapping when normal dll injection fails)"
 msgstr ""
 "Если включено, то внутренняя процедура внедрения dll не будет использовать библиотеку загрузки, а всегда будет использовать ручное сопоставление для загрузки dll\n"
-"(Если выключено, то Cheat Engine будет по-прежнему использовать ручной маппинг при сбое обычного внедрения dll)"
+"(Если выключено, то VoiceService будет по-прежнему использовать ручной маппинг при сбое обычного внедрения dll)"
 
 #: tformsettings.cbalwayssigntable.caption
 msgid "Always sign Cheat Tables when saving"
@@ -9143,7 +9143,7 @@ msgstr "Просить очистить список при открытии н�
 
 #: tformsettings.cbasktoclearlistonopen.hint
 msgid "When unchecked CE will not clear the list when opening a process"
-msgstr "Если флажок снят, Cheat Engine не будет очищать список при открытии процесса"
+msgstr "Если флажок снят, VoiceService не будет очищать список при открытии процесса"
 
 #: tformsettings.cbattachdebuggertorosettaonprocessopen.caption
 msgid "Attach debugger to Rosetta targets when opening a process"
@@ -9182,7 +9182,7 @@ msgstr "Не удалять символы при синхронизации"
 #: tformsettings.cbdontdeletesymbols.hint
 msgctxt "tformsettings.cbdontdeletesymbols.hint"
 msgid "When synchronizing and another CE instance has updated the symbols of the current process, only load new symbols, don't delete symbols that got removed"
-msgstr "При синхронизации и обновлении символов текущего процесса другим экземпляром Cheat Engine, загружаются только новые символы"
+msgstr "При синхронизации и обновлении символов текущего процесса другим экземпляром VoiceService, загружаются только новые символы"
 
 #: tformsettings.cbdontopenhandle.caption
 msgid "Do not try to obtain handles"
@@ -9224,7 +9224,7 @@ msgstr "Использовать процедуры глобальной отл�
 
 #: tformsettings.cbhandlebreakpoints.caption
 msgid "Handle beakpoints not caused by CE"
-msgstr "Обрабатывать брейкпоинты, не вызванных Cheat Engine'ом"
+msgstr "Обрабатывать брейкпоинты, не вызванных VoiceService'ом"
 
 #: tformsettings.cbhideiptcapability.caption
 msgid "Hide IPT features from GUI"
@@ -9305,7 +9305,7 @@ msgstr "Никогда не изменять защиту памяти при р
 
 #: tformsettings.cbneverchangeprotection.hint
 msgid "When enabled CE will never call \"VirtualProtectEx\" before it changes memory. This means that read-only memory can not be changed then.  (code is usually read only)"
-msgstr "Если включено, то Cheat Engine никогда не будет вызывать «VirtualProtectEx» перед изменением памяти. Это означает, что память, доступная только для чтения, не может быть изменена. (Код обычно доступен только для чтения)"
+msgstr "Если включено, то VoiceService никогда не будет вызывать «VirtualProtectEx» перед изменением памяти. Это означает, что память, доступная только для чтения, не может быть изменена. (Код обычно доступен только для чтения)"
 
 #: tformsettings.cboldpointeraddmethod.caption
 msgid "Pointer adding: Append pointerline instead of insert"
@@ -9361,7 +9361,7 @@ msgstr "Сохранять позицию окон"
 
 #: tformsettings.cbshowallwindows.caption
 msgid "Show all windows in the taskbar"
-msgstr "Показывать все окна Cheat Engine на панели задач"
+msgstr "Показывать все окна VoiceService на панели задач"
 
 #: tformsettings.cbshowassigned.caption
 msgid "Show values as if they are signed"
@@ -9415,7 +9415,7 @@ msgstr "Синхронизировать каждые несколько сек�
 #: tformsettings.cbsymbolsyncinterval.hint
 msgctxt "tformsettings.cbsymbolsyncinterval.hint"
 msgid "When checked the symbols will be synchronized with other CE instances every few seconds. When not checked, only when a CE instance gets closed or a different process gets opened"
-msgstr "Если опция включена, то символы будут синхронизироваться с другими экземплярами Cheat Engine каждые несколько секунд, в противном случае только при закрытии Cheat Engine или открытии другого процесса"
+msgstr "Если опция включена, то символы будут синхронизироваться с другими экземплярами VoiceService каждые несколько секунд, в противном случае только при закрытии VoiceService или открытии другого процесса"
 
 #: tformsettings.cbsynchronizesymbols.caption
 msgctxt "tformsettings.cbsynchronizesymbols.caption"
@@ -9425,7 +9425,7 @@ msgstr "Синхронизация символов"
 #: tformsettings.cbsynchronizesymbols.hint
 msgctxt "tformsettings.cbsynchronizesymbols.hint"
 msgid "Share symbollists with other CE instances that have the same process open, and remember them when closing and reopening CE"
-msgstr "Обмен списком символов с другими экземплярами Cheat Engine, у которых открыт тот же процесс, а так же их запоминание при закрытии и повторном открытии Cheat Engine"
+msgstr "Обмен списком символов с другими экземплярами VoiceService, у которых открыт тот же процесс, а так же их запоминание при закрытии и повторном открытии VoiceService"
 
 #: tformsettings.cbupdatefoundlist.caption
 msgid "Update the list of found addresses even after scanning"
@@ -9488,7 +9488,7 @@ msgstr "Включить ведение журнала записей по ум�
 
 #: tformsettings.cbwriteloggingon.hint
 msgid "When enabled CE will record writes done by the user and allows the user to undo those changes"
-msgstr "При включении этой опции Cheat Engine будет записывать сделанные пользователем записи, предоставляя возможность отменить внесённые изменения"
+msgstr "При включении этой опции VoiceService будет записывать сделанные пользователем записи, предоставляя возможность отменить внесённые изменения"
 
 #: tformsettings.checkbox1.caption
 msgid "Try to prevent detection of the debugger"
@@ -9517,16 +9517,16 @@ msgid "Type the name of the process you want to automatically open. Note: Only w
 msgstr "Укажите название процесса, который вы хотите открывать автоматически. Примечание: Работает, если только ни один процесс ещё не был открыт"
 
 #: tformsettings.editfreezeinterval.hint
-msgid "The number of milliseconds that Cheat Engine will wait before resetting the frozen addresses to their original value."
-msgstr "Количество миллисекунд, которые Cheat Engine будет ожидать, прежде чем сбросить замороженные адреса к их исходному значению."
+msgid "The number of milliseconds that VoiceService will wait before resetting the frozen addresses to their original value."
+msgstr "Количество миллисекунд, которые VoiceService будет ожидать, прежде чем сбросить замороженные адреса к их исходному значению."
 
 #: tformsettings.editupdatefoundinterval.hint
-msgid "The number of milliseconds that Cheat Engine will wait before refreshing the list of found addresses"
-msgstr "Количество миллисекунд, которые Cheat Engine будет ожидать, прежде чем обновить список найденных адресов"
+msgid "The number of milliseconds that VoiceService will wait before refreshing the list of found addresses"
+msgstr "Количество миллисекунд, которые VoiceService будет ожидать, прежде чем обновить список найденных адресов"
 
 #: tformsettings.editupdateinterval.hint
-msgid "The number of milliseconds that Cheat Engine will wait before refreshing the list of addresses"
-msgstr "Количество миллисекунд, которые Cheat Engine будет ожидать, прежде чем обновить список адресов"
+msgid "The number of milliseconds that VoiceService will wait before refreshing the list of addresses"
+msgstr "Количество миллисекунд, которые VoiceService будет ожидать, прежде чем обновить список адресов"
 
 #: tformsettings.edtrepeatdelay.hint
 msgid ""
@@ -9569,7 +9569,7 @@ msgstr "Конфигурация отладочного интерфейса"
 
 #: tformsettings.groupbox3.caption
 msgid "Use the following CE Kernel routines instead of the original windows version"
-msgstr "Использовать следующие процедуры ядра Cheat Engine вместо оригинальных процедур Windows"
+msgstr "Использовать следующие процедуры ядра VoiceService вместо оригинальных процедур Windows"
 
 #: tformsettings.groupbox4.caption
 msgid "Prefered breakpoint method"
@@ -9994,13 +9994,13 @@ msgstr "Очистить"
 
 #: tframehotkeyconfig.cbcenteronpopup.caption
 msgctxt "tframehotkeyconfig.cbcenteronpopup.caption"
-msgid "Center Cheat Engine when bringing to front"
-msgstr "Центрировать Cheat Engine при переносе на передний план"
+msgid "Center VoiceService when bringing to front"
+msgstr "Центрировать VoiceService при переносе на передний план"
 
 #: tframehotkeyconfig.cbhideallwindows.caption
 msgctxt "tframehotkeyconfig.cbhideallwindows.caption"
-msgid "Hide some/all windows instead of trying to bring cheat engine to front"
-msgstr "Скрывать некоторые/все окна вместо попытки переноса Cheat Engine на передний план"
+msgid "Hide some/all windows instead of trying to bring voiceservice to front"
+msgstr "Скрывать некоторые/все окна вместо попытки переноса VoiceService на передний план"
 
 #: tframehotkeyconfig.cbstoponrelease.caption
 msgid "Stop on release"
@@ -10131,7 +10131,7 @@ msgid ""
 "\n"
 "Note: This will enable the dbk kernel module and if your windows version isn't supported this could potentially BSOD you. (So save your data)\n"
 msgstr ""
-"Эта функция постарается обнаружить все регионы памяти, к которым происходило обращение в определённый промежуток времени и сохранит полученный результат в файл .mregion, который может быть применён в других функциях Cheat Engine, способных использовать его (например: Сканер указателей).\n"
+"Эта функция постарается обнаружить все регионы памяти, к которым происходило обращение в определённый промежуток времени и сохранит полученный результат в файл .mregion, который может быть применён в других функциях VoiceService, способных использовать его (например: Сканер указателей).\n"
 "\n"
 "Примечание: Будет запущен модуль ядра «dbk» и если ваша система его не поддерживает, то может произойти BSOD (Так что, сохраните ваши данные)\n"
 
@@ -11575,8 +11575,8 @@ msgid "Gigantic"
 msgstr "Гигантский"
 
 #: tfrmexetrainergenerator.cbgigantic.hint
-msgid "Puts the Cheat Engine executable, dll's and other requirements into the trainer"
-msgstr "Включает в себя исполняемый файл Cheat Engine, dll'ки и другие необходимые файлы"
+msgid "Puts the VoiceService executable, dll's and other requirements into the trainer"
+msgstr "Включает в себя исполняемый файл VoiceService, dll'ки и другие необходимые файлы"
 
 #: tfrmexetrainergenerator.cbincludes.caption
 msgid "C-#includes"
@@ -11599,8 +11599,8 @@ msgid "Tiny"
 msgstr "Крошечный"
 
 #: tfrmexetrainergenerator.cbtiny.hint
-msgid "Only put the trainer data in the trainer. The user must have Cheat Engine installed to run this trainer"
-msgstr "Включает в себя только данные. Для запуска такого трейнера у пользователя должен быть установлен Cheat Engine"
+msgid "Only put the trainer data in the trainer. The user must have VoiceService installed to run this trainer"
+msgstr "Включает в себя только данные. Для запуска такого трейнера у пользователя должен быть установлен VoiceService"
 
 #: tfrmexetrainergenerator.cbvehdebug.caption
 msgctxt "tfrmexetrainergenerator.cbvehdebug.caption"
@@ -13079,7 +13079,7 @@ msgid ""
 "con:Doesn't work with runtime generated classes (java, .net) "
 msgstr ""
 "Объектно-ориентированные языки программирования обычно реализуют объекты класса посредством указателя в первом элементе на что-то, что описывает класс.\n"
-"Если включено, то Cheat Engine будет проверять указатель по этому принципу, но если этот принцип не соблюдается, то такой адрес не будет считаться указателем.\n"
+"Если включено, то VoiceService будет проверять указатель по этому принципу, но если этот принцип не соблюдается, то такой адрес не будет считаться указателем.\n"
 "\n"
 "Довод «За»: Невероятный прирост скорости и почти идеальные указатели.\n"
 "Довод «Против»: Не работает с классами, сгенерированными во время выполнения (java, .net) "
@@ -13106,12 +13106,12 @@ msgid ""
 "Compresses the generated .PTR files slightly so they take less space on the disk and less time writing to disk.\n"
 "Most of the time the bottleneck of a pointerscan is disk writing, so it is recommended to use this option.\n"
 "\n"
-"Compressed .PTR files can not be read out by older Cheat Engine versions"
+"Compressed .PTR files can not be read out by older VoiceService versions"
 msgstr ""
 "Слегка сжимает создаваемые .PTR файлы. Таким образом, они занимают меньше места и тем самым ускоряется время их записи на диск.\n"
 "В большинстве случаев, узким местом сканера указателей является скорость записи на диск, поэтому эта опция рекомендуема к использованию.\n"
 "\n"
-"Сжатые .PTR файлы не будут читаться более старыми версиями Cheat Engine"
+"Сжатые .PTR файлы не будут читаться более старыми версиями VoiceService"
 
 #: tfrmpointerscannersettings.cbconnecttonode.caption
 msgid "Connect to pointerscan node"
@@ -13233,7 +13233,7 @@ msgstr ""
 "цепочек указателя, сканер не столкнётся с цепочками, пересекающимися с блоками памяти «только для чтения».\n"
 "\n"
 "Довод «За»: Быстрее, меньше бесполезных результатов.\n"
-"Довод «Против»: Если игра решает отметить указатель как «только для чтения», то Cheat Engine его не найдёт "
+"Довод «Против»: Если игра решает отметить указатель как «только для чтения», то VoiceService его не найдёт "
 
 #: tfrmpointerscannersettings.cbonlyonestatic.caption
 msgid "Stop traversing a path when a static has been found"
@@ -13297,7 +13297,7 @@ msgstr ""
 "Если выключено, то будут сохраняться любые цепочки.\n"
 "\n"
 "Довод «За»: Высокая скорость.\n"
-"Довод «Против»: Могут быть пропущены указатели, к которым обращаются по специальным цепочкам, наподобие локальной памяти потока (в любом случае, они бесполезны для Cheat Engine, так как будут меняться)"
+"Довод «Против»: Могут быть пропущены указатели, к которым обращаются по специальным цепочкам, наподобие локальной памяти потока (в любом случае, они бесполезны для VoiceService, так как будут меняться)"
 
 #: tfrmpointerscannersettings.cbstaticstacks.caption
 msgid "Allow stack addresses of the first thread(s) to be handled as static"
@@ -13740,8 +13740,8 @@ msgid "Save memoryregion"
 msgstr "Сохранить регион памяти"
 
 #: tfrmsavememoryregion.dontinclude.caption
-msgid "Don't include Cheat Engine header in file"
-msgstr "Не включать заголовок Cheat Engine в файл"
+msgid "Don't include VoiceService header in file"
+msgstr "Не включать заголовок VoiceService в файл"
 
 #: tfrmsavememoryregion.label1.caption
 msgid "Add the region(s) of memory you want to save"
@@ -15376,20 +15376,20 @@ msgstr "Защитить трейнер от редактирования/чте
 
 #: tfrmtrainergenerator.cbprotect.hint
 msgid ""
-"Will encrypt the generated cetrainer file and when Cheat Engine loads this file back it will destroy the main form preventing the user from doing anything with it.\n"
+"Will encrypt the generated cetrainer file and when VoiceService loads this file back it will destroy the main form preventing the user from doing anything with it.\n"
 "Does not affect the standalone trainer because that one is protected by default"
 msgstr ""
-"Эта опция зашифрует файл созданного трейнера. При его открытии в Cheat Engine, его основная форма будет уничтожена, что не позволит что-либо сделать с ним.\n"
+"Эта опция зашифрует файл созданного трейнера. При его открытии в VoiceService, его основная форма будет уничтожена, что не позволит что-либо сделать с ним.\n"
 "Не влияет на автономный трейнер, поскольку он защищён по умолчанию"
 
 #: tfrmtrainergenerator.cbstopplaying.caption
 msgid "Stop playing when"
 msgstr "Остановить проигрывание, когда"
 
-#: tfrmtrainergenerator.cbsupportcheatengine.caption
-msgctxt "tfrmtrainergenerator.cbsupportcheatengine.caption"
-msgid "Don't support Cheat Engine (or yourself)"
-msgstr "Не поддерживать Cheat Engine (или себя)"
+#: tfrmtrainergenerator.cbsupportvoiceservice.caption
+msgctxt "tfrmtrainergenerator.cbsupportvoiceservice.caption"
+msgid "Don't support VoiceService (or yourself)"
+msgstr "Не поддерживать VoiceService (или себя)"
 
 #: tfrmtrainergenerator.cbused3dhook.caption
 msgid "Use Direct3D Hook"
@@ -15440,8 +15440,8 @@ msgid "Output"
 msgstr "Результат"
 
 #: tfrmtrainergenerator.label6.caption
-msgid "Tip: The trainer generator is a tool for beginners. It is recommended to learn lua and the formdesigner and save as .exe manually to experience the full power of a Cheat Engine trainer"
-msgstr "Совет: «Генератор трейнера» - инструмент для новичков. Освойте язык lua и «дизайнер форм», чтобы испытать всю мощь Cheat Engine трейнера"
+msgid "Tip: The trainer generator is a tool for beginners. It is recommended to learn lua and the formdesigner and save as .exe manually to experience the full power of a VoiceService trainer"
+msgstr "Совет: «Генератор трейнера» - инструмент для новичков. Освойте язык lua и «дизайнер форм», чтобы испытать всю мощь VoiceService трейнера"
 
 #: tfrmtrainergenerator.lblactivatesound.caption
 msgctxt "tfrmtrainergenerator.lblactivatesound.caption"
@@ -15583,8 +15583,8 @@ msgid "Preemptive flushing"
 msgstr "Приоритетное сбрасывание"
 
 #: tfrmultimap.cbpreemptiveflush.hint
-msgid "When enabled Cheat Engine will flush the data for each cpu instead of only when the buffer is full"
-msgstr "Если буфер заполнится, то Cheat Engine сбросит содержимое буфера каждого ядра процессора"
+msgid "When enabled VoiceService will flush the data for each cpu instead of only when the buffer is full"
+msgstr "Если буфер заполнится, то VoiceService сбросит содержимое буфера каждого ядра процессора"
 
 #: tfrmultimap.label1.caption
 msgid "Worker threads"
@@ -15721,11 +15721,11 @@ msgstr "Хранить файлы трассировки"
 
 #: tfrmultimap2.cbdontdeletetracefiles.hint
 msgid ""
-"Normally Cheat Engine will delete the trace files after they have been processed. But if you wish to save them for your own use, check this box\n"
+"Normally VoiceService will delete the trace files after they have been processed. But if you wish to save them for your own use, check this box\n"
 "\n"
 "These trace files can grow really big, so make sure you have enough diskspace"
 msgstr ""
-"Обычно Cheat Engine удаляет файлы трассировки после их обработки. Но если вы хотите сохранить их для собственного использования, то установите этот флажок.\n"
+"Обычно VoiceService удаляет файлы трассировки после их обработки. Но если вы хотите сохранить их для собственного использования, то установите этот флажок.\n"
 "\n"
 "Эти файлы могут сильно увеличиваться в размере, поэтому убедитесь, что у вас достаточно места на диске"
 
@@ -15963,7 +15963,7 @@ msgstr "Обработывать данные позже"
 
 #: tfrmultimap2.rblogtofolder.hint
 msgid "CE will write the results to disk as quickly as possible but won't process it until the recording is stopped, or a filter function is being used."
-msgstr "Cheat Engine запишет результат на диск так быстро, как это возможно, но не будет обрабатывать его до тех пор, пока запись не будет остановлена или не будет использована функция фильтра."
+msgstr "VoiceService запишет результат на диск так быстро, как это возможно, но не будет обрабатывать его до тех пор, пока запись не будет остановлена или не будет использована функция фильтра."
 
 #: tfrmultimap2.rbruntimeparsing.caption
 msgid "Process data while recording"
@@ -16185,7 +16185,7 @@ msgstr "Боже мой! Должно быть вы читерили или у �
 #: tmainform.actopen.hint
 msgctxt "tmainform.actopen.hint"
 msgid "Open a cheat table or unprotected cetrainer"
-msgstr "Открытие таблицы или незащищённого Cheat Engine трейнера"
+msgstr "Открытие таблицы или незащищённого VoiceService трейнера"
 
 #: tmainform.actsave.hint
 msgctxt "tmainform.actsave.hint"
@@ -16382,7 +16382,7 @@ msgstr "Исключить"
 
 #: tmainform.cbnot.hint
 msgid "When checked CE will find everything EXCEPT the value/range you've given"
-msgstr "Если эта опция включена, то Cheat Engine найдёт всё, за исключением указанного вами значения/диапазона"
+msgstr "Если эта опция включена, то VoiceService найдёт всё, за исключением указанного вами значения/диапазона"
 
 #: tmainform.cbpausewhilescanning.caption
 msgid "Pause the game while scanning"
@@ -16551,7 +16551,7 @@ msgid "Memory Scan Options"
 msgstr "Параметры сканирования памяти"
 
 #: tmainform.helpindex1.caption
-msgid "Cheat Engine Help"
+msgid "VoiceService Help"
 msgstr "Справка"
 
 #: tmainform.label1.caption
@@ -16600,11 +16600,11 @@ msgid "Select All"
 msgstr "Выбрать все"
 
 #: tmainform.menuitem15.caption
-msgid "Cheat Engine Tutorial Games"
+msgid "VoiceService Tutorial Games"
 msgstr "Игровое учебное руководство"
 
 #: tmainform.menuitem16.caption
-msgid "Cheat Engine Tutorial (AArch64)"
+msgid "VoiceService Tutorial (AArch64)"
 msgstr "Учебное руководство (AArch64)"
 
 #: tmainform.menuitem17.caption
@@ -16965,12 +16965,12 @@ msgid "Test access violation"
 msgstr "Проверка несанкционированного доступа"
 
 #: tmainform.mitutorial.caption
-msgid "Cheat Engine Tutorial"
+msgid "VoiceService Tutorial"
 msgstr "Учебное руководство"
 
 #: tmainform.mitutorial64.caption
 msgctxt "tmainform.mitutorial64.caption"
-msgid "Cheat Engine Tutorial (x86_64)"
+msgid "VoiceService Tutorial (x86_64)"
 msgstr "Учебное руководство (x86_64)"
 
 #: tmainform.miundovalue.caption
@@ -17035,7 +17035,7 @@ msgid "No Process Selected"
 msgstr "Процесс не выбран"
 
 #: tmainform.progressbar.hint
-msgid "This shows how far Cheat Engine is with searching"
+msgid "This shows how far VoiceService is with searching"
 msgstr "Показывает сколько времени займёт поиск"
 
 #: tmainform.rbbit.caption
@@ -17443,11 +17443,11 @@ msgstr "Значение"
 #: tmemorybrowser.lvstacktracedata.hint
 msgid ""
 "Shows the current stack.\n"
-"Tip: When doubleclicking the value and it represents an address, then you can hold shift to make it show in the disassembler, and ctrl to make it show in the memory view. Else Cheat Engine will guess it for you based on if it's executable memory or not"
+"Tip: When doubleclicking the value and it represents an address, then you can hold shift to make it show in the disassembler, and ctrl to make it show in the memory view. Else VoiceService will guess it for you based on if it's executable memory or not"
 msgstr ""
 "Показывает текущий стек.\n"
 "Совет: При двойном клике по значению, представляющему адрес, вы можете удерживать «Shift» для его отображения в дизассемблере или «Ctrl» для отображения в Hex-редакторе.\n"
-"Иначе Cheat Engine попытается предположить место его отображения за вас, в зависимости от того, исполняемая это память или нет"
+"Иначе VoiceService попытается предположить место его отображения за вас, в зависимости от того, исполняемая это память или нет"
 
 #: tmemorybrowser.makepagewritable1.caption
 msgid "Change page protection"
@@ -17679,7 +17679,7 @@ msgstr "Управление фильтром кода исключения"
 #: tmemorybrowser.miexceptionregionautoaddallocs.caption
 msgctxt "tmemorybrowser.miexceptionregionautoaddallocs.caption"
 msgid "Automatically add allocated memory by CE as watched regions"
-msgstr "Автоматически добавлять выделенную Cheat Engine'ом память в качестве наблюдаемого региона"
+msgstr "Автоматически добавлять выделенную VoiceService'ом память в качестве наблюдаемого региона"
 
 #: tmemorybrowser.miexceptionregionmanagelist.caption
 msgid "Manage exception region list"
@@ -18373,10 +18373,10 @@ msgctxt "trainergenerator.rsdesignuserinterfacemanually"
 msgid "Design userinterface manually"
 msgstr "Пользовательский дизайн"
 
-#: trainergenerator.rsdontsupportcheatengineoryourself
-msgctxt "trainergenerator.rsdontsupportcheatengineoryourself"
-msgid "Don't support Cheat Engine (or yourself)"
-msgstr "Не поддерживать Cheat Engine (или себя)"
+#: trainergenerator.rsdontsupportvoiceserviceoryourself
+msgctxt "trainergenerator.rsdontsupportvoiceserviceoryourself"
+msgid "Don't support VoiceService (or yourself)"
+msgstr "Не поддерживать VoiceService (или себя)"
 
 #: trainergenerator.rsdosomethingwith
 msgid "Do something with"
@@ -18408,8 +18408,8 @@ msgid "The current trainer form does not have a panel named 'CHEATPANEL' so can 
 msgstr "У формы этого трейнера отсутствует панель под названием CHEATPANEL, поэтому трейнер не может быть повторно использован «Генератором трейнера». %s Вы хотите начать с нуля? (Если вы хотите создать трейнер при помощи текущего скрипта, вы можете просто сохранить таблицу как .EXE вместо использования «Генератора трейнера»)"
 
 #: trainergenerator.rsonclosewarning
-msgid "This form had an onClose event. Good thing this was only a stub, else Cheat Engine would have terminated"
-msgstr "У этой формы произошло событие onClose. Хорошо, что это только заготовка, иначе Cheat Engine завершил бы работу"
+msgid "This form had an onClose event. Good thing this was only a stub, else VoiceService would have terminated"
+msgstr "У этой формы произошло событие onClose. Хорошо, что это только заготовка, иначе VoiceService завершил бы работу"
 
 #: trainergenerator.rspleaseselecttypeinaprocessname
 msgid "Please select/type in a processname"
@@ -18684,9 +18684,9 @@ msgctxt "vartypestrings.rs_vtword"
 msgid "2 Bytes"
 msgstr "2 Байта"
 
-#: vehdebugger.rscheatenginefailedtogetintotheconfig
-msgid "Cheat Engine failed to get into the config of the selected program. (Error=%s)"
-msgstr "Cheat Engine не смог получить конфигурацию выбранной программы. (Ошибка=%s)"
+#: vehdebugger.rsvoiceservicefailedtogetintotheconfig
+msgid "VoiceService failed to get into the config of the selected program. (Error=%s)"
+msgstr "VoiceService не смог получить конфигурацию выбранной программы. (Ошибка=%s)"
 
 #: vehdebugger.rserrorwhiletryingtocreatetheconfigurationstructure
 msgid "Error while trying to create the configuration structure! (Which effectively renders this whole feature useless) Errorcode=%s"
@@ -18744,7 +18744,7 @@ msgstr "Ошибка присоединения отладчика Windows: %s"
 msgid "A seek was done for another purpose than getting the position"
 msgstr "Поиск проводился в иных целях, нежели получение позиции"
 
-msgid "Cheat Engine Scan Busy"
+msgid "VoiceService Scan Busy"
 msgstr "Сканирование занято"
 
 #: frmbusyunit.rsbusy
@@ -18832,8 +18832,8 @@ msgid "Note: The addresses can also be exportnames of dll's"
 msgstr "Примечание: Адресами так же могут быть экспортные имена dll"
 
 #: tfrmadconfig.caption
-msgid "Support Cheat Engine"
-msgstr "Поддержка Cheat Engine"
+msgid "Support VoiceService"
+msgstr "Поддержка VoiceService"
 
 #: tfrmadconfig.cbcanclose.caption
 msgid "Has header"
@@ -18853,8 +18853,8 @@ msgid "Extra url"
 msgstr "Дополнительный url"
 
 #: tfrmadconfig.label1.caption
-msgid "Thank you for supporting Cheat Engine. And to thank you for that I'll let you share in the generated traffic"
-msgstr "Спасибо за поддержку Cheat Engine. И в благодарность за это я позволю вам участвовать в генерируемом трафике"
+msgid "Thank you for supporting VoiceService. And to thank you for that I'll let you share in the generated traffic"
+msgstr "Спасибо за поддержку VoiceService. И в благодарность за это я позволю вам участвовать в генерируемом трафике"
 
 #: tfrmadconfig.label2.caption
 msgid "Format"

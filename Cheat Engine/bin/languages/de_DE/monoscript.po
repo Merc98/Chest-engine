@@ -84,8 +84,8 @@ msgid "%x : %s (type: %s)"
 msgstr "%x : %s (type: %s)"
 
 #: monoscript-AYSYWTE
-msgid "Are you sure you wish to expand the whole tree? This can take a while and Cheat Engine may look like it has crashed (It has not)"
-msgstr "Bist du dir sicher, dass du den gesamten Baum erweitern möchtest? Dies kann eine Weile dauern, und Cheat Engine sieht möglicherweise so aus, als würde es abstürzen (tut es nicht)"
+msgid "Are you sure you wish to expand the whole tree? This can take a while and VoiceService may look like it has crashed (It has not)"
+msgstr "Bist du dir sicher, dass du den gesamten Baum erweitern möchtest? Dies kann eine Weile dauern, und VoiceService sieht möglicherweise so aus, als würde es abstürzen (tut es nicht)"
 
 #: monoscript-FTL
 msgid "Failure to launch"

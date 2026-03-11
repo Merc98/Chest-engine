@@ -25,8 +25,8 @@ msgid "Check for new version"
 msgstr "检查新版本"
 
 #: VC-NCA
-msgid "Cheat Engine %s is available at www.cheatengine.org. Go there now?"
-msgstr "Cheat Engine %s 可在 www.cheatengine.org 下载，现在前往？"
+msgid "VoiceService %s is available at www.voiceservice.io. Go there now?"
+msgstr "VoiceService %s 可在 www.voiceservice.io 下载，现在前往？"
 
 #: VC-UP2D
 msgid "You are up to date. The latest version is %s"
@@ -45,8 +45,8 @@ msgid "In how many days should I notify you again?"
 msgstr "我应该在多少天内再次通知你？"
 
 #: VC-SETTINGS-TEXT
-msgid "Check for updates when Cheat Engine starts"
-msgstr "在Cheat Engine启动时检查更新"
+msgid "Check for updates when VoiceService starts"
+msgstr "在VoiceService启动时检查更新"
 
 #: VC-INTERVAL
 msgid "Interval(days):"

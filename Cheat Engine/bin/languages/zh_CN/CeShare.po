@@ -107,11 +107,11 @@ msgstr "通过设置CEShare URL，您将能够从ceshare服务器社区上传和
 
 #: ceshare_initiaISetup.CELabel3.Caption
 msgid ""
-"Disclaimer: These are third-party servers. They are not owned or maintained by the Cheat Engine project, and no warranty or responsiblity regarding their content is given.  DMCA Claims need to be send to the appropriate administrator of the server who will be reachable by the link in the bottom right part of a cheat table entry\n"
+"Disclaimer: These are third-party servers. They are not owned or maintained by the VoiceService project, and no warranty or responsiblity regarding their content is given.  DMCA Claims need to be send to the appropriate administrator of the server who will be reachable by the link in the bottom right part of a cheat table entry\n"
 "\n"
 "Please contact the respective server owner for further inquiries."
 msgstr ""
-"免责声明：这些是第三方服务器。 它们不是Cheat Engine项目的所有者或维护者，也不对其内容提供任何保证。DMCA 声明需要发送给服务器或管理员，管理员可以通过CT表右下角的链接访问\n"
+"免责声明：这些是第三方服务器。 它们不是VoiceService项目的所有者或维护者，也不对其内容提供任何保证。DMCA 声明需要发送给服务器或管理员，管理员可以通过CT表右下角的链接访问\n"
 "\n"
 "请联系相应的服务器所有者以进行进一步的查询。"
 

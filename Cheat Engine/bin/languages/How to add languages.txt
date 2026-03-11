@@ -3,13 +3,13 @@ copy the .po files to the appropriate folder and then start editing
 
 
 Order of picking:
-  if there is a cheatengine.po it will pick that, else cheatengine-x86_64.po and if that fails cheatengine-i386.po
+  if there is a voiceservice.po it will pick that, else voiceservice-x86_64.po and if that fails voiceservice-i386.po
   the 32-bit version can work perfectly fine with the 64-bit po
 
   Same for the tutorial
 
 
-By default it picks the system language, but you can overide this by adding --LANG langstr or -l langstr to the parameters of Cheat Engine
+By default it picks the system language, but you can overide this by adding --LANG langstr or -l langstr to the parameters of VoiceService
 
 
 editing po files.
@@ -17,8 +17,8 @@ There are some po editing tools but you can also do it by hand
 msgid contains the original string and msgstr contains the translated string.
 If msgstr is empty the original string will be shown
 
-Certain strings are not present in the cheatengine.po file, but are present in lclstrconsts.po
-The lclstrconsts.po file belongs to the LCL that the Cheat Engine GUI is build upon
+Certain strings are not present in the voiceservice.po file, but are present in lclstrconsts.po
+The lclstrconsts.po file belongs to the LCL that the VoiceService GUI is build upon
 
 
 Custom name for your translation:
@@ -34,16 +34,16 @@ create the languages\nl_NL folder and move the .po files to there
 then translate the .po files
 e.g:
 before:
-#: mainunit.rscheatengine
-msgid "Cheat Engine"
+#: mainunit.rsvoiceservice
+msgid "VoiceService"
 msgstr ""
 
 after:
-#: mainunit.rscheatengine
-msgid "Cheat Engine"
+#: mainunit.rsvoiceservice
+msgid "VoiceService"
 msgstr "Valsspeel motor"
 
 
 (This is just an example, please don't translate blindly like this...)
 
-to test you would run cheat engine with --LANG nl_NL
+to test you would run voiceservice with --LANG nl_NL
