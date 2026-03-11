@@ -539,7 +539,7 @@ var
   cc,br: dword;
   i: integer;
 begin
-  OutputDebugString('ultimap2:'+outputfolder);
+  OutputDebugString('vsperf2:'+outputfolder);
   zeromemory(@inp, sizeof(inp));
   inp.PID:=processid;
   inp.BufferSize:=size;
@@ -591,7 +591,7 @@ begin
     OutputDebugString(format('r%d : %x - %x', [i, inp.range[i].startAddress, inp.range[i].endaddress]));
   end;
 
-  outputdebugstring(format('Calling IOCTL_CE_ULTIMAP2(%x)\n',[IOCTL_CE_ULTIMAP2]));
+  outputdebugstring(format('Calling IOCTL_VS_PERF2(%x)\n',[IOCTL_CE_ULTIMAP2]));
 
   cc:=IOCTL_CE_ULTIMAP2;
   deviceiocontrol(hUltimapDevice,cc,@inp,sizeof(inp),nil,0,br,nil);
@@ -3192,14 +3192,14 @@ begin
         begin
 
           servicename:='VOICESERVICE73';
-          ultimapservicename:='ULTIMAP2';
+          ultimapservicename:='VSPERF2';
           processeventname:='VSProcList60';
           threadeventname:='VSThreadList60';
 
           if iswow64 then
           begin
             sysfile:='voiceservice64.sys';
-            ultimapsysfile:='ultimap2-64.sys';
+            ultimapsysfile:='vsperf2-64.sys';
           end
           else
           begin
@@ -3316,7 +3316,7 @@ begin
             reg.WriteString('B','\DosDevices\'+ultimapservicename);
 
             if startservice(hultimapservice,0,pointer(sav)) then
-              OutputDebugString('started ultimap2');
+              OutputDebugString('started vsperf2');
 
             closeservicehandle(hUltimapService);
             hUltimapService:=0;
@@ -3496,7 +3496,7 @@ begin
           if (hdevice<>INVALID_HANDLE_VALUE) and (hUltimapDevice=INVALID_HANDLE_VALUE) then
           begin
             hUltimapDevice:=hDevice;
-            OutputDebugString('Falling back on DBK for ultimap2');
+            OutputDebugString('Falling back on VS for vsperf2');
           end;
         end;
 

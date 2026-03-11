@@ -240,7 +240,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -252,7 +252,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -270,7 +270,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -288,7 +288,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -300,7 +300,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -318,7 +318,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -336,7 +336,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -351,7 +351,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -370,7 +370,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -389,7 +389,7 @@
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -426,7 +426,7 @@ makecab /f "$(ProjectDir)\ultimap2-64.ddf"
       <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <PostBuildEvent>
-      <Command>copy $(TargetPath) "d:\svn\cheat engine\bin\ultimap2-64.sys"</Command>
+      <Command>copy $(TargetPath) "d:\svn\voiceservice\bin\vsperf2-64.sys"</Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>copy to ce bin folder</Message>
@@ -440,7 +440,7 @@ makecab /f "$(ProjectDir)\ultimap2-64.ddf"
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Inf Include="ultimap2-64.inf" />
+    <Inf Include="vsperf2-64.inf" />
   </ItemGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />

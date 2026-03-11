@@ -346,7 +346,7 @@ begin
 
 
       try
-        s:='ULTIMAP2';
+        s:='VSPERF2';
         getmem(apppath,250);
         GetModuleFileName(0,apppath,250);
 

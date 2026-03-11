@@ -69,7 +69,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="ultimap2-64.inf">
+    <Inf Include="vsperf2-64.inf">
       <Filter>Driver Files</Filter>
     </Inf>
   </ItemGroup>

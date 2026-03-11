@@ -16,6 +16,6 @@
 .Set DestinationDir=ultimap2-64
 ;Specify files to be included in cab file
 WdfCoinstaller01009.dll
-ultimap2-64.sys
+vsperf2-64.sys
 ultimap2-64.Inf
 ultimap2-64.PDB
