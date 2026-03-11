@@ -567,7 +567,7 @@ NTSTATUS DispatchCreate(IN PDEVICE_OBJECT DeviceObject,
 	}
 	else
 	{
-		DbgPrint("A process without SeDebugPrivilege tried to open the dbk driver\n");
+		DbgPrint("A process without SeDebugPrivilege tried to open the vs driver\n");
 		Irp->IoStatus.Status = STATUS_UNSUCCESSFUL;
 	}
 

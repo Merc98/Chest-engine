@@ -252,7 +252,7 @@ NTSTATUS DispatchCreate(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	}
 	else
 	{
-		DbgPrint("A process without SeDebugPrivilege tried to open the dbk driver\n");
+		DbgPrint("A process without SeDebugPrivilege tried to open the vs driver\n");
 		Irp->IoStatus.Status = STATUS_UNSUCCESSFUL;
 	}
 
@@ -286,7 +286,7 @@ NTSTATUS DispatchClose(IN PDEVICE_OBJECT DeviceObject,
 NTSTATUS DispatchPnP(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
 	PIO_STACK_LOCATION stack;
-	DbgPrint("DBK:DispatchPnP\n");
+	DbgPrint("VS:DispatchPnP\n");
 	stack = IoGetCurrentIrpStackLocation(Irp);
 
 	DbgPrint("MinorFunction=%d\n", stack->MinorFunction);

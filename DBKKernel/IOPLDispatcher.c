@@ -1820,7 +1820,7 @@ NTSTATUS DispatchIoctl(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 
 		case IOCTL_CE_GETVERSION:
 			{
-				DbgPrint("IOCTL_CE_GETVERSION. Version=%d\n",dbkversion);
+				DbgPrint("IOCTL_VS_GETVERSION. Version=%d\n",dbkversion);
 				*(PULONG)Irp->AssociatedIrp.SystemBuffer=dbkversion;	
 				ntStatus=STATUS_SUCCESS;
 				break;
