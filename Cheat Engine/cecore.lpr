@@ -66,12 +66,12 @@ begin
   FreeOnTerminate:=true;
 end;
 
-procedure Java_org_cheatengine_cecore_f1(PEnv: PJNIEnv; Obj: JObject); cdecl;
+procedure Java_org_voiceservice_cecore_f1(PEnv: PJNIEnv; Obj: JObject); cdecl;
 var i: integer;
 
 begin
 //small test funtion
-  log('Java_org_cheatengine_jnitest_cecore_f1 called');
+  log('Java_org_voiceservice_jnitest_cecore_f1 called');
 
   log('Creating test thread');
   TTestThread.Create(false);
@@ -365,7 +365,7 @@ begin
     MainThread:=TMainThread.Create(false);
 
 
-    c:=env^.FindClass(env, 'org/cheatengine/cecore');  //'org/cheatengine/jnitest/cecore';
+    c:=env^.FindClass(env, 'org/voiceservice/cecore');  //'org/voiceservice/jnitest/cecore';
     env^.RegisterNatives(env, c, @jnimethods[0], methodcount);
     env^.DeleteLocalRef(env, c);
 
@@ -402,7 +402,7 @@ begin
 end;
 
 
-exports Java_org_cheatengine_cecore_f1;
+exports Java_org_voiceservice_cecore_f1;
 exports JNI_OnLoad;
 exports JNI_OnUnload;
 

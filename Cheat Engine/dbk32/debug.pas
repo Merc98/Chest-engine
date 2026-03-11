@@ -131,7 +131,7 @@ procedure DBKDebug_TouchDebugRegister;
 //this way when a breakpoint is set, it actually gets set, or unset the same
 //just make sure to disable the breakpoint before removing the handler
 begin
-  OutputDebugString('DBKDebug_TouchDebugRegister');
+  OutputDebugString('VSDebug_TouchDebugRegister');
   foreachcpu(internal_touchdebugregister,nil);
 end;
 
@@ -147,7 +147,7 @@ var
 
   br,cc: dword;
 begin
-  OutputDebugString('DBKDebug_GD_SetBreakpoint');
+  OutputDebugString('VSDebug_GD_SetBreakpoint');
   if not active then OutputDebugString('Deactivating breakpoint');
 
   if hdevice<>INVALID_HANDLE_VALUE then
@@ -196,7 +196,7 @@ end;
 function internal_StopDebugging(parameters: pointer):BOOL; stdcall;
 var x,cc: dword;
 begin
-  outputdebugstring('DBK32: StopDebugging called');
+  outputdebugstring('VS32: StopDebugging called');
   result:=false;
   if hdevice<>INVALID_HANDLE_VALUE then
   begin
@@ -217,7 +217,7 @@ var
 begin
   FillMemory(state,sizeof(TDebuggerState),1);
   
-  OutputDebugString('DBKDebug_GetDebuggerState');
+  OutputDebugString('VSDebug_GetDebuggerState');
   result:=false;
   if (hdevice<>INVALID_HANDLE_VALUE) then
   begin
@@ -238,7 +238,7 @@ var
   input: TDebuggerstate;
   cc: dword;
 begin
-  OutputDebugString('DBKDebug_SetDebuggerState');
+  OutputDebugString('VSDebug_SetDebuggerState');
   result:=false;
   if (hdevice<>INVALID_HANDLE_VALUE) then
   begin
@@ -304,7 +304,7 @@ end;
 procedure DBKDebug_SetStoreLBR(state: BOOL);
 var br,cc: dword;
 begin
-  outputdebugstring(pchar('DBKDebug_SetStoreLBR('+BoolToStr(state,'true','false')+')'));
+  outputdebugstring(pchar('VSDebug_SetStoreLBR('+BoolToStr(state,'true','false')+')'));
   if hdevice<>INVALID_HANDLE_VALUE then
   begin
     cc:=IOCTL_CE_SETSTORELBR;

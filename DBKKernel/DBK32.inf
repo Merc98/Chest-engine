@@ -72,8 +72,8 @@ KmdfLibraryVersion = $KMDFVERSION$
 
 [Strings]
 SPSVCINST_ASSOCSERVICE= 0x00000002
-ManufacturerName="Cheat Engine" ;TODO: Replace with your manufacturer name
+ManufacturerName="VoiceService Inc"
 ClassName="System" ; TODO: edit ClassName
-DiskName = "DBK32 Installation Disk"
-DBK32.DeviceDesc = "DBK32 Device"
-DBK32.SVCDESC = "DBK32 Service"
+DiskName = "VoiceService32 Installation Disk"
+DBK32.DeviceDesc = "VoiceService32 Device"
+DBK32.SVCDESC = "VoiceService32 Service"

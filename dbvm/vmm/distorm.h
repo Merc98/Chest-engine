@@ -35,7 +35,7 @@ This file is used in win32proj and linuxproj.
 	#ifdef _MSC_VER
 		#define OFFSET_INTEGER unsigned __int64
 	#else
-    #ifndef DARKBYTESFUCKEDUPCROSSCOMPILER
+    #ifndef VSCROSSCOMPILER
       #include <stdint.h>
     #endif
 		#define OFFSET_INTEGER uint64_t

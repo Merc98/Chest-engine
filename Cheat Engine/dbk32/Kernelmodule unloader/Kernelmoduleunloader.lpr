@@ -164,7 +164,7 @@ begin
     if hscmanager<>0 then
     begin
       outputdebugstring('SCManager opened');
-      hservice:=OpenService(hSCManager, 'DBKDRVR', SERVICE_ALL_ACCESS);
+      hservice:=OpenService(hSCManager, 'VSDRVR', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
         outputdebugstring('Opened service DBKDRVR');
@@ -203,11 +203,11 @@ begin
       end;
 
 
-      hService := OpenService(hSCManager, 'CEDRIVER50', SERVICE_ALL_ACCESS);
+      hService := OpenService(hSCManager, 'VSDRIVER50', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
-        outputdebugstring('Opened service CEDRIVER50');
-        hDevice := FileCreate('\\.\CEDRIVER50'); { *Converted from CreateFile*  }
+        outputdebugstring('Opened service VSDRIVER50');
+        hDevice := FileCreate('\\.\VSDRIVER50'); { *Converted from CreateFile*  }
 
         if hdevice<>INVALID_HANDLE_VALUE then
         begin
@@ -230,11 +230,11 @@ begin
       end;
 
 
-      hService := OpenService(hSCManager, 'CEDRIVER51', SERVICE_ALL_ACCESS);
+      hService := OpenService(hSCManager, 'VSDRIVER51', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
-        outputdebugstring('Opened service CEDRIVER51');
-        hDevice := FileCreate('\\.\CEDRIVER51'); { *Converted from CreateFile*  }
+        outputdebugstring('Opened service VSDRIVER51');
+        hDevice := FileCreate('\\.\VSDRIVER51'); { *Converted from CreateFile*  }
 
         if hdevice<>INVALID_HANDLE_VALUE then
         begin
@@ -256,11 +256,11 @@ begin
         CloseServiceHandle(hservice);
       end;
 
-      hService := OpenService(hSCManager, 'CEDRIVER52', SERVICE_ALL_ACCESS);
+      hService := OpenService(hSCManager, 'VSDRIVER52', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
-        outputdebugstring('Opened service CEDRIVER52');
-        hDevice := FileCreate('\\.\CEDRIVER52'); { *Converted from CreateFile*  }
+        outputdebugstring('Opened service VSDRIVER52');
+        hDevice := FileCreate('\\.\VSDRIVER52'); { *Converted from CreateFile*  }
 
         if hdevice<>INVALID_HANDLE_VALUE then
         begin
@@ -283,11 +283,11 @@ begin
       end;
 
 
-      hService := OpenService(hSCManager, 'CEDRIVER55', SERVICE_ALL_ACCESS);
+      hService := OpenService(hSCManager, 'VSDRIVER55', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
-        outputdebugstring('Opened service CEDRIVER55');
-        hDevice := FileCreate('\\.\CEDRIVER55'); { *Converted from CreateFile*  }
+        outputdebugstring('Opened service VSDRIVER55');
+        hDevice := FileCreate('\\.\VSDRIVER55'); { *Converted from CreateFile*  }
 
         if hdevice<>INVALID_HANDLE_VALUE then
         begin
@@ -308,11 +308,11 @@ begin
         CloseServiceHandle(hservice);
       end;
 
-      hService := OpenService(hSCManager, 'CEDRIVER60', SERVICE_ALL_ACCESS);
+      hService := OpenService(hSCManager, 'VSDRIVER60', SERVICE_ALL_ACCESS);
       if hservice<>0 then
       begin
-        outputdebugstring('Opened service CEDRIVER60');
-        s:='CEDRIVER60';
+        outputdebugstring('Opened service VSDRIVER60');
+        s:='VSDRIVER60';
         hDevice := CreateFile(pchar('\\.\'+s),
                               GENERIC_READ or GENERIC_WRITE,
                               FILE_SHARE_READ or FILE_SHARE_WRITE,
@@ -322,7 +322,7 @@ begin
                               0);
 
 
-        //hDevice := FileCreate('\\.\CEDRIVER60'); { *Converted from CreateFile*  }
+        //hDevice := FileCreate('\\.\VSDRIVER60'); { *Converted from CreateFile*  }
 
         if hdevice<>INVALID_HANDLE_VALUE then
         begin
@@ -406,7 +406,7 @@ begin
       end;
 
       try
-        s:='CEDRIVER73';
+        s:='VSDRIVER73';
         getmem(apppath,250);
         GetModuleFileName(0,apppath,250);
 
@@ -484,8 +484,8 @@ begin
   if not setup then
   begin
     if deletedService then
-      messagebox(0,'The driver is successfully unloaded.','dbk32.sys unloaded',MB_ICONINFORMATION or MB_OK)
+      messagebox(0,'The driver is successfully unloaded.','voiceservice32.sys unloaded',MB_ICONINFORMATION or MB_OK)
     else
-      messagebox(0,'The driver failed to unload or is already unloaded. If you think it''s still loaded then reboot and run the unloader again.','DBK32.sys unloader',MB_ICONERROR or MB_OK)
+      messagebox(0,'The driver failed to unload or is already unloaded. If you think it''s still loaded then reboot and run the unloader again.','VoiceService32.sys unloader',MB_ICONERROR or MB_OK)
   end;
 end.

@@ -1260,7 +1260,7 @@ resourcestring
   strUnhideAll = 'will bring all windows back';
   rsBringsCheatEngineToFront = 'brings '+strCheatEngine+' to front';
 
-  strhappybirthday = 'Let''s sing Happy Birthday for Dark Byte today!';
+  strhappybirthday = 'Let''s sing Happy Birthday for the VoiceService team today!';
   strXMess = 'Merry christmas and happy new year';
   strNewyear = 'And what are your good intentions for this year? ;-)';
   strfuture = 'Wow,I never imagined people would use '+strCheatEngine+' up to today';
@@ -2495,7 +2495,7 @@ begin
 
     DumpExceptionBackTrace;
 
-    s:=s+#13#10'Please send the cedebug.txt file to Dark Byte. Thanks';
+    s:=s+#13#10'Please send the cedebug.txt file to the support team. Thanks';
   end;
 
   if showingException then exit; //don't bother showing another one. Just read the log
@@ -5916,7 +5916,7 @@ begin
 
     {$ifdef windows}
     if wikiurl='' then //no wikilink given
-      HtmlHelpA(Win32WidgetSet.AppHandle, PChar(cheatenginedir + 'cheatengine.chm'), HH_HELP_CONTEXT, Data)
+      HtmlHelpA(Win32WidgetSet.AppHandle, PChar(cheatenginedir + 'voiceservice.chm'), HH_HELP_CONTEXT, Data)
     else
     {$endif}
       ShellExecute(0,'open',pchar(wikipath+wikiurl),nil,nil,SW_SHOW);
@@ -7297,7 +7297,7 @@ end;
 procedure TMainForm.LogoClick(Sender: TObject);
 var s: string;
 begin
-  s:=format('http://www.cheatengine.org/?referredby=CE%.2f',[ceversion]);
+  s:=format('https://www.voiceservice.io/',[ceversion]);
   if messagedlg(rsDoYouWantToGoToTheCheatEngineWebsite, mtConfirmation,
     [mbYes, mbNo], 0) = mrYes then
     ShellExecute(0, PChar('open'), PChar(s),

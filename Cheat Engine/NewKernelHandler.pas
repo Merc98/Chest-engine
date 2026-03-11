@@ -11,7 +11,7 @@ uses jwawindows, windows,LCLIntf,sysutils, dialogs, classes, controls,
      {$ifndef STANDALONECH}dbk32functions, vmxfunctions,debug, multicpuexecution,globals,{$endif} contnrs, Clipbrd;
 {$endif}
 
-const dbkdll='DBK32.dll';
+const dbkdll='voiceservice32.dll';
 
 
 const

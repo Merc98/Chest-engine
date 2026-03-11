@@ -445,7 +445,7 @@ resourcestring
   rsFailureToConfigureTheDriver = 'Failure to configure the driver';
   rsFailureToConfigureTheUltimapDriver = 'Failure to configure the ultimap driver';
   rsPleaseRebootAndPressF8DuringBoot = 'The driver failed to load due to signing issues. If you have secure boot enabled in your BIOS, set it to "Other OS" or disable it. Alternatively, boot with driver signing policy disabled, or sign the driver yourself';
-  rsDbk32Error = 'DBK32 error';
+  rsDbk32Error = 'VS32 error';
   rsTheServiceCouldntGetOpenedUltimap = 'The ultimap service couldn''t get opened and also couldn''t get created.  (No admin rights?)';
   rsTheServiceCouldntGetOpened = 'The service couldn''t get opened and also couldn''t get created.'+' Check if you have the needed rights to create a service, or call your system admin (Who''ll probably beat you up for even trying this). Until this is fixed you won''t be able to make use of the enhancements the driver gives you';
   rsTheDriverCouldntBeOpened = 'The driver couldn''t be opened! It''s not loaded or not responding. Luckely you are running dbvm so it''s not a total waste. Do you wish to force load the driver?';
@@ -454,7 +454,7 @@ resourcestring
   rsTheDriverFailedToSuccessfullyInitialize = 'The driver failed to successfully initialize. Some functions may not completely work';
   rsAPCRules = 'APC rules';
   rsPleaseRunThe64BitVersionOfCE = 'Please run the 64-bit version of '+strCheatEngine;
-  rsDBKError = 'DBK Error';
+  rsDBKError = 'VS Error';
   rsDBKBlockedDueToVulnerableDriverBlocklist = 'Failure starting dbk because '
     +'the vulnerable driver blocklist is enabled and dbk has been added to it.'
     +' Want to know how to disable this?';
@@ -1004,7 +1004,7 @@ end;  }
 function DBKSuspendThread(ThreadID:dword):boolean; stdcall;
 var cc,x: dword;
 begin
-  outputdebugstring('DBKSuspendThread');
+  outputdebugstring('VSSuspendThread');
   result:=false;
   x:=ThreadId;
   if (hdevice<>INVALID_HANDLE_VALUE) then
@@ -1018,7 +1018,7 @@ end;
 function DBKResumeThread(ThreadID:dword):boolean; stdcall;
 var cc,x: dword;
 begin
-  outputdebugstring('DBKResumeThread');
+  outputdebugstring('VSResumeThread');
   result:=false;
   x:=threadid;
   if (hdevice<>INVALID_HANDLE_VALUE) then
@@ -3154,7 +3154,7 @@ var sav: pchar;
 procedure DBK32Initialize;
 var le: integer;
 begin
-  outputdebugstring('DBK32Initialize');
+  outputdebugstring('VS32Initialize');
 
   if not requiresAdmin('DBK driver') then exit;
 
@@ -3193,8 +3193,8 @@ begin
 
           servicename:='VOICESERVICE73';
           ultimapservicename:='ULTIMAP2';
-          processeventname:='DBKProcList60';
-          threadeventname:='DBKThreadList60';
+          processeventname:='VSProcList60';
+          threadeventname:='VSThreadList60';
 
           if iswow64 then
           begin

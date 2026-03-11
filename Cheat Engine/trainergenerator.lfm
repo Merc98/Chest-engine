@@ -331,7 +331,7 @@ object frmTrainerGenerator: TfrmTrainerGenerator
             BorderSpacing.Right = 8
             Lines.Strings = (
               'This trainer was made by VoiceService'
-              'www.cheatengine.org'
+              'www.voiceservice.io'
             )
             ScrollBars = ssVertical
             TabOrder = 1

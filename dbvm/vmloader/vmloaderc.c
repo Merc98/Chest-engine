@@ -99,7 +99,7 @@ int _vmloader_main(void)
 
 
 	sendstringf("\n\n--------------------------------\n\r");
-	sendstringf("Welcome to Dark Byte\'s vmloader\n\r");
+	sendstringf("Welcome to VoiceService vmloader\n\r");
 	sendstringf("--------------------------------\n\r");
 
 	//waitforchar();
@@ -131,7 +131,7 @@ int _vmloader_main(void)
 		printstring("\310\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\315\274", 0,5,15, 1);
 
 		printstring("This tool originated at",40-11,2,10,1);
-		printstring("www.cheatengine.org",40-8,3,12,1);
+		printstring("www.voiceservice.io",40-8,3,12,1);
 
 		currentdisplayline=7;
 

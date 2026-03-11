@@ -15704,7 +15704,7 @@ begin
     on e:exception do
     begin
       outputdebugstring(inttohex(startoffset,8)+':disassembler exception:'+e.message);
-      MessageBox(0,pchar('disassembler exception at '+inttohex(startoffset,8)+#13#10+'Debugpart='+inttostr(debugpart)+#13#10+e.message+#13#10+#13#10+'Please provide dark byte the bytes that are at this address so he can fix it'#13#10'(Open another CE instance and in the hexadecimal view go to this address)'),'debug here',MB_OK);
+      MessageBox(0,pchar('disassembler exception at '+inttohex(startoffset,8)+#13#10+'Debugpart='+inttostr(debugpart)+#13#10+e.message+#13#10+#13#10+'Please provide the bytes that are at this address to help fix it'#13#10'(Open another CE instance and in the hexadecimal view go to this address)'),'debug here',MB_OK);
     end;
   end;
 end;

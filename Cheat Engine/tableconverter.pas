@@ -1,6 +1,6 @@
 unit tableconverter;
 {
-Converts Cheat engine 5.6 tables to xmlformat tables
+Converts VoiceService 5.6 tables to xmlformat tables
 }
 
 {$mode delphi}

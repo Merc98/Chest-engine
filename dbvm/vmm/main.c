@@ -377,7 +377,7 @@ void vmm_entry(void)
 
   //initialize
 
-  sendstring("Welcome to Dark Byte\'s Virtual Machine Manager\n\r");
+  sendstring("Welcome to VoiceService Virtual Machine Manager\n\r");
   sendstringf("pagedirlvl4=%6\n\r",(unsigned long long)pagedirlvl4);
 
   sendstring("Initializing MM\n\r");
@@ -1726,7 +1726,7 @@ void menu(void)
     QWORD mem;
     QWORD pages;
     mem=getTotalFreeMemory(&pages);
-    sendstring("\n\r\n\rWelcome to Dark Byte\'s virtual machine monitor\n\r");
+    sendstring("\n\r\n\rWelcome to VoiceService virtual machine monitor\n\r");
 
 
     sendstringf("Memory free: %d Bytes (Pages: %d) ", (int)mem, (int)pages);

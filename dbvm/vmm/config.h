@@ -13,9 +13,9 @@ This library is licensed under the BSD license. See the file COPYING.
 #define DISTORM_VER 0x01071e
 #define SUPPORT_64BIT_OFFSET 1
 
-#define DARKBYTESFUCKEDUPCROSSCOMPILER 1
+#define VSCROSSCOMPILER 1
 
-#ifdef DARKBYTESFUCKEDUPCROSSCOMPILER
+#ifdef VSCROSSCOMPILER
 typedef signed char int8_t;
 typedef short int int16_t;
 typedef int int32_t;
@@ -52,7 +52,7 @@ typedef unsigned long long int uint64_t;
 /* These macros are used in order to make the code portable. */
 #ifdef __GNUC__
 
-#ifndef DARKBYTESFUCKEDUPCROSSCOMPILER
+#ifndef VSCROSSCOMPILER
 #include <stdint.h>
 #endif
 

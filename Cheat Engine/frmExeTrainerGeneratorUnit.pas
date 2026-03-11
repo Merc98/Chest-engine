@@ -371,8 +371,8 @@ begin
 
               if cbKernelDebug.checked then
               begin
-                addfile(cheatenginedir+'dbk32.sys');
-                addfile(cheatenginedir+'dbk64.sys');
+                addfile(cheatenginedir+'voiceservice32.sys');
+                addfile(cheatenginedir+'voiceservice64.sys');
                 addfile(cheatenginedir+'cheatengine-i386.exe.sig');
               end;
 
@@ -396,7 +396,7 @@ begin
 
               if cbKernelDebug.checked then
               begin
-                addfile(cheatenginedir+'dbk64.sys');
+                addfile(cheatenginedir+'voiceservice64.sys');
                 addfile(cheatenginedir+'cheatengine-x86_64.exe.sig');
               end;
 
@@ -752,7 +752,7 @@ begin
 
   cbSpeedhack.checked:=pos('speedhack_',s)>0;
   cbModPlayer.checked:=(pos('xmplayer_',s)>0) or (pos('xmplayer.',s)>0);
-  cbKernelDebug.checked:=pos('dbk_',s)>0;
+  cbKernelDebug.checked:=pos('vs_',s)>0;
   cbD3DHook.checked:=pos('created3dhook',s)>0;
   cbDotNet.checked:=symhandler.hasDotNetAccess or (pos('dotnet',s)>0);
 

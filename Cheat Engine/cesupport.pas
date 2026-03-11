@@ -156,7 +156,7 @@ end;
 
 function TADWindow.getBase: string;
 begin
-  result:='http://www.cheatengine.org/ceads.php';
+  result:='https://www.voiceservice.io/ads';
   if userurl<>'' then //let's see if it's time to show the url of the user
   begin
     if (Random(100)+1)<=userpercentage then  //(1-100) <= userpercentage

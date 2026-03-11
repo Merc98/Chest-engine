@@ -448,7 +448,7 @@ begin
           DebugLn(errormessage);
           lazlogger.DumpExceptionBackTrace;
 
-          errormessage:=errormessage+#13#10'Please send the cedebug.txt file to Dark Byte. Thanks';
+          errormessage:=errormessage+#13#10'Please send the cedebug.txt file to the support team. Thanks';
         end;
 
         {$ifdef windows}
