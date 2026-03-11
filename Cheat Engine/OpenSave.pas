@@ -220,7 +220,7 @@ resourcestring
   rsUnknownExtention = 'Unknown extension';
   rsYouCanOnlyProtectAFileIfItHasAnCETRAINERExtension = 'You can only protect a file if it has an .CETRAINER extension';
   rsErrorSaving = 'Error saving...';
-  rsAskIfStupid = 'Generating a '+strtrainerlower+' with the current state of the cheat '
+  rsAskIfStupid = 'Generating a '+strtrainerlower+' with the current state of the config '
     +'table will likely result in a completely useless '+strtrainerlower+' that does '
     +'nothing. Are you sure?';
   rsOSThereIsANewerVersionifCheatEngineOutEtc = 'There is a newer version of '+strCheatEngine+' out. It''s recommended to use that version instead';

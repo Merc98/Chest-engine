@@ -192,7 +192,7 @@ resourcestring
       'There is already a trainer form defined. '
     +'Continuing will erase the current trainerscript and cheats in the '
     +'trainer and replace them with the current hotkeys defined in your '
-    +'current cheat table (Layout and images will remain unchanged). Continue ?';
+    +'current config table (Layout and images will remain unchanged). Continue ?';
   rsNoCheatPanel = 'The current trainer form does not have a panel '
     +'named ''CHEATPANEL'' so can not be reused by the automated trainer '
     +'generator.%sDo you want to start from scratch? (If you want to create a '
@@ -207,10 +207,10 @@ resourcestring
     +'save your table as .EXE or CETRAINER';
   rsGoBackToGeneratedDesigner = 'Go back to generated designer';
   rsDesignUserinterfaceManually = 'Design userinterface manually';
-  rsCheatEntries = 'Cheat Entries';
-  rsSelectTheCheatEntryYouWantToSetTheHotkeyFor = 'Select the cheat entry you '
+  rsCheatEntries = 'Config Entries';
+  rsSelectTheCheatEntryYouWantToSetTheHotkeyFor = 'Select the config entry you '
     +'want to set the hotkey for';
-  rsYouNeedACheatTableWithCheatEntries = 'You need a cheat table with cheat '
+  rsYouNeedACheatTableWithCheatEntries = 'You need a config table with cheat '
     +'entries';
   rsDonTSupportCheatEngineOrYourself = 'Don''t support '+strCheatEngine+' (or '
     +'yourself)';
@@ -493,7 +493,7 @@ begin
     image.stretch:=true;
     image.parent:=extrapanel;
 
-    //these are part of the cheatpanel which has ben destroyed or just created
+    //these are part of the configpanel which has ben destroyed or just created
     hotkeylabel:=Tcelabel.create(trainerform);
     hotkeylabel.name:='HOTKEYLABEL';
     hotkeylabel.caption:=rsHotkey;
@@ -997,7 +997,7 @@ begin
   l.add('--'+rsAutogenwarningPart1);
   l.add('--'+rsAutoGenWarningPart2);
   l.add('');
-  l.add('--Uncomment the following line if this is a Cheat Table format trainer and you don''t want CE to show (Tip, save as .CETRAINER alternatively)');
+  l.add('--Uncomment the following line if this is a Config Table format trainer and you don''t want CE to show (Tip, save as .CETRAINER alternatively)');
   l.add('--hideAllCEWindows()');
   l.add('');
   l.add('RequiredCEVersion='+floattostr(ceversion));
@@ -1010,7 +1010,7 @@ begin
 
 
     if cbUseD3DHook.checked then
-      l.add('d3dcheats={}  --table containing the information to build the cheat lines for d3d');
+      l.add('d3dcheats={}  --table containing the information to build the config lines for d3d');
 
 
     cheatpanel:=TCEPanel(trainerform.FindComponent('CHEATPANEL'));
@@ -1146,7 +1146,7 @@ begin
         end;
       end;
     end
-    else //the user deleted the cheat panel
+    else //the user deleted the config panel
       showmessage(rsTipYouDontHaveToUseTheTrainerGeneratorIfYouDontWantTo);
 
     seperator:=TCESplitter(trainerform.FindComponent('SEPERATOR'));
@@ -1471,7 +1471,7 @@ begin
         l.add('    BackgroundSprite=h.createSprite(BackgroundTexture)');
         l.add('    BackgroundSprite.Alphablend=1.0-D3DHook.transparency / 100  --alphablend takes a value between 0.0 and 1.0 where 1.0 is fully visible, and transparency is a percentage from 0 to 100 where 100 is invisible');
         l.add('');
-        l.add('    --create the cheat entry lines');
+        l.add('    --create the config entry lines');
         l.add('    for i,info in ipairs(d3dcheats) do');
         l.add('      local pic=createPicture()');
         l.add('      local text=info.description');
@@ -1515,7 +1515,7 @@ begin
         l.add('function D3DHookSpriteClick(d3dhook_sprite, x, y)');
         l.add('  for i,info in ipairs(d3dcheats) do');
         l.add('    if (d3dhook_sprite==info.CheckboxSprite) or (d3dhook_sprite==info.TextSprite) then');
-        l.add('      --clicked on a cheat entry. Execute the hotkey event');
+        l.add('      --clicked on a config entry. Execute the hotkey event');
         l.add('      local mr=getAddressList().getMemoryRecordByID(info.memrecid)');
         l.add('      mr.getHotkeyByID(info.hotkeyid).doHotkey() --execute the hotkey event');
         l.add('      break');
@@ -1629,7 +1629,7 @@ begin
 
       if uppercase(ExtractFileName(f))=uppercase(comboProcesslist.Text) then
       begin
-        messagedlg('You may not name your trainer .EXE the same as the process you wish to cheat on', mtError, [mbok],0);
+        messagedlg('You may not name your trainer .EXE the same as the process you wish to modify', mtError, [mbok],0);
         exit;
       end;
 

@@ -8580,7 +8580,7 @@ begin
   {$ifdef windows}
   if aprilfools then  //what whould happen if this var is false?
   begin
-    if copy(cenorm,1,5)='Cheat' then
+    if copy(cenorm,1,5)='Voice' then
     begin
       cenorm[3]:='E';
       cenorm[4]:='A';
@@ -11150,7 +11150,7 @@ end;
 
 procedure TMainForm.ClearList;
 {
-Will remove all entries from the cheattable, comments, and advanced options window
+Will remove all entries from the configtable, comments, and advanced options window
 }
 begin
   Comments.Memo1.Clear;

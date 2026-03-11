@@ -6,7 +6,7 @@ object frmMicroTransactions: TfrmMicroTransactions
   AutoSize = True
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
-  Caption = 'Cheat-E-Coins'
+  Caption = 'Voice-E-Credits'
   ClientHeight = 240
   ClientWidth = 320
   OnCreate = FormCreate
@@ -22,7 +22,7 @@ object frmMicroTransactions: TfrmMicroTransactions
     BorderSpacing.Left = 32
     BorderSpacing.Top = 5
     BorderSpacing.Right = 32
-    Caption = 'Cheat-E-coins left in your inventory:'
+    Caption = 'Voice-E-Credits left in your inventory:'
     ParentColor = False
   end
   object Image1: TImage

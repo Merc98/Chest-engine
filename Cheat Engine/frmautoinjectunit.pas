@@ -448,8 +448,8 @@ resourcestring
   rsEverythingOk = 'Everything ok';
   rsRenameTab = 'Rename tab';
   rsNewNameQuestion = 'What should the new name be?';
-  rsDescribeThatThisCodeWillDisableTheScript = 'code from here till the end of the code will be used to disable the cheat';
-  rsDescribeThatThisCodeWillEnableTheScript = 'code from here to ''[DISABLE]'' will be used to enable the cheat';
+  rsDescribeThatThisCodeWillDisableTheScript = 'code from here till the end of the code will be used to disable the config';
+  rsDescribeThatThisCodeWillEnableTheScript = 'code from here to ''[DISABLE]'' will be used to enable the config';
   rsAADescribeAllocatedMemory = 'this is allocated memory, you have read,write'
     +',execute access';
   rsPlaceYourCodeHere = 'place your code here';
@@ -3399,7 +3399,7 @@ begin
   ReadProcessMemory(processhandle, pointer(a), @originalbytes[0], codesize, br);
 
 
-  // same as menu option "Cheat Engine framework code", make sure we
+  // same as menu option "VoiceService framework code", make sure we
   // have enable and disable
   getenableanddisablepos(script,enablepos,disablepos);
 
@@ -3726,7 +3726,7 @@ begin
   setlength(originalbytes, codesize);
   ReadProcessMemory(processhandle, pointer(a), @originalbytes[0], codesize, br);
 
-  // same as menu option "Cheat Engine framework code", make sure we
+  // same as menu option "VoiceService framework code", make sure we
   // have enable and disable
   getenableanddisablepos(script,enablepos,disablepos);
 

@@ -74,7 +74,7 @@ object frmD3DTrainerGeneratorOptions: TfrmD3DTrainerGeneratorOptions
       AnchorSideTop.Side = asrBottom
       Left = 199
       Height = 19
-      Hint = 'If selected the background image will get resized so that cheat entries will fit inside it'#13#10'This is useful if you pick a 1x1 pixel size bitmap that you wish to stretch'
+      Hint = 'If selected the background image will get resized so that config entries will fit inside it'#13#10'This is useful if you pick a 1x1 pixel size bitmap that you wish to stretch'
       Top = 252
       Width = 170
       Caption = 'Scale the background image'
