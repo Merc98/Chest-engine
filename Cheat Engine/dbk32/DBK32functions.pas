@@ -288,7 +288,7 @@ function {VirtualQueryEx}VQE(hProcess: THandle; address: pointer; var mbi: _MEMO
 Function {NtOpenProcess}NOP(Handle: PHandle; AccessMask: dword; objectattributes: pointer; clientid: PClient_ID):DWORD; stdcall;
 Function {ZwClose}ZC(Handle: THandle): NTSTATUS; stdcall;
 
-function DBK_NtQueryInformationProcess(ProcessHandle: HANDLE; ProcessInformationClass: PROCESSINFOCLASS; ProcessInformation: PVOID; ProcessInformationLength: ULONG; ReturnLength: PULONG): NTSTATUS; stdcall;
+function VS_NtQueryInformationProcess(ProcessHandle: HANDLE; ProcessInformationClass: PROCESSINFOCLASS; ProcessInformation: PVOID; ProcessInformationLength: ULONG; ReturnLength: PULONG): NTSTATUS; stdcall;
 function DBK_NtReadVirtualMemory(ProcessHandle : HANDLE; BaseAddress : PVOID; Buffer : PVOID; BufferLength : ULONG; ReturnLength : PSIZE_T): NTSTATUS; stdcall;
 
 Function {NtOpenThread}NtOT(var Handle: THandle; AccessMask: dword; objectattributes: pointer; clientid: PClient_ID):DWORD; stdcall;
@@ -393,7 +393,7 @@ const IOCTL_CE_ULTIMAP2_RESUME        = (IOCTL_UNKNOWN_BASE shl 16) or ($0855 sh
 
 }
 
-procedure dbk_test;
+procedure vs_test;
 
 procedure LaunchDBVM(cpuid: integer); stdcall;
 procedure allocateMemoryForDBVM(pagecount: QWORD);
@@ -697,7 +697,7 @@ begin
     result:=0;
 end;
 
-procedure dbk_test;
+procedure vs_test;
 var cc,br: dword;
 begin
   OutputDebugString('vs_test');
@@ -1732,7 +1732,7 @@ begin
   result:=oldNtReadVirtualMemory(processhandle, BaseAddress, Buffer, BufferLength, ReturnLength);
 end;
 
-function DBK_NtQueryInformationProcess(ProcessHandle: HANDLE; ProcessInformationClass: PROCESSINFOCLASS; ProcessInformation: PVOID; ProcessInformationLength: ULONG; ReturnLength: PULONG): NTSTATUS; stdcall;
+function VS_NtQueryInformationProcess(ProcessHandle: HANDLE; ProcessInformationClass: PROCESSINFOCLASS; ProcessInformation: PVOID; ProcessInformationLength: ULONG; ReturnLength: PULONG): NTSTATUS; stdcall;
 type
   toutput=record
     result: QWORD;
@@ -1789,7 +1789,7 @@ begin
         begin
           //too big, possibly some bad code somewhere
           OutputDebugString('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Too big!!!!!!!!!!!!!!!!!!!!!!!!!');
-          result:=DBK_NtQueryInformationProcess(ProcessHandle, ProcessInformationClass, ProcessInformation, 65535,ReturnLength);
+          result:=VS_NtQueryInformationProcess(ProcessHandle, ProcessInformationClass, ProcessInformation, 65535,ReturnLength);
           exit;
         end;
 

@@ -5620,11 +5620,11 @@ begin
   result:=1;
 end;
 
-function lua_dbk_test(L: PLua_state): integer; cdecl;
+function lua_vs_test(L: PLua_state): integer; cdecl;
 begin
   result:=0;
   {$IFDEF windows}
-  dbk_test;
+  vs_test;
   {$ENDIF}
 end;
 
@@ -16664,7 +16664,7 @@ begin
     lua_register(L, 'dbk_getCR0', dbk_getCR0);
     lua_register(L, 'dbk_getCR3', dbk_getCR3);
     lua_register(L, 'dbk_getCR4', dbk_getCR4);
-    lua_register(L, 'dbk_test', lua_dbk_test);
+    lua_register(L, 'vs_test', lua_vs_test);
     lua_register(L, 'dbvm_getCR0', dbvm_getCR0);
     lua_register(L, 'dbvm_getCR3', dbvm_getCR3);
     lua_register(L, 'dbvm_getCR4', dbvm_getCR4);
