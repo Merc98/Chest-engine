@@ -700,7 +700,7 @@ end;
 procedure dbk_test;
 var cc,br: dword;
 begin
-  OutputDebugString('dbk_test');
+  OutputDebugString('vs_test');
   cc:=IOCTL_CE_TEST;
   deviceiocontrol(hdevice,cc,nil,0,nil,0,br,nil);
 end;
@@ -1795,7 +1795,7 @@ begin
 
         //still here, so not too big
 
-        OutputDebugString('DBK_NtQueryInformationProcess('+inttostr(integer(ProcessInformationClass))+')');
+        OutputDebugString('VS_NtQueryInformationProcess('+inttostr(integer(ProcessInformationClass))+')');
 
         getmem(outp, sizeof(qword)*2+ProcessInformationLength);
 
@@ -3156,7 +3156,7 @@ var le: integer;
 begin
   outputdebugstring('VS32Initialize');
 
-  if not requiresAdmin('DBK driver') then exit;
+  if not requiresAdmin('VS driver') then exit;
 
   try
     if hdevice=INVALID_HANDLE_VALUE then
@@ -3478,7 +3478,7 @@ begin
           if GetDriverVersion<>currentversion then
           begin
             closehandle(hdevice);
-            messagebox(0,PChar(rsTheDriverThatIsCurrentlyLoaded),'DBK',MB_ICONERROR or MB_OK);
+            messagebox(0,PChar(rsTheDriverThatIsCurrentlyLoaded),'VS',MB_ICONERROR or MB_OK);
 
             hdevice:=INVALID_HANDLE_VALUE;
           end
@@ -3487,7 +3487,7 @@ begin
             InitializeDriver(0,0);
             {
             if not InitializeDriver(0,0) then
-              messagebox(0,rsTheDriverFailedToSuccessfullyInitialize,'DBK',MB_ICONERROR or MB_OK);
+              messagebox(0,rsTheDriverFailedToSuccessfullyInitialize,'VS',MB_ICONERROR or MB_OK);
               }
 
           end;
