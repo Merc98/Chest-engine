@@ -407,7 +407,7 @@ begin
   s:=StringReplace(s, 'cheat','config',[rfReplaceAll]);
   s:=StringReplace(s, 'Tutorial-','rtm-Tutorial-',[rfReplaceAll, rfIgnoreCase]);
   s:=StringReplace(s, 'Config Table','Config Table',[rfReplaceAll]);
-  s:=StringReplace(s, 'CheatTable','Codetable',[rfReplaceAll]);
+  s:=StringReplace(s, 'ConfigTable','Codetable',[rfReplaceAll]);
 
   s:=StringReplace(s, ' trainer',' mod-tool ',[rfReplaceAll]);
   s:=StringReplace(s, ' Trainer',' Mod-Tool ',[rfReplaceAll]);

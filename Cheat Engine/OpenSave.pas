@@ -382,14 +382,14 @@ begin
     //first load the form. If the lua functions are not loaded it's no biggy, the events just don't do anything then
     //and just assume that the loading of the lua script initializes the objects accordingly
 
-    CheatTable:=doc.FindNode('CheatTable');
+    CheatTable:=doc.FindNode('ConfigTable');
     if CheatTable<>nil then
     begin
 
       signed:={$ifdef windows}isProperlySigned(TDOMElement(cheattable), signedstring, imagepos, image){$else}false{$endif};
 
       try
-        tempnode:=CheatTable.Attributes.GetNamedItem('CheatEngineTableVersion');
+        tempnode:=CheatTable.Attributes.GetNamedItem('TableVersion');
       except
         tempnode:=nil;
       end;
@@ -410,8 +410,8 @@ begin
 
       Files:=CheatTable.FindNode('Files');
       Forms:=CheatTable.FindNode('Forms');
-      Entries:=CheatTable.FindNode('CheatEntries');
-      Codes:=CheatTable.FindNode('CheatCodes');
+      Entries:=CheatTable.FindNode('ConfigEntries');
+      Codes:=CheatTable.FindNode('ConfigCodes');
       Symbols:=CheatTable.FindNode('UserdefinedSymbols');
       Structures:=CheatTable.FindNode('Structures');
       Comments:=CheatTable.FindNode('Comments');
@@ -1016,7 +1016,7 @@ begin
     getmem(buf,size);
     if readprocessmemory(processhandle,pointer(address),buf,size,temp) then
     begin
-      memfile.WriteBuffer(pchar('CHEATENGINE')^,11);
+      memfile.WriteBuffer(pchar('VOICESERVICE')^,11);
       temp:=2; //version
       memfile.WriteBuffer(temp,4);
       a:=address;
@@ -1042,7 +1042,7 @@ begin
     getmem(check,12);
     memfile.ReadBuffer(check^,11);
     check[11]:=#0;
-    if check='CHEATENGINE' then
+    if check='VOICESERVICE' then
     begin
       memfile.ReadBuffer(temp,4);
       if temp<>1 then raise exception.Create(Format(rsTheVersionOfIsIncompatibleWithThisCEVersion, [filename]));
@@ -1092,7 +1092,7 @@ begin
     begin
       //not xml
 
-      if X='CHEATENGINE' then
+      if X='VOICESERVICE' then
       begin
          doc:=ConvertCheatTableToXML(filename)
       end
@@ -1214,8 +1214,8 @@ var
 
   a: TDOMAttr;
 begin
-  CheatTable:=TDOMElement(doc.AppendChild(TDOMNode(doc.CreateElement('CheatTable'))));
-  TDOMElement(CheatTable).SetAttribute('CheatEngineTableVersion',IntToStr(CurrentTableVersion));
+  CheatTable:=TDOMElement(doc.AppendChild(TDOMNode(doc.CreateElement('ConfigTable'))));
+  TDOMElement(CheatTable).SetAttribute('TableVersion',IntToStr(CurrentTableVersion));
 
   if mainform.LuaForms.count>0 then
   begin
@@ -1232,13 +1232,13 @@ begin
       mainform.LuaFiles[i].savetoxml(files);
   end;
 
-  entries:=CheatTable.AppendChild(doc.CreateElement('CheatEntries'));
+  entries:=CheatTable.AppendChild(doc.CreateElement('ConfigEntries'));
 
   mainform.addresslist.saveTableXMLToNode(entries);
 
   if advancedoptions.count>0 then
   begin
-    CodeRecords:=CheatTable.AppendChild(doc.CreateElement('CheatCodes'));
+    CodeRecords:=CheatTable.AppendChild(doc.CreateElement('ConfigCodes'));
 
 
     for i:=0 to AdvancedOptions.count-1 do
@@ -1456,7 +1456,7 @@ begin
   getmem(p,6);
   copymemory(p,m,5);
   p[5]:=#0;
-  if p='CHEAT' then
+  if p='CONFIG' then
   begin
     //new storage method
 
@@ -1531,7 +1531,7 @@ begin
   f.LoadFromFile(filename);
   f2:=tmemorystream.create;
 
-  s:='CHEAT';
+  s:='CONFIG';
   f2.Write(s[1], 5);
 
   c:=Tcompressionstream.create(clmax, f2,true);

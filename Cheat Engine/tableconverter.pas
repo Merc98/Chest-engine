@@ -73,8 +73,8 @@ begin
   try
     doc:=TXMLDocument.Create;
 
-    CheatTable:=doc.AppendChild(doc.CreateElement('CheatTable'));
-    TDOMElement(CheatTable).SetAttribute('CheatEngineTableVersion',IntToStr(CurrentTableVersion));
+    CheatTable:=doc.AppendChild(doc.CreateElement('ConfigTable'));
+    TDOMElement(CheatTable).SetAttribute('TableVersion',IntToStr(CurrentTableVersion));
 
 
     getmem(x,12);
@@ -82,7 +82,7 @@ begin
       ctfile.ReadBuffer(x^,11);
       x[11]:=#0;
 
-     // if x<>'CHEATENGINE' then
+     // if x<>'VOICESERVICE' then
      //   raise exception.Create('Not a valid cheat engine 5.6 table. If this table was made by a uce, get ce 5.6 and open/resave it');
 
     finally
@@ -105,13 +105,13 @@ begin
       cheatEntry.AppendChild(doc.CreateElement('Description')).TextContent:='Group '+inttostr(i);
 
       groups[i].node:=cheatEntry;
-      groups[i].appendnode:=cheatEntry.AppendChild(doc.CreateElement('CheatEntries'));
+      groups[i].appendnode:=cheatEntry.AppendChild(doc.CreateElement('ConfigEntries'));
       groups[i].used:=false;
     end;
 
     if records>0 then
     begin
-      entries:=CheatTable.AppendChild(doc.CreateElement('CheatEntries'));
+      entries:=CheatTable.AppendChild(doc.CreateElement('ConfigEntries'));
 
 
       for i:=0 to records-1 do
@@ -233,7 +233,7 @@ begin
     if records>0 then
     begin
       //it has code records
-      CodeRecords:=CheatTable.AppendChild(doc.CreateElement('CheatCodes'));
+      CodeRecords:=CheatTable.AppendChild(doc.CreateElement('ConfigCodes'));
 
       for i:=0 to records-1 do
       begin

@@ -409,7 +409,7 @@ var
   e: TDOMElement;
 begin
   ReadXMLFile(d, f);
-  e:=TDOMElement(d.FindNode('CheatTable'));
+  e:=TDOMElement(d.FindNode('ConfigTable'));
   signtable(e);
   WriteXMLFile(d,f);
 end;
