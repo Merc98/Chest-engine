@@ -349,5 +349,34 @@ initialization
 
   end;
   {$endif}
+
+  // ── Pink Theme ──────────────────────────────────────────────────────────────
+  // Override all system/dark-mode colors with a rose-pink palette.
+  // TColor format: $00BBGGRR
+  ColorSet.FontColor               := $0032145A;  // dark rose         RGB( 90, 20, 50)
+  ColorSet.InactiveFontColor       := $00643C78;  // muted rose        RGB(120, 60,100)
+  ColorSet.TextBackground          := $00F5F0FF;  // lavender blush    RGB(255,240,245)
+  ColorSet.EditBackground          := $00E9E4FF;  // misty rose        RGB(255,228,233)
+  ColorSet.ButtonFaceColorDefault  := $00C1B6FF;  // light pink        RGB(255,182,193)
+  ColorSet.ButtonFaceColorHover    := $00A08AFF;  // rose              RGB(255,138,160)
+  ColorSet.ButtonFaceColorDown     := $00B469FF;  // hot pink          RGB(255,105,180)
+  ColorSet.ButtonFaceColorDisabled := $00DCD2FF;  // pale pink         RGB(255,210,220)
+  ColorSet.ButtonBorderColor       := $008264B4;  // deep rose border  RGB(180,100,130)
+  ColorSet.ButtonBorderColorHover  := $005A3C96;  // darker border     RGB(150, 60, 90)
+  ColorSet.ButtonInactiveBorderColor:=$00AA96C8;  // inactive border   RGB(200,150,170)
+  ColorSet.CheckboxFillColor       := $00AA82FF;  // pink checkbox     RGB(255,130,170)
+  ColorSet.InactiveCheckboxFillColor:=$00C8B4DC;  // pale checkbox     RGB(220,180,200)
+  ColorSet.CheckboxCheckMarkColor  := $00F5F0FF;  // light mark        RGB(255,240,245)
+  ColorSet.InactiveCheckboxCheckMarkColor:=$00DCD2FF;
+
+  clWindowText := ColorSet.FontColor;
+  clWindow     := ColorSet.TextBackground;
+  clBtnFace    := ColorSet.ButtonFaceColorDefault;
+  clBtnText    := ColorSet.FontColor;
+  clHighlight  := ColorSet.ButtonFaceColorDown;
+  clBtnBorder  := ColorSet.ButtonBorderColor;
+
+  darkmodestring := '';  // force light-mode registry key suffix
+  // ────────────────────────────────────────────────────────────────────────────
 end.
 
