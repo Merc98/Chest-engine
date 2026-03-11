@@ -735,7 +735,7 @@ type
       Shift: TShiftState; X, Y: integer);
     procedure Findoutwhataccessesthisaddress1Click(Sender: TObject);
     procedure OpenProcesslist1Click(Sender: TObject);
-    procedure CloseCheatEngine1Click(Sender: TObject);
+    procedure CloseApp1Click(Sender: TObject);
     procedure Showashexadecimal1Click(Sender: TObject);
     procedure OpenMemorybrowser1Click(Sender: TObject);
     procedure cbPauseWhileScanningClick(Sender: TObject);
@@ -5111,7 +5111,7 @@ var
   s: string;
 begin
   s := scantablist.TabText[scantablist.SelectedTab];
-  if InputQuery(rsCheatEngine, rsWhatWillBeTheNewNameForThisTab, s) then
+  if InputQuery(rsVSApp, rsWhatWillBeTheNewNameForThisTab, s) then
     scantablist.TabText[scantablist.SelectedTab] := s;
 end;
 
@@ -9168,7 +9168,7 @@ begin
   sbOpenProcess.Click;
 end;
 
-procedure TMainForm.CloseCheatEngine1Click(Sender: TObject);
+procedure TMainForm.CloseApp1Click(Sender: TObject);
 begin
   Close;
 end;

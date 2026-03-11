@@ -558,7 +558,7 @@ begin
 end;
 
 function lua_ToCEUserData(L: PLua_state; i: integer): pointer;
-//Cheat Engine implements two types of userdata. the legacy LightUserData used in 6.2- and the Heavy UserData in 6.3+
+//VoiceService implements two types of userdata. the legacy LightUserData used in 6.2- and the Heavy UserData in 6.3+
 //Heavy UserData is a pointer with a pointer to the real object, while lightuserdata is just a pointer to the object
 begin
   result:=lua_touserdata(L,i);
@@ -779,14 +779,14 @@ begin
   {$endif}
   if not FileExists(f) then //perhaps in the cedir
   begin
-    f:=CheatEngineDir+'main.lua';
+    f:=AppDir+'main.lua';
     if not FileExists(f) then
     begin
       //try the defines only then
       f:='defines.lua';
       if not FileExists(f) then
       begin
-        f:=CheatEngineDir+'defines.lua';
+        f:=AppDir+'defines.lua';
         if not FileExists(f) then
           exit;
       end;
@@ -7912,10 +7912,10 @@ begin
   lua_error(L);
 end;
 
-function getCheatEngineDir(L: PLua_State): integer; cdecl;
+function getAppDir(L: PLua_State): integer; cdecl;
 begin
   lua_pop(L, lua_gettop(l));
-  lua_pushstring(L, CheatEngineDir);
+  lua_pushstring(L, AppDir);
   result:=1;
 end;
 
@@ -13381,7 +13381,7 @@ begin
       ts:='i386';
 
     try
-      cefuncproc.InjectDll(CheatEngineDir+'winhook-'+ts+'.dll');
+      cefuncproc.InjectDll(AppDir+'winhook-'+ts+'.dll');
     except
     end;
   end;
@@ -15385,9 +15385,9 @@ var
   highestAddress: ptruint=0;
 begin
 
-  libfile:=CheatEngineDir+'tcclib'+PathDelim+'lib'+PathDelim+'libtcc1.c';  //release
+  libfile:=AppDir+'tcclib'+PathDelim+'lib'+PathDelim+'libtcc1.c';  //release
   if not fileexists(libfile) then
-    libfile:=CheatEngineDir+'..'+PathDelim+'tcclib'+PathDelim+'lib'+PathDelim+'libtcc1.c'; //development
+    libfile:=AppDir+'..'+PathDelim+'tcclib'+PathDelim+'lib'+PathDelim+'libtcc1.c'; //development
 
 
   if fileexists(libfile) then
@@ -16747,7 +16747,7 @@ begin
 
     lua_register(L, 'allocateSharedMemory', allocateSharedMemory);
     lua_register(L, 'deallocateSharedMemory', deallocateSharedMemory);
-    lua_register(L, 'getCheatEngineDir', getCheatEngineDir);
+    lua_register(L, 'getAppDir', getAppDir);
     lua_register(L, 'getCheatEngineProcessID', lua_getCheatEngineProcessID);
 
     lua_register(L, 'disassemble', disassemble_lua);
@@ -17285,7 +17285,7 @@ begin
       {$ifdef darwin}
       autorunpath:=extractfiledir(extractfiledir(Application.ExeName))+'/Lua/Autorun/';
       {$else}
-      autorunpath:=CheatEngineDir+'autorun'+pathdelim;
+      autorunpath:=AppDir+'autorun'+pathdelim;
       {$endif}
 
 

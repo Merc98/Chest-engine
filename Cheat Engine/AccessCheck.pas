@@ -32,7 +32,7 @@ procedure FileAccessTest;
 var f: tfilestream;
 begin
   try
-    f:=TFilestream.Create(CheatEngineDir+'accesscheck.tmp', fmCreate);
+    f:=TFilestream.Create(AppDir+'accesscheck.tmp', fmCreate);
     try
       f.WriteBuffer(rsNoDeleteRights+#13#10,18);
     finally
@@ -43,7 +43,7 @@ begin
   end;
 
   try
-    f:=TFilestream.Create(CheatEngineDir+'accesscheck.tmp', fmOpenReadWrite);
+    f:=TFilestream.Create(AppDir+'accesscheck.tmp', fmOpenReadWrite);
     try
       f.Seek(0,soFromEnd);
       f.WriteBuffer(rsButYouDoHaveModifyRights+#13#10,31);
@@ -54,7 +54,7 @@ begin
     raise exception.Create(rsNoFileModificationRights);
   end;
 
-  if not deletefile(CheatEngineDir+'accesscheck.tmp') then
+  if not deletefile(AppDir+'accesscheck.tmp') then
     raise exception.Create(rsNoFileDeletionRights);
   
 end;

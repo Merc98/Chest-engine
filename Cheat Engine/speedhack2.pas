@@ -180,7 +180,7 @@ begin
       if e then
       begin
         OutputDebugString('Speedhack: speedhackversion_GetTickCount not found. Injecting DLL');
-        injectdll(CheatEngineDir+fname);
+        injectdll(AppDir+fname);
 
         OutputDebugString('Speedhack: after dll injection. Waiting for symbols reinitialized');
         symhandler.reinitialize;

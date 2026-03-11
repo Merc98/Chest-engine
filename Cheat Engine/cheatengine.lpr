@@ -291,7 +291,7 @@ var
 
 begin
   Application.Title:='VoiceService 7.5';
- //'Cheat Engine 7.3';
+ //'VoiceService 7.5';
   {$ifdef darwin}
   macPortFixRegPath;
   {$endif}

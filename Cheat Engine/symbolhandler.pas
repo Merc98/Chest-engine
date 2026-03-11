@@ -6709,17 +6709,17 @@ begin
 {$ifdef windows}
   //first load the latest version
   {$ifdef cpu32}
-  dbghlp:=LoadLibrary(pchar(CheatEngineDir+'\win32\dbghelp.dll'));
+  dbghlp:=LoadLibrary(pchar(AppDir+'\win32\dbghelp.dll'));
   {$else}
-  dbghlp:=LoadLibrary(pchar(CheatEngineDir+'\win64\dbghelp.dll'));
+  dbghlp:=LoadLibrary(pchar(AppDir+'\win64\dbghelp.dll'));
   {$endif}
 
   if dbghlp=0 then //if that fails, try the old one with the same searchpath
   begin
     {$ifdef cpu32}
-    dbghlp:=LoadLibrary(pchar(CheatEngineDir+'\win32\old\dbghelp.dll'));
+    dbghlp:=LoadLibrary(pchar(AppDir+'\win32\old\dbghelp.dll'));
     {$else}
-    dbghlp:=LoadLibrary(pchar(CheatEngineDir+'\win64\old\dbghelp.dll'));
+    dbghlp:=LoadLibrary(pchar(AppDir+'\win64\old\dbghelp.dll'));
     {$endif}
   end;
 
@@ -6736,16 +6736,16 @@ begin
     end;
 
     {$ifdef cpu32}
-    p:=CheatEngineDir+'\win32\old';
+    p:=AppDir+'\win32\old';
     {$else}
-    p:=CheatEngineDir+'\win64\old';
+    p:=AppDir+'\win64\old';
     {$endif}
     DLLDirectoryCookie:=AddDllDirectory(@p[1]);  //external dll's now use the old path
 
     {$ifdef cpu32}
-    dbghlp:=LoadLibrary(pchar(CheatEngineDir+'\win32\old\dbghelp.dll'));
+    dbghlp:=LoadLibrary(pchar(AppDir+'\win32\old\dbghelp.dll'));
     {$else}
-    dbghlp:=LoadLibrary(pchar(CheatEngineDir+'\win64\old\dbghelp.dll'));
+    dbghlp:=LoadLibrary(pchar(AppDir+'\win64\old\dbghelp.dll'));
     {$endif}
 
     if dbghlp=0 then

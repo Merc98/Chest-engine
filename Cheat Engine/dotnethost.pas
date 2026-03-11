@@ -1,4 +1,4 @@
-//Copyright Cheat Engine
+//Copyright VoiceService
 
 unit dotnethost;
 

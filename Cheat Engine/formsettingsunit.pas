@@ -1814,9 +1814,9 @@ begin
 
   f:=TStringList.Create;
   {$ifdef darwin}
-  OutputDebugString('ScanForLanguages: Looking in '+CheatEngineDir+{$ifdef darwin}PathDelim+'..'+{$endif}PathDelim+'Languages');
+  OutputDebugString('ScanForLanguages: Looking in '+AppDir+{$ifdef darwin}PathDelim+'..'+{$endif}PathDelim+'Languages');
   {$endif}
-  FindAllDirectories(f,CheatEngineDir+{$ifdef darwin}PathDelim+'..'+{$endif}PathDelim+'Languages',false);
+  FindAllDirectories(f,AppDir+{$ifdef darwin}PathDelim+'..'+{$endif}PathDelim+'Languages',false);
 
   index:=1;
   for i:=0 to f.Count-1 do

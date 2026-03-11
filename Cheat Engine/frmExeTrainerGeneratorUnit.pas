@@ -744,8 +744,8 @@ begin
   comboCompression.itemindex:=3;
 
 
-  OpenDialog1.InitialDir:=CheatEngineDir;
-  SelectDirectoryDialog1.InitialDir:=CheatEngineDir;
+  OpenDialog1.InitialDir:=AppDir;
+  SelectDirectoryDialog1.InitialDir:=AppDir;
 
   //scan the current script for markers that might indicate a used feature
   s:=lowercase(mainform.frmLuaTableScript.assemblescreen.Text);

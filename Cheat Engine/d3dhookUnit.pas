@@ -1623,7 +1623,7 @@ begin
   begin
     ZeroMemory(shared, sizeof(TD3DHookShared));
     shared.texturelist:=sizeof(TD3DHookShared)+(maxsize div 2);
-    shared.cheatenginedir:=CheatEngineDir;
+    shared.cheatenginedir:=AppDir;
     shared.useCommandListLock:=1;
   end;
 

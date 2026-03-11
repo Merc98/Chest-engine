@@ -650,7 +650,7 @@ begin
 
     if not symhandler.getmodulebyname(mname,mi) then
     begin
-      injectdll(CheatEngineDir+mname);
+      injectdll(AppDir+mname);
       symhandler.reinitialize(True);
     end;
       

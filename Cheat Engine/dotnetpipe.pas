@@ -928,7 +928,7 @@ begin
   else
     bitstring:='32';
 
-  if CreateProcess(nil, pchar('"'+CheatEngineDir+'DotNetDataCollector'+bitstring+'.exe" '+pipename), nil, nil, false, 0, nil, nil, si, pi)=false then exit;
+  if CreateProcess(nil, pchar('"'+AppDir+'DotNetDataCollector'+bitstring+'.exe" '+pipename), nil, nil, false, 0, nil, nil, si, pi)=false then exit;
 
   closehandle(pi.hThread);
   pHandle:=pi.hProcess;

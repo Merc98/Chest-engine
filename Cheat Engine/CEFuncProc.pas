@@ -1,4 +1,4 @@
-// Copyright Cheat Engine. All Rights Reserved.
+// Copyright VoiceService. All Rights Reserved.
 
 
 unit CEFuncProc;
@@ -6,7 +6,7 @@ unit CEFuncProc;
 {$MODE Delphi}
 
 //This version of CEFuncProc has been COPIED to the server dir
-//Cheat Engine regular WONT look at this
+//VoiceService regular WONT look at this
 
 interface
 
@@ -292,7 +292,7 @@ type TScanSettings = record
   scan_mem_mapped: boolean;
   scanvalue: string[255];
   scanvalue2: string[255];
-  CheatEngineDir: string[255];
+  AppDir: string[255];
   buffersize:dword;
   priority:integer;
   nrofbits:integer;
@@ -1961,13 +1961,13 @@ var
 
 
 begin
-  assignfile(memoryfile,CheatEngineDir+'Memory.TMP');
-  assignfile(addressfile,CheatEngineDir+'Addresses.TMP');
+  assignfile(memoryfile,AppDir+'Memory.TMP');
+  assignfile(addressfile,AppDir+'Addresses.TMP');
   reset(memoryfile,1);
   reset(addressfile,1);
 
-  assignfile(newmemoryfile,CheatEngineDir+'Memory2.TMP');
-  assignfile(newaddressfile,CheatEngineDir+'Address2.TMP');
+  assignfile(newmemoryfile,AppDir+'Memory2.TMP');
+  assignfile(newaddressfile,AppDir+'Address2.TMP');
   rewrite(newmemoryfile,1);
   rewrite(newaddressfile,1);
 
@@ -2168,12 +2168,12 @@ begin
   closefile(newmemoryfile);
   closefile(newaddressfile);
 
-  deletefile(CheatEngineDir+'Memory.UNDO');
-  deletefile(CheatEngineDir+'Addresses.UNDO');
-  renamefile(CheatEngineDir+'Memory.tmp',cheatenginedir+'Memory.UNDO');
-  renamefile(CheatEngineDir+'Addresses.tmp',CheatEngineDir+'Addresses.UNDO');
-  renamefile(CheatEngineDir+'Memory2.tmp',CheatEngineDir+'Memory.TMP');
-  Renamefile(CheatengineDir+'Address2.TMP',CheatEngineDir+'Addresses.TMP');
+  deletefile(AppDir+'Memory.UNDO');
+  deletefile(AppDir+'Addresses.UNDO');
+  renamefile(AppDir+'Memory.tmp',cheatenginedir+'Memory.UNDO');
+  renamefile(AppDir+'Addresses.tmp',AppDir+'Addresses.UNDO');
+  renamefile(AppDir+'Memory2.tmp',AppDir+'Memory.TMP');
+  Renamefile(CheatengineDir+'Address2.TMP',AppDir+'Addresses.TMP');
 
 
 end;
@@ -2725,8 +2725,8 @@ var
   AMalloc: IMalloc;
 {$ENDIF}
 begin
-  CheatEngineDir:=ExtractFilePath(application.ExeName);
-  result:=CheatEngineDir;
+  AppDir:=ExtractFilePath(application.ExeName);
+  result:=AppDir;
 
   {$IFDEF windows}
   //blatantly stolen from http://www.scalabium.com/faq/dct0106.htm
@@ -2764,10 +2764,10 @@ end;
 Procedure Shutdown;
 //This will erase the temporary files and close the processhandle (In case it doesnt happen automatically)
 begin
-  deletefile(CheatEngineDir+'Memory.TMP');
-  deletefile(CheatEngineDir+'Addresses.TMP');
-  deletefile(CheatEngineDir+'Memory.UNDO');
-  deletefile(CheatEngineDir+'Addresses.UNDO');
+  deletefile(AppDir+'Memory.TMP');
+  deletefile(AppDir+'Addresses.TMP');
+  deletefile(AppDir+'Memory.UNDO');
+  deletefile(AppDir+'Addresses.UNDO');
   freemem(memory);
   memory:=nil;
  // Closehandle(processhandle);
@@ -3221,7 +3221,7 @@ end;
 function GetRelativeFilePath(filename: string):string;
 begin
   result:=filename;
-  if pos(uppercase(CheatEngineDir),uppercase(filename))=1 then
+  if pos(uppercase(AppDir),uppercase(filename))=1 then
     result:='.\'+copy(filename,length(CheatEnginedir)+1,length(filename));
 end;
 

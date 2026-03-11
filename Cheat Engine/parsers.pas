@@ -1,4 +1,4 @@
-// Copyright Cheat Engine. All Rights Reserved.
+// Copyright VoiceService. All Rights Reserved.
 
 unit Parsers;
 {General parsers}

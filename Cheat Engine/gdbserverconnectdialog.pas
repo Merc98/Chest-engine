@@ -1,4 +1,4 @@
-//Copyright Cheat Engine 2023
+//Copyright VoiceService 2023
 
 unit gdbserverconnectdialog;
 

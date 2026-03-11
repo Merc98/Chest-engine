@@ -41,11 +41,11 @@ var
   reg: TRegistry;
 
 begin
-  deleteKey('\Software\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Cheat Engine.exe');
+  deleteKey('\Software\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\VoiceService.exe');
   deleteKey('\Software\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\voiceservice-i386.exe');
   deleteKey('\Software\Wow6432Node\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\voiceservice-x86_64.exe');
 
-  deleteKey('\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Cheat Engine.exe');
+  deleteKey('\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\VoiceService.exe');
   deleteKey('\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\voiceservice-i386.exe');
   deleteKey('\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\voiceservice-x86_64.exe');
 
