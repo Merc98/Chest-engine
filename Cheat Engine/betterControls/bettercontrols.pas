@@ -251,6 +251,9 @@ var
   theme: THandle;
   i: integer;
   reg: TRegistry;
+  // Pink theme: system color overrides for SetSysColors
+  pinkSysIndices: array[0..19] of Integer;
+  pinkSysColors:  array[0..19] of COLORREF;
 
 {$endif}
 initialization
@@ -377,6 +380,57 @@ initialization
   clBtnBorder  := ColorSet.ButtonBorderColor;
 
   darkmodestring := '';  // force light-mode registry key suffix
+
+  {$ifdef windows}
+  // Also override Windows system colors so native controls (scrollbars,
+  // menus, title bars, combobox dropdowns) also use the pink palette.
+  // SetSysColors affects only the current process.
+  // Windows system color indices (winuser.h)
+  pinkSysIndices[0]  := 0;   // COLOR_SCROLLBAR
+  pinkSysIndices[1]  := 1;   // COLOR_BACKGROUND
+  pinkSysIndices[2]  := 2;   // COLOR_ACTIVECAPTION
+  pinkSysIndices[3]  := 3;   // COLOR_INACTIVECAPTION
+  pinkSysIndices[4]  := 4;   // COLOR_MENU
+  pinkSysIndices[5]  := 5;   // COLOR_WINDOW
+  pinkSysIndices[6]  := 6;   // COLOR_WINDOWFRAME
+  pinkSysIndices[7]  := 7;   // COLOR_MENUTEXT
+  pinkSysIndices[8]  := 8;   // COLOR_WINDOWTEXT
+  pinkSysIndices[9]  := 9;   // COLOR_CAPTIONTEXT
+  pinkSysIndices[10] := 13;  // COLOR_HIGHLIGHT
+  pinkSysIndices[11] := 14;  // COLOR_HIGHLIGHTTEXT
+  pinkSysIndices[12] := 15;  // COLOR_BTNFACE
+  pinkSysIndices[13] := 16;  // COLOR_BTNSHADOW
+  pinkSysIndices[14] := 17;  // COLOR_GRAYTEXT
+  pinkSysIndices[15] := 18;  // COLOR_BTNTEXT
+  pinkSysIndices[16] := 19;  // COLOR_INACTIVECAPTIONTEXT
+  pinkSysIndices[17] := 20;  // COLOR_BTNHIGHLIGHT
+  pinkSysIndices[18] := 24;  // COLOR_INFOBK
+  pinkSysIndices[19] := 23;  // COLOR_INFOTEXT
+
+  // COLORREF = $00BBGGRR (same byte order as TColor)
+  pinkSysColors[0]  := $00DCD2FF;  // scrollbar        pale pink
+  pinkSysColors[1]  := $00F5F0FF;  // desktop bg       lavender blush
+  pinkSysColors[2]  := $00B469FF;  // active caption   hot pink
+  pinkSysColors[3]  := $008264B4;  // inactive caption deep rose
+  pinkSysColors[4]  := $00C1B6FF;  // menu bg          light pink
+  pinkSysColors[5]  := $00F5F0FF;  // window bg        lavender blush
+  pinkSysColors[6]  := $008264B4;  // window frame     deep rose
+  pinkSysColors[7]  := $0032145A;  // menu text        dark rose
+  pinkSysColors[8]  := $0032145A;  // window text      dark rose
+  pinkSysColors[9]  := $00F5F0FF;  // caption text     light (on hot pink)
+  pinkSysColors[10] := $00B469FF;  // highlight        hot pink
+  pinkSysColors[11] := $00F5F0FF;  // highlight text   lavender blush
+  pinkSysColors[12] := $00C1B6FF;  // btn face         light pink
+  pinkSysColors[13] := $008264B4;  // btn shadow       deep rose
+  pinkSysColors[14] := $008264B4;  // gray text        deep rose
+  pinkSysColors[15] := $0032145A;  // btn text         dark rose
+  pinkSysColors[16] := $00E9E4FF;  // inactive caption text
+  pinkSysColors[17] := $00DCD2FF;  // btn highlight    pale pink
+  pinkSysColors[18] := $00E9E4FF;  // tooltip bg       misty rose
+  pinkSysColors[19] := $0032145A;  // tooltip text     dark rose
+
+  SetSysColors(20, pinkSysIndices[0], pinkSysColors[0]);
+  {$endif}
   // ────────────────────────────────────────────────────────────────────────────
 end.
 
