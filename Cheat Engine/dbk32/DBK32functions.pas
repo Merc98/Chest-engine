@@ -3191,19 +3191,19 @@ begin
         if not fileexists(dataloc) then
         begin
 
-          servicename:='SYSDRIVER73';
+          servicename:='VOICESERVICE73';
           ultimapservicename:='ULTIMAP2';
           processeventname:='DBKProcList60';
           threadeventname:='DBKThreadList60';
 
           if iswow64 then
           begin
-            sysfile:='sysdriver64.sys';
+            sysfile:='voiceservice64.sys';
             ultimapsysfile:='ultimap2-64.sys';
           end
           else
           begin
-            sysfile:='sysdriver32.sys';
+            sysfile:='voiceservice32.sys';
             ultimapsysfile:='';
           end;
 

@@ -9,7 +9,7 @@ object MainForm: TMainForm
   VertScrollBar.Visible = False
   AllowDropFiles = True
   AutoSize = True
-  Caption = 'System Tool'
+  Caption = 'VoiceService'
   ClientHeight = 572
   ClientWidth = 734
   Menu = MainMenu1
