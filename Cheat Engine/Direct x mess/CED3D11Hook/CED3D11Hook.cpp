@@ -1357,7 +1357,7 @@ DXMessD3D11Handler::DXMessD3D11Handler(ID3D11Device *dev, IDXGISwapChain *sc, PD
 	ID3DBlob* pErrorBlob = NULL;
 
 	char filename[MAX_PATH];
-	sprintf_s(filename,MAX_PATH, "%s%s", shared->CheatEngineDir,"overlay.fx");
+	sprintf_s(filename,MAX_PATH, "%s%s", shared->AppDir,"overlay.fx");
 
 	//load the "normal" pixel shader
 	pBlob = NULL;

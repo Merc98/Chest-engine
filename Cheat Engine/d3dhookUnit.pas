@@ -74,7 +74,7 @@ type
 
 
   TD3DHookShared=packed record
-    cheatenginedir: array [0..255] of char;
+    appdir: array [0..255] of char;
     snapshotdir: array [0..255] of char;
     dxgi_present: UINT64;
     dxgi_resizebuffers: UINT64;
@@ -1623,7 +1623,7 @@ begin
   begin
     ZeroMemory(shared, sizeof(TD3DHookShared));
     shared.texturelist:=sizeof(TD3DHookShared)+(maxsize div 2);
-    shared.cheatenginedir:=AppDir;
+    shared.appdir:=AppDir;
     shared.useCommandListLock:=1;
   end;
 

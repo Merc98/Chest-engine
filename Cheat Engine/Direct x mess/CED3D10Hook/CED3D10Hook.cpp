@@ -740,7 +740,7 @@ DXMessD3D10Handler::DXMessD3D10Handler(ID3D10Device *dev, IDXGISwapChain *sc, PD
     ID3DBlob* pBlob = NULL;
 	ID3DBlob* pErrorBlob = NULL;
 	char shaderfile[MAX_PATH];
-	sprintf_s(shaderfile,MAX_PATH, "%s%s", shared->CheatEngineDir,"overlay.fx");
+	sprintf_s(shaderfile,MAX_PATH, "%s%s", shared->AppDir,"overlay.fx");
 
 	//normal pixel shader
 	pBlob = NULL;

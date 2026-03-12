@@ -685,7 +685,7 @@ void hookIfNeeded(void)
 void InitializeD3D9Api()
 {
 	char dllpath[MAX_PATH];				
-	strcpy_s(dllpath, MAX_PATH, (char *)shared->CheatEngineDir);
+	strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 #ifdef _AMD64_
 	strcat_s(dllpath, MAX_PATH, "CED3D9Hook64.dll");
 #else
@@ -839,7 +839,7 @@ HRESULT __stdcall D3D9_Present_new(IDirect3DDevice9 *Device, RECT* pSourceRect,C
 void InitializeD3D10Api()
 {
 	char dllpath[MAX_PATH];				
-	strcpy_s(dllpath, MAX_PATH, (char *)shared->CheatEngineDir);
+	strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 #ifdef _AMD64_
 	strcat_s(dllpath, MAX_PATH, "CED3D10Hook64.dll");
 #else
@@ -925,7 +925,7 @@ HRESULT	__stdcall D3D10_DrawAuto_new(ID3D10Device *device)
 void InitializeD3D11Api()
 {
 	char dllpath[MAX_PATH];				
-	strcpy_s(dllpath, MAX_PATH, (char *)shared->CheatEngineDir);
+	strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 #ifdef _AMD64_
 	strcat_s(dllpath, MAX_PATH, "CED3D11Hook64.dll");
 #else
@@ -1073,7 +1073,7 @@ int GetDXVersionAndInitDLL(IDXGISwapChain *x, void *device)
 			{
 				//load the dll and use getprocaddress
 				char dllpath[MAX_PATH];
-				strcpy_s(dllpath, MAX_PATH, (char *)shared->CheatEngineDir);
+				strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 				strcat_s(dllpath, MAX_PATH, "CED3D11Hook.dll");
 
 				HMODULE hdll=LoadLibraryA(dllpath);
@@ -1088,7 +1088,7 @@ int GetDXVersionAndInitDLL(IDXGISwapChain *x, void *device)
 			if ((D3D10_1Hook_SwapChain_Present==NULL) || (D3D10_1Hook_SwapChain_ResizeBuffers==NULL))
 			{
 				char dllpath[MAX_PATH];
-				strcpy_s(dllpath, MAX_PATH, (char *)shared->CheatEngineDir);
+				strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 				strcat_s(dllpath, MAX_PATH, "CED3D10Hook.dll");
 
 				HMODULE hdll=LoadLibraryA(dllpath);
@@ -1102,7 +1102,7 @@ int GetDXVersionAndInitDLL(IDXGISwapChain *x, void *device)
 			if ((D3D10Hook_SwapChain_Present==NULL) || (D3D10Hook_SwapChain_ResizeBuffers==NULL))
 			{
 				char dllpath[MAX_PATH];
-				strcpy_s(dllpath, MAX_PATH, (char *)shared->CheatEngineDir);
+				strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 				strcat_s(dllpath, MAX_PATH, "CED3D10Hook.dll");
 
 				HMODULE hdll=LoadLibraryA(dllpath);

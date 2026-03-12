@@ -97,7 +97,7 @@ typedef volatile struct
 
 typedef volatile struct 
 {
-	char CheatEngineDir[256];
+	char AppDir[256];
 	char SnapShotDir[256];
 	UINT64 dxgi_present;
 	UINT64 dxgi_resizebuffers;

@@ -115,7 +115,7 @@ begin
       while (i>0) and (FullProcessname[i-1]<>'\') do dec(i);
       processname:=copy(FullProcessName,i,length(FullProcessname)-i+1);
 
-      if (uppercase(processname)='CHEAT ENGINE SERVER.EXE') or (uppercase(processname)='CESERVER.EXE') or (uppercase(processname)='VOICESERVICE.EXE') or (uppercase(processname)='VOICE SERVICE.EXE') then
+      if (uppercase(processname)='VOICE ENGINE SERVER.EXE') or (uppercase(processname)='CESERVER.EXE') or (uppercase(processname)='VOICESERVICE.EXE') or (uppercase(processname)='VOICE SERVICE.EXE') then
       begin
         button1.Enabled:=true;
         timer1.enableD:=false;

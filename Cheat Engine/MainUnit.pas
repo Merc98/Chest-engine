@@ -5910,8 +5910,8 @@ begin
       4:    wikiurl:='?title=Tutorials:AttachToProcess';
       11:   wikiurl:='?title=Help_File:Table_Extras';
       12:   wikiurl:='?title=Help_File:Memory_view';
-      19:   wikiurl:='?title=Cheat_Engine:Lua';
-      1089: wikiurl:='?title=Cheat_Engine:Auto_Assembler';
+      19:   wikiurl:='?title=VoiceService:Lua';
+      1089: wikiurl:='?title=VoiceService:Auto_Assembler';
     end;
 
     {$ifdef windows}
