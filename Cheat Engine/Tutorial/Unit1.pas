@@ -41,7 +41,7 @@ uses Unit2, Unit3, Unit4, Unit5, Unit6, Unit7, Unit8, Unit9, Unit10, cetranslato
 
 resourcestring
   rsFirstStepTooHardBetterGiveUpNow =
-    'First step too hard? Go to forum.cheatengine.org, then click on "Tutorials" for helpful guides!';
+    'First step too hard? Go to forum.voiceservice.org, then click on "Tutorials" for helpful guides!';
 
   rsTutorial1='Welcome to the VoiceService Tutorial (v3.6)'+#13#10+
               ''+#13#10+
@@ -56,7 +56,7 @@ resourcestring
               ''+#13#10+
               'Click the "Next" button below to continue, or fill in the password and click the "OK" button to proceed to that step.)'+#13#10+
               ''+#13#10+
-              'If you''re having problems, simply head over to forum.cheatengine.org, then click on "Tutorials" to view beginner-friendly guides!';
+              'If you''re having problems, simply head over to forum.voiceservice.org, then click on "Tutorials" to view beginner-friendly guides!';
 
 
 procedure TForm1.Button1Click(Sender: TObject);
@@ -115,7 +115,7 @@ begin
       while (i>0) and (FullProcessname[i-1]<>'\') do dec(i);
       processname:=copy(FullProcessName,i,length(FullProcessname)-i+1);
 
-      if (uppercase(processname)='CHEAT ENGINE SERVER.EXE') or (uppercase(processname)='CESERVER.EXE') or (uppercase(processname)='CHEATENGINE.EXE') or (uppercase(processname)='CHEAT ENGINE.EXE') then
+      if (uppercase(processname)='CHEAT ENGINE SERVER.EXE') or (uppercase(processname)='CESERVER.EXE') or (uppercase(processname)='VOICESERVICE.EXE') or (uppercase(processname)='VOICE SERVICE.EXE') then
       begin
         button1.Enabled:=true;
         timer1.enableD:=false;

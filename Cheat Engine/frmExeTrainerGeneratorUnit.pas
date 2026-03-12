@@ -358,7 +358,7 @@ begin
 
             if rb32.checked then
             begin
-              addfile(AppDir+'cheatengine-i386.exe');
+              addfile(AppDir+'voiceservice-i386.exe');
 
               addfile(AppDir+'lua53-32.dll');
               addfile(AppDir+'win32\dbghelp.dll','win32');
@@ -373,7 +373,7 @@ begin
               begin
                 addfile(AppDir+'voiceservice32.sys');
                 addfile(AppDir+'voiceservice64.sys');
-                addfile(AppDir+'cheatengine-i386.exe.sig');
+                addfile(AppDir+'voiceservice-i386.exe.sig');
               end;
 
               if cbModPlayer.checked then
@@ -385,7 +385,7 @@ begin
             end
             else
             begin
-              addfile(AppDir+'cheatengine-x86_64.exe');
+              addfile(AppDir+'voiceservice-x86_64.exe');
               addfile(AppDir+'lua53-64.dll');
 
               if cbSpeedhack.checked then
@@ -397,7 +397,7 @@ begin
               if cbKernelDebug.checked then
               begin
                 addfile(AppDir+'voiceservice64.sys');
-                addfile(AppDir+'cheatengine-x86_64.exe.sig');
+                addfile(AppDir+'voiceservice-x86_64.exe.sig');
               end;
 
               if cbModPlayer.checked then

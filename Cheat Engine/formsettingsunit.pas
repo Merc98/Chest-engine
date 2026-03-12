@@ -469,7 +469,7 @@ resourcestring
   rsSigning = 'Signing';
   rsNoName = 'No Name';
   rsAttachToForegroundProcess = 'Attach to current foreground process';
-  rsPopupHideCheatEngine = 'Popup/Hide '+strCheatEngine;
+  rsPopupHideApp = 'Popup/Hide '+strCheatEngine;
   rsPauseTheSelectedProcess = 'Pause the selected process';
   rsToggleTheSpeedhack = 'Toggle the speedhack';
   rsSpeedhackSpeed = 'Speedhack speed';
@@ -1822,7 +1822,7 @@ begin
   for i:=0 to f.Count-1 do
   begin
     n:=f[i];
-    if not (fileexists(n+pathsep+'cheatengine.po') or fileexists(n+PathDelim+'cheatengine-x86_64.po') or fileexists(n+PathDelim+'cheatengine-i386.po')) then
+    if not (fileexists(n+pathsep+'voiceservice.po') or fileexists(n+PathDelim+'voiceservice-x86_64.po') or fileexists(n+PathDelim+'voiceservice-i386.po')) then
       continue;
 
 
@@ -1931,7 +1931,7 @@ begin
   begin
     clear;
     add(rsAttachToForegroundProcess);
-    add(rsPopupHideCheatEngine);
+    add(rsPopupHideApp);
     add(rsPauseTheSelectedProcess);
     add(rsToggleTheSpeedhack);
     add(rsSpeedhackSpeed+' 1');

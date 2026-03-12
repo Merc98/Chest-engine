@@ -59,7 +59,7 @@ resourcestring
 
 
 var
-  cheatenginepublictablekey: BCRYPT_KEY_HANDLE=0;
+  appPublicTableKey: BCRYPT_KEY_HANDLE=0;
   publictablekey: array [0..139] of byte =($45, $43, $53, $35, $42, $00, $00,
    $00, $01, $A3, $7A, $45, $2A, $66, $60, $85, $C7, $50, $9D, $8C, $3F, $34,
    $57, $D3, $FF, $50, $E3, $32, $CA, $4C, $4D, $61, $9B, $00, $19, $7E, $61,
@@ -235,9 +235,9 @@ begin
     begin
 
 
-      if cheatenginepublictablekey=0 then
+      if appPublicTableKey=0 then
       begin
-        s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPUBLIC_BLOB, cheatenginepublictablekey, @publictablekey[0], 140, 0);
+        s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPUBLIC_BLOB, appPublicTableKey, @publictablekey[0], 140, 0);
         if not succeeded(s) then raise exception.create(
           rsFailedToLoadVSPublicKey);
       end;
@@ -316,7 +316,7 @@ begin
 
       //now verify this hash with the signature and the ce public key
 
-      s:=BCryptVerifySignature(cheatenginepublictablekey,nil,hashbuffer,hashlength,sig, signaturesize,0);
+      s:=BCryptVerifySignature(appPublicTableKey,nil,hashbuffer,hashlength,sig, signaturesize,0);
       if not succeeded(s) then raise exception.create(rsInvalidPublicKey);
 
       //still here so the public key is valid

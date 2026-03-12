@@ -72,7 +72,7 @@ resourcestring
   rsErrorWhileTryingToCreateTheConfigurationStructure = 'Error while trying '
     +'to create the configuration structure! (Which effectively renders this '
     +'whole feature useless) Errorcode=%s';
-  rsCheatEngineFailedToGetIntoTheConfig = strCheatEngine+' failed to get into '
+  rsAppFailedToGetIntoTheConfig = strCheatEngine+' failed to get into '
     +'the config of the selected program. (Error=%s)';
   rsFailureDuplicatingTheEventHandlesToTheOtherProcess = 'Failure duplicating '
     +'the event handles to the other process';
@@ -584,7 +584,7 @@ begin
 
       OutputDebugString('MapViewOfFile failed: '+inttostr(e));
 
-      raise exception.Create(Format(rsCheatEngineFailedToGetIntoTheConfig, [
+      raise exception.Create(Format(rsAppFailedToGetIntoTheConfig, [
         inttostr(e)]));
     end;
 

@@ -1255,7 +1255,7 @@ end;
 resourcestring
   StrSelectExeFor3D='Select the executable of the Direct-3D game';
   rsAOErrorWhileTryingToCreateTheSharedKeyStructureEtc = 'Error while trying to create the shared key structure! (Which efficiently renders this whole feature useless)';
-  rsAOCheatEngineFailedToGetIntoTheConfigOfSelectedProgram = strCheatEngine+' failed to get into the config of the selected program.';
+  rsAOAppFailedToGetIntoTheConfigOfSelectedProgram = strCheatEngine+' failed to get into the config of the selected program.';
   rsAOYouCanOnlyLoadExeFiles = 'You can only load EXE files';
 
 procedure TAdvancedOptions.Button4Click(Sender: TObject);

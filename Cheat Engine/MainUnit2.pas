@@ -45,7 +45,7 @@ const
 resourcestring
   cename = strCheatEngine;
   cenamewithversion = strCheatEngine+' '+strVersionPart;
-  rsCheatEngine = strCheatEngine;
+  rsAppName = strCheatEngine;
   rsPleaseWait = 'Please Wait!';
 
 procedure UpdateToolsMenu;

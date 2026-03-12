@@ -1210,7 +1210,7 @@ resourcestring
     'Select the saved scan result to delete from the list below';
   rsComparingTo = 'Comparing to %s';
   rsHex = 'Hex';
-  rsDoYouWantToGoToTheCheatEngineWebsite =
+  rsDoYouWantToGoToTheWebsite =
     'Do you want to go to the '+strCheatEngine+' website?';
 
   strdeleteall = 'Are you sure you want to delete all addresses?';
@@ -1258,7 +1258,7 @@ resourcestring
   strHideAll = 'will hide all windows';
   strUnHideForeground = 'will bring the foreground window back';
   strUnhideAll = 'will bring all windows back';
-  rsBringsCheatEngineToFront = 'brings '+strCheatEngine+' to front';
+  rsBringsAppToFront = 'brings '+strCheatEngine+' to front';
 
   strhappybirthday = 'Let''s sing Happy Birthday for the VoiceService team today!';
   strXMess = 'Merry christmas and happy new year';
@@ -5111,7 +5111,7 @@ var
   s: string;
 begin
   s := scantablist.TabText[scantablist.SelectedTab];
-  if InputQuery(rsCheatEngine, rsWhatWillBeTheNewNameForThisTab, s) then
+  if InputQuery(rsAppName, rsWhatWillBeTheNewNameForThisTab, s) then
     scantablist.TabText[scantablist.SelectedTab] := s;
 end;
 
@@ -7298,7 +7298,7 @@ procedure TMainForm.LogoClick(Sender: TObject);
 var s: string;
 begin
   s:=format('https://www.voiceservice.io/',[ceversion]);
-  if messagedlg(rsDoYouWantToGoToTheCheatEngineWebsite, mtConfirmation,
+  if messagedlg(rsDoYouWantToGoToTheWebsite, mtConfirmation,
     [mbYes, mbNo], 0) = mrYes then
     ShellExecute(0, PChar('open'), PChar(s),
       PChar(''), PChar(''), SW_MAXIMIZE);
@@ -8414,7 +8414,7 @@ begin
 
   end
   else
-    fronttext := rsBringsCheatEngineToFront;
+    fronttext := rsBringsAppToFront;
 
 
   hk:=cereg.readString('BringToFrontHotkey');
@@ -8547,7 +8547,7 @@ begin
 
   //  animatewindow(mainform.Handle,10000,AW_CENTER);
   //mainform.repaint;
-  fronttext := rsBringsCheatEngineToFront;
+  fronttext := rsBringsAppToFront;
 
   if dontrunshow then
     exit;
