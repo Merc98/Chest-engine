@@ -150,7 +150,7 @@ begin
       begin
         ForceDirectories('/usr/local/lib/');
 
-        path:=cheatenginedir+'libspeedhack.dylib';
+        path:=AppDir+'libspeedhack.dylib';
         if CopyFile(path, '/usr/local/lib/libspeedhack.dylib', true)=false then
         begin
           raise exception.create('Failure copying libspeedhack.dylib to /usr/local/lib');

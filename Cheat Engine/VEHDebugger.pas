@@ -631,7 +631,7 @@ begin
     begin
       try
         debuggerAttachStatus:='Injecting vehdebug'+prefix+'.dll';
-        InjectDll(cheatenginedir+'vehdebug'+prefix+'.dll');
+        InjectDll(AppDir+'vehdebug'+prefix+'.dll');
       except
       end;
     end;

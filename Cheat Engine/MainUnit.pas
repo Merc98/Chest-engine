@@ -3230,8 +3230,8 @@ begin
     else
     if fileexists(expectedfilename) then
       path:=expectedfilename
-    else if fileexists(cheatenginedir + expectedfilename) then
-      path:=cheatenginedir + expectedfilename
+    else if fileexists(AppDir + expectedfilename) then
+      path:=AppDir + expectedfilename
     else if fileexists( IncludeTrailingPathDelimiter(opendialog1.InitialDir)+expectedfilename) then
       path:=IncludeTrailingPathDelimiter(opendialog1.InitialDir)+expectedfilename
     else if fileexists( IncludeTrailingPathDelimiter(extractfilepath(opendialog1.FileName))+expectedfilename) then
@@ -3803,7 +3803,7 @@ begin
   p.Executable:=(path);
   p.Execute;
   {$else}
-  shellexecute(0, 'open', pchar(cheatenginedir+{$ifdef altname}'rtmtutorial-x86_64.exe'{$else}'Tutorial-x86_64.exe'{$endif}), nil, nil, sw_show);
+  shellexecute(0, 'open', pchar(AppDir+{$ifdef altname}'rtmtutorial-x86_64.exe'{$else}'Tutorial-x86_64.exe'{$endif}), nil, nil, sw_show);
   {$endif}
 end;
 
@@ -5916,7 +5916,7 @@ begin
 
     {$ifdef windows}
     if wikiurl='' then //no wikilink given
-      HtmlHelpA(Win32WidgetSet.AppHandle, PChar(cheatenginedir + 'voiceservice.chm'), HH_HELP_CONTEXT, Data)
+      HtmlHelpA(Win32WidgetSet.AppHandle, PChar(AppDir + 'voiceservice.chm'), HH_HELP_CONTEXT, Data)
     else
     {$endif}
       ShellExecute(0,'open',pchar(wikipath+wikiurl),nil,nil,SW_SHOW);
@@ -10039,13 +10039,13 @@ end;
 
 procedure TMainForm.miTutorialClick(Sender: TObject);
 begin
-  if not fileexists(cheatenginedir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}) then
+  if not fileexists(AppDir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}) then
   begin
-    if fileexists(cheatenginedir+{$ifdef altname}'rtmtutorial-i386.cepack'{$else}'Tutorial-i386.cepack'{$endif}) then
-      ceunpackfile(cheatenginedir+{$ifdef altname}'rtmtutorial-i386.cepack'{$else}'Tutorial-i386.cepack'{$endif}, cheatenginedir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}, false);
+    if fileexists(AppDir+{$ifdef altname}'rtmtutorial-i386.cepack'{$else}'Tutorial-i386.cepack'{$endif}) then
+      ceunpackfile(AppDir+{$ifdef altname}'rtmtutorial-i386.cepack'{$else}'Tutorial-i386.cepack'{$endif}, AppDir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}, false);
   end;
 
-  shellexecute(0, 'open', pchar(cheatenginedir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}), nil, nil, sw_show);
+  shellexecute(0, 'open', pchar(AppDir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}), nil, nil, sw_show);
 end;
 
 procedure TMainForm.miFlFindWhatAccessesClick(Sender: TObject);

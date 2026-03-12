@@ -34,7 +34,7 @@ begin
   //parse the donottrace.txt file and find the range
   setlength(ignoredtracerregions, 0);
 
-  s:=cheatenginedir+'donottrace.txt';
+  s:=AppDir+'donottrace.txt';
   if FileExists(s) then //if the list exists
   begin
     donottrace:=tstringlist.create;

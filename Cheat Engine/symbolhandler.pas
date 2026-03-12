@@ -6462,7 +6462,7 @@ var
   s: string;
   i,j: integer;
 begin
-  s:=cheatenginedir+'commonmodulelist.txt';
+  s:=AppDir+'commonmodulelist.txt';
   if FileExists(s) then //if the list exists
   begin
     if commonModuleList=nil then

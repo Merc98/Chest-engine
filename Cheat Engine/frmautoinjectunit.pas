@@ -2973,7 +2973,7 @@ begin
       add('envname:');
       add('db ''UC_HOME'',0');
       add('envvar:');
-      add('db '''+cheatenginedir+''' ,0');
+      add('db '''+AppDir+''' ,0');
       add('myscript:');
       add('push envvar');
       add('push envname');
@@ -3009,7 +3009,7 @@ begin
     setenvscript.free;
 
 
-    injectdll(cheatenginedir+'undercdll.dll','');
+    injectdll(AppDir+'undercdll.dll','');
     symhandler.reinitialize;
     hasjustloadedundercdll:=true;
   end else hasjustloadedundercdll:=false;

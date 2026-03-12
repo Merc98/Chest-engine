@@ -2255,10 +2255,10 @@ begin
               if not fileexists(s1) then //check if it's inside the current location
               begin
                 //if not, check the default paths
-                s2:=cheatenginedir+'includes'+pathdelim+'s1';
+                s2:=AppDir+'includes'+pathdelim+'s1';
                 if fileexists(s2) then s1:=s2 else
                 begin
-                  s2:=cheatenginedir+s1;
+                  s2:=AppDir+s1;
                   if fileexists(s2) then s1:=s2
                   else
                   begin
@@ -2382,9 +2382,9 @@ begin
                 if getConnection=nil then //no connection, so local. Check if the file can be found locally and if so, set the specific path
                 begin
                 {$endif}
-                  if fileexists(cheatenginedir+s2) then s1:=cheatenginedir+s2 else
+                  if fileexists(AppDir+s2) then s1:=AppDir+s2 else
                     if fileexists(getcurrentdir+ PathDelim+s2) then s1:=getcurrentdir+PathDelim+s2 else
-                      if fileexists(cheatenginedir+s1) then s1:=cheatenginedir+s1;
+                      if fileexists(AppDir+s1) then s1:=AppDir+s1;
                 {$ifdef windows}
                 end;
                 {$endif}

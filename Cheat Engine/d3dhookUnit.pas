@@ -1684,9 +1684,9 @@ begin
       symhandler.reinitialize;
       symhandler.waitforsymbolsloaded(true, 'kernel32.dll');
       if processhandler.is64Bit then
-        injectdll(cheatenginedir+'d3dhook64.dll')
+        injectdll(AppDir+'d3dhook64.dll')
       else
-        injectdll(cheatenginedir+'d3dhook.dll');
+        injectdll(AppDir+'d3dhook.dll');
 
       //wait till the injection is done
       WaitForSingleObject(h, INFINITE);

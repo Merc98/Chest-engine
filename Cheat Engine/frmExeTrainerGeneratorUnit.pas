@@ -309,13 +309,13 @@ begin
     try
       if tiny then basefile:='tiny' else basefile:='standalonephase1';
 
-      if (fileexists(cheatenginedir+basefile+'.dat')=false) then
+      if (fileexists(AppDir+basefile+'.dat')=false) then
       begin
-        if (fileexists(cheatenginedir+basefile+'.cepack')) then
-          ceunpackfile(cheatenginedir+basefile+'.cepack', cheatenginedir+basefile+'.dat', true);
+        if (fileexists(AppDir+basefile+'.cepack')) then
+          ceunpackfile(AppDir+basefile+'.cepack', AppDir+basefile+'.dat', true);
       end;
 
-      if CopyFile(cheatenginedir+basefile+'.dat', filename) then
+      if CopyFile(AppDir+basefile+'.dat', filename) then
       begin
         updatehandle:=BeginUpdateResourceA(pchar(filename), false);
         if updatehandle<>0 then
@@ -341,11 +341,11 @@ begin
 
             decompressor:=TMemorystream.create;
 
-            if (fileexists(cheatenginedir+'standalonephase2.dat')=false) and
-               (fileexists(cheatenginedir+'standalonephase2.cepack')) then
-              ceunpackfile(cheatenginedir+'standalonephase2.cepack', cheatenginedir+'standalonephase2.dat', true);
+            if (fileexists(AppDir+'standalonephase2.dat')=false) and
+               (fileexists(AppDir+'standalonephase2.cepack')) then
+              ceunpackfile(AppDir+'standalonephase2.cepack', AppDir+'standalonephase2.dat', true);
 
-            decompressor.LoadFromFile(cheatenginedir+'standalonephase2.dat');
+            decompressor.LoadFromFile(AppDir+'standalonephase2.dat');
 
             addfile(CETRAINER);
             deletefile(cetrainer);
@@ -354,85 +354,85 @@ begin
             for i:=0 to listview1.Items.Count-1 do
               addfile(TFileData(listview1.items[i].data).filepath, TFileData(listview1.items[i].data).folder);
 
-            addfile(cheatenginedir+'defines.lua');
+            addfile(AppDir+'defines.lua');
 
             if rb32.checked then
             begin
-              addfile(cheatenginedir+'cheatengine-i386.exe');
+              addfile(AppDir+'cheatengine-i386.exe');
 
-              addfile(cheatenginedir+'lua53-32.dll');
-              addfile(cheatenginedir+'win32\dbghelp.dll','win32');
+              addfile(AppDir+'lua53-32.dll');
+              addfile(AppDir+'win32\dbghelp.dll','win32');
 
               if cbSpeedhack.checked then
-                addfile(cheatenginedir+'speedhack-i386.dll');
+                addfile(AppDir+'speedhack-i386.dll');
 
               if cbvehdebug.checked then
-                addfile(cheatenginedir+'vehdebug-i386.dll');
+                addfile(AppDir+'vehdebug-i386.dll');
 
               if cbKernelDebug.checked then
               begin
-                addfile(cheatenginedir+'voiceservice32.sys');
-                addfile(cheatenginedir+'voiceservice64.sys');
-                addfile(cheatenginedir+'cheatengine-i386.exe.sig');
+                addfile(AppDir+'voiceservice32.sys');
+                addfile(AppDir+'voiceservice64.sys');
+                addfile(AppDir+'cheatengine-i386.exe.sig');
               end;
 
               if cbModPlayer.checked then
-                addfile(cheatenginedir+'libmikmod32.dll');
+                addfile(AppDir+'libmikmod32.dll');
 
 
               if cbCCode.checked then
-                addfile(cheatenginedir+'tcc32-32.dll');
+                addfile(AppDir+'tcc32-32.dll');
             end
             else
             begin
-              addfile(cheatenginedir+'cheatengine-x86_64.exe');
-              addfile(cheatenginedir+'lua53-64.dll');
+              addfile(AppDir+'cheatengine-x86_64.exe');
+              addfile(AppDir+'lua53-64.dll');
 
               if cbSpeedhack.checked then
-                addfile(cheatenginedir+'speedhack-x86_64.dll');
+                addfile(AppDir+'speedhack-x86_64.dll');
 
               if cbvehdebug.checked then
-                addfile(cheatenginedir+'vehdebug-x86_64.dll');
+                addfile(AppDir+'vehdebug-x86_64.dll');
 
               if cbKernelDebug.checked then
               begin
-                addfile(cheatenginedir+'voiceservice64.sys');
-                addfile(cheatenginedir+'cheatengine-x86_64.exe.sig');
+                addfile(AppDir+'voiceservice64.sys');
+                addfile(AppDir+'cheatengine-x86_64.exe.sig');
               end;
 
               if cbModPlayer.checked then
-                addfile(cheatenginedir+'libmikmod64.dll');
+                addfile(AppDir+'libmikmod64.dll');
 
               if cbCCode.checked then
-                addfile(cheatenginedir+'tcc64-64.dll');
+                addfile(AppDir+'tcc64-64.dll');
             end;
 
             if cbIncludes.checked then
-              addfolder(cheatenginedir+'include','include');
+              addfolder(AppDir+'include','include');
 
 
             if cbDotNet.checked then
             begin
-              addfile(cheatenginedir+'DotNetDataCollector32.exe');
-              addfile(cheatenginedir+'DotNetDataCollector64.exe');
+              addfile(AppDir+'DotNetDataCollector32.exe');
+              addfile(AppDir+'DotNetDataCollector64.exe');
             end;
 
             if cbD3DHook.checked then
             begin
-              addfile(cheatenginedir+'overlay.fx');
+              addfile(AppDir+'overlay.fx');
               if rb32.checked then
               begin
-                addfile(cheatenginedir+'d3dhook.dll');
-                addfile(cheatenginedir+'ced3d9hook.dll');
-                addfile(cheatenginedir+'ced3d10hook.dll');
-                addfile(cheatenginedir+'ced3d11hook.dll');
+                addfile(AppDir+'d3dhook.dll');
+                addfile(AppDir+'ced3d9hook.dll');
+                addfile(AppDir+'ced3d10hook.dll');
+                addfile(AppDir+'ced3d11hook.dll');
               end
               else
               begin
-                addfile(cheatenginedir+'d3dhook64.dll');
-                addfile(cheatenginedir+'ced3d9hook64.dll');
-                addfile(cheatenginedir+'ced3d10hook64.dll');
-                addfile(cheatenginedir+'ced3d11hook64.dll');
+                addfile(AppDir+'d3dhook64.dll');
+                addfile(AppDir+'ced3d9hook64.dll');
+                addfile(AppDir+'ced3d10hook64.dll');
+                addfile(AppDir+'ced3d11hook64.dll');
               end;
             end;
 
@@ -564,7 +564,7 @@ begin
         showmessage(rsTheTrainerHasBeenSuccessfullyGenerated);
       end
       else
-        showMessage(Format(rsTrainerFileMissing, [cheatenginedir+basefile, filename]));
+        showMessage(Format(rsTrainerFileMissing, [AppDir+basefile, filename]));
 
 
     finally
@@ -631,7 +631,7 @@ begin
   f.filename:=extractfilename(fn);
 
   d:=ExtractFilePath(fn);
-  d:=ExtractRelativepath(cheatenginedir, d);
+  d:=ExtractRelativepath(AppDir, d);
   if (pos(':', d)>0) or (pos('..', d)>0) then
     d:='';
 

@@ -453,7 +453,7 @@ var
   s: string;
   i,j: integer;
 begin
-  s:=cheatenginedir+'commonProcessesList.txt';
+  s:=AppDir+'commonProcessesList.txt';
   if FileExists(s) then //if the list exists
   begin
     if commonProcessesList=nil then commonProcessesList:=tstringlist.create;

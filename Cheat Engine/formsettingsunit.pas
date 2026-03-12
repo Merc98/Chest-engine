@@ -1291,7 +1291,7 @@ begin
       preferedLanguage:='*';
 
     try
-      ini:=TIniFile.Create(cheatenginedir+{$ifdef darwin}'..'+DirectorySeparator+{$endif}'Languages' + DirectorySeparator+'language.ini');
+      ini:=TIniFile.Create(AppDir+{$ifdef darwin}'..'+DirectorySeparator+{$endif}'Languages' + DirectorySeparator+'language.ini');
       try
         old:=ini.ReadString('Language','PreferedLanguage','');
         ini.WriteString('Language','PreferedLanguage',preferedLanguage);

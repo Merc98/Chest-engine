@@ -2170,10 +2170,10 @@ begin
 
   deletefile(AppDir+'Memory.UNDO');
   deletefile(AppDir+'Addresses.UNDO');
-  renamefile(AppDir+'Memory.tmp',cheatenginedir+'Memory.UNDO');
+  renamefile(AppDir+'Memory.tmp',AppDir+'Memory.UNDO');
   renamefile(AppDir+'Addresses.tmp',AppDir+'Addresses.UNDO');
   renamefile(AppDir+'Memory2.tmp',AppDir+'Memory.TMP');
-  Renamefile(CheatengineDir+'Address2.TMP',AppDir+'Addresses.TMP');
+  Renamefile(AppDir+'Address2.TMP',AppDir+'Addresses.TMP');
 
 
 end;
@@ -3222,7 +3222,7 @@ function GetRelativeFilePath(filename: string):string;
 begin
   result:=filename;
   if pos(uppercase(AppDir),uppercase(filename))=1 then
-    result:='.\'+copy(filename,length(CheatEnginedir)+1,length(filename));
+    result:='.\'+copy(filename,length(AppDir)+1,length(filename));
 end;
 
 

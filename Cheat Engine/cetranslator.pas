@@ -99,13 +99,13 @@ var
     if LangID <> '' then
     begin
       //ParamStrUTF8(0) is said not to work properly in linux, but I've tested it
-      Result := cheatenginedir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine'+LCEXT;
+      Result := AppDir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine'+LCEXT;
       if FileExists(Result) then exit;
 
-      Result := cheatenginedir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-x86_64'+LCEXT;
+      Result := AppDir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-x86_64'+LCEXT;
       if FileExists(Result) then exit;
 
-      Result := cheatenginedir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-i386'+LCEXT;
+      Result := AppDir + {$ifdef Darwin}'../'+{$endif}'Languages' + DirectorySeparator + LangID + DirectorySeparator + 'cheatengine-i386'+LCEXT;
       if FileExists(Result) then exit;
 
     end;
@@ -128,7 +128,7 @@ begin
     Lang := GetEnvironmentVariableUTF8('LANG');
 
 
-  languageIniFile:=cheatenginedir+ {$ifdef darwin}'../'+{$endif}'Languages' + DirectorySeparator+'language.ini';
+  languageIniFile:=AppDir+ {$ifdef darwin}'../'+{$endif}'Languages' + DirectorySeparator+'language.ini';
   {$ifdef darwin}
   OutputDebugString('languageIniFile='+languageIniFile);
   {$endif}
