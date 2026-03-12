@@ -5111,7 +5111,7 @@ var
   s: string;
 begin
   s := scantablist.TabText[scantablist.SelectedTab];
-  if InputQuery(rsVSApp, rsWhatWillBeTheNewNameForThisTab, s) then
+  if InputQuery(rsCheatEngine, rsWhatWillBeTheNewNameForThisTab, s) then
     scantablist.TabText[scantablist.SelectedTab] := s;
 end;
 
