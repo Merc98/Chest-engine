@@ -1601,7 +1601,7 @@ begin
   commandlistCS:=TCriticalSection.create;
 
 
-  sharename:='CED3D_'+inttostr(processhandler.ProcessID);
+  sharename:='VSHK_'+inttostr(processhandler.ProcessID);
 
   fprocessid:=processhandler.processid;
   maxsize:=size;

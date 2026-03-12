@@ -1215,10 +1215,10 @@ DWORD WINAPI InitializeD3DHookDll(PVOID params)
 	
 
 //#ifdef DEBUG	
-//	sprintf_s(sharename, 100,"CED3D_DEBUG2");	
+//	sprintf_s(sharename, 100,"VSHK_DEBUG2");	
 	//sprintf_s(eventname, 100,"CED3D_DEBUG2_READY");	
 //#else
-	sprintf_s(sharename, 50,"CED3D_%d", GetCurrentProcessId());
+	sprintf_s(sharename, 50,"VSHK_%d", GetCurrentProcessId());
 	sprintf_s(eventname, 50,"%s_READY", sharename);	
 
 	sprintf_s(hasclickeventname, 50,"%s_HASCLICK", sharename);

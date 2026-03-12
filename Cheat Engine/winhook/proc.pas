@@ -22,7 +22,7 @@ var
   results: array of QWord;
 begin
   setlength(results,5);
-  CEConnection.DoCommandMR(async, 'return CEWindowProcEvent_Internal('+IntToStr(hWnd)+','+IntToStr(Msg)+','+IntToStr(wParam)+','+IntToStr(lParam)+')',5,@results[0]);
+  CEConnection.DoCommandMR(async, 'return VSWindowProcEvent_Internal('+IntToStr(hWnd)+','+IntToStr(Msg)+','+IntToStr(wParam)+','+IntToStr(lParam)+')',5,@results[0]);
   r:=results[0];
   if r=0 then exit(0);
   if r=1 then exit(DefWindowProc(hwnd, Msg, wParam, lParam));

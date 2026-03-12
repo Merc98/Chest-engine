@@ -2168,7 +2168,7 @@ begin
   needsinit1:=true;
 
   for i:=0 to assemblescreen.Lines.Count-1 do
-    if trim(assemblescreen.lines[i])='luacall(openLuaServer(''CELUASERVER''))' then
+    if trim(assemblescreen.lines[i])='luacall(openLuaServer(''VSLUASERVER''))' then
       needsinit1:=false;
 
   if needsinit1 then
@@ -2180,11 +2180,11 @@ begin
       luaserverinit.add('loadlibrary(luaclient-i386.dll)');
 
 
-    luaserverinit.add('luacall(openLuaServer(''CELUASERVER''))');
+    luaserverinit.add('luacall(openLuaServer(''VSLUASERVER''))');
 
     luaserverinit.add('');
-    luaserverinit.add('CELUA_ServerName:');
-    luaserverinit.add('db ''CELUASERVER'',0');
+    luaserverinit.add('VSLUAAPI:');
+    luaserverinit.add('db ''VSLUASERVER'',0');
     luaserverinit.add('');
 
     luaserverinit.add('{');
@@ -2195,7 +2195,7 @@ begin
       luaserverinit.add('mov rcx, addresstostringwithfunction //(The lua function will have access to the variable passed by name "parameter")');
       luaserverinit.add('mov rdx, integervariableyouwishtopasstolua');
       luaserverinit.add('sub rsp,20');
-      luaserverinit.add('call CELUA_ExecuteFunction // or CELUA_ExecuteFunctionAsync if you don''t need GUI access or want to handle it yourself');
+      luaserverinit.add('call VSLUAExec // or VSLUAExecAsync if you don''t need GUI access or want to handle it yourself');
       luaserverinit.add('add rsp,20');
       luaserverinit.add('');
       luaserverinit.add('//------');
@@ -2206,7 +2206,7 @@ begin
       luaserverinit.add('jne short hasrefid');
       luaserverinit.add('');
       luaserverinit.add('mov rcx,addresswithluafunctionname');
-      luaserverinit.add('call CELUA_GetFunctionReferenceFromName  //Basically calls createRef(functionname) and returns the value');
+      luaserverinit.add('call VSLUAGetRef  //Basically calls createRef(functionname) and returns the value');
       luaserverinit.add('mov [addresswithluafunctionidstored],eax');
       luaserverinit.add('mov ecx,eax');
       luaserverinit.add('');
@@ -2218,7 +2218,7 @@ begin
       luaserverinit.add('mov [r8+c],param3');
       luaserverinit.add('//...');
       luaserverinit.add('mov r9,0 //0=no async, 1=async.  Use async if you do not wish to update the GUI. Faster');
-      luaserverinit.add('call CELUA_ExecuteFunctionByReference');
+      luaserverinit.add('call VSLUAExecByRef');
       luaserverinit.add('');
       luaserverinit.add('When done RAX will contain the result of the lua function');
       luaserverinit.add('And as per 64-bit calling convention, RCX, RDX, R8, R9, R10, R11 may have been altered. So save/restore them beforehand');
@@ -2229,7 +2229,7 @@ begin
     begin
       luaserverinit.add('push integervariableyouwishtopasstolua');
       luaserverinit.add('push addresstostringwithfunction  //(The lua function will have access to the variable passed by name "parameter")');
-      luaserverinit.add('call CELUA_ExecuteFunction');
+      luaserverinit.add('call VSLUAExec');
       luaserverinit.add('');
       luaserverinit.add('//------');
       luaserverinit.add('//Alternate call by ref example:');
@@ -2239,7 +2239,7 @@ begin
       luaserverinit.add('jne short hasrefid');
       luaserverinit.add('');
       luaserverinit.add('push addresswithluafunctionname');
-      luaserverinit.add('call CELUA_GetFunctionReferenceFromName  //Basically calls createRef(functionname) and returns the value');
+      luaserverinit.add('call VSLUAGetRef  //Basically calls createRef(functionname) and returns the value');
       luaserverinit.add('mov [addresswithluafunctionidstored],eax');
 
       luaserverinit.add('hasrefid:');
@@ -2251,7 +2251,7 @@ begin
       luaserverinit.add('push addresswithparameterlist');
       luaserverinit.add('push numberofparameterstopass');
       luaserverinit.add('push eax //push the reference ID of the function');
-      luaserverinit.add('call CELUA_ExecuteFunctionByReference');
+      luaserverinit.add('call VSLUAExecByRef');
       luaserverinit.add('');
 
       luaserverinit.add('When done EAX will contain the result of the lua function');

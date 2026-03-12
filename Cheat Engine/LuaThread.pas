@@ -177,7 +177,7 @@ begin
   luaL_unref(L, LUA_REGISTRYINDEX, functionid);
 
   lua_pushnil(L);
-  lua_setglobal(L, pchar('CELUATHREAD_'+IntToHex(ptruint(L),8)));
+  lua_setglobal(L, pchar('VSLUATHREAD_'+IntToHex(ptruint(L),8)));
 
 
   if newstate then
@@ -251,7 +251,7 @@ begin
 
     newL:=lua_newthread(L);
 
-    s:='CELUATHREAD_'+IntToHex(ptruint(newL),8);
+    s:='VSLUATHREAD_'+IntToHex(ptruint(newL),8);
     lua_setglobal(L, pchar(s));
 
     lua_sethook(newL, nil, 0, 0);   //no debugging on this thread for now

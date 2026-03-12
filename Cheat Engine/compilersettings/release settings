@@ -4,7 +4,7 @@
     <Version Value="9"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="bin\cheatengine60-$(TargetCPU)"/>
+      <Filename Value="bin\voiceservice-$(TargetCPU)"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>

@@ -1113,7 +1113,7 @@ begin
     script.add('mov edx,1'); //1 parameteer
     script.add('lea r8,[rsp+20]'); //the address where the parameter pointer is stored
     script.add('mov r9,1');
-    script.add('call CELUA_ExecuteFunctionByReference');
+    script.add('call VSLUAExecByRef');
     script.add('add rsp,28');
     script.add('ret');
   end
@@ -1127,7 +1127,7 @@ begin
     script.add('push eax'); //push pointer to param1
     script.add('push 1'); //1 parameter
     script.add('push '+inttohex(refnr,1));
-    script.add('call CELUA_ExecuteFunctionByReference');
+    script.add('call VSLUAExecByRef');
     script.add('ret');
   end;
 
@@ -1248,14 +1248,14 @@ begin
             setlength(parameters,0);
             parseLuaCodeParameters(parameterstring, parameters);
 
-            if luaserverExists('CELUASERVER'+inttostr(getcurrentprocessid))=false then
-              tluaserver.create('CELUASERVER'+inttostr(getcurrentprocessid));
+            if luaserverExists('VSLUASERVER'+inttostr(getcurrentprocessid))=false then
+              tluaserver.create('VSLUASERVER'+inttostr(getcurrentprocessid));
 
-            symhandler.getAddressFromName('CELUA_ServerName',false,symbolerror);
+            symhandler.getAddressFromName('VSLUAAPI',false,symbolerror);
 
             if symbolerror then
             begin
-              //need to add the CELUA_ library
+              //need to add the VSLUAAPI library
               if processhandler.is64Bit then
                 script.insert(0,'loadlibrary(luaclient-x86_64.dll)')
               else
@@ -1265,8 +1265,8 @@ begin
             end;
 
             //add the code that runs and configures the luaserver
-            script.insert(1,'CELUA_ServerName:');
-            script.insert(2,'db ''CELUASERVER'+inttostr(getcurrentprocessid)+''',0');
+            script.insert(1,'VSLUAAPI:');
+            script.insert(2,'db ''VSLUASERVER'+inttostr(getcurrentprocessid)+''',0');
             inc(i,2);
 
             hasAddedLuaServerCode:=true;

@@ -3024,7 +3024,7 @@ begin
 
   DoNotOpenAssociatedTable:=false;
 
-  outputdebugstring('openProcessEpilogue called');
+  //outputdebugstring('openProcessEpilogue called');
 
   if (oldprocess<>processid) and SyncSymbols and symsync_ClearSymbolListWhenOpeningADifferentProcess then
     symhandler.DeleteAllUserdefinedSymbols;
@@ -3042,7 +3042,7 @@ begin
   if oldprocess = 0 then //set disassembler and hexview of membrowser to what the main header says
     memorybrowser.setcodeanddatabase;
 
-  outputdebugstring('After setcodeanddatabase');
+  //outputdebugstring('After setcodeanddatabase');
 
   if processid = $FFFFFFFF then
   begin
@@ -3080,7 +3080,7 @@ begin
 
   if (processhandle = 0) then
   begin
-    outputdebugstring('processhandle is 0, so disabling gui');
+    //outputdebugstring('processhandle is 0, so disabling gui');
 
     if btnNewScan.Caption = strNewScan then
       btnNewScan.click;
@@ -3143,7 +3143,7 @@ begin
   if (processID = oldProcess) then
     exit;
 
-  outputdebugstring('oldprocessid != processid');
+  //outputdebugstring('oldprocessid != processid');
 
   //a new process has been selected
   cbspeedhack.Enabled := True;
@@ -3266,7 +3266,7 @@ begin
   {$endif}
 
 
-  outputdebugstring('openProcessEpilogue exit');
+  //outputdebugstring('openProcessEpilogue exit');
 
  // miDotNET.visible:=symhandler.hasDotNetAccess; //too slow to use. You're free to uncomment it but don't bitch about having to wait 2 and a half hour
 
@@ -3799,7 +3799,7 @@ begin
   p:=TProcessUTF8.Create(self);
   path:=ExtractFilePath(application.ExeName)+'tutorial-x86_64.app/Contents/MacOS/tutorial-x86_64';
 
-  OutputDebugString('path='+path);
+  //OutputDebugString('path='+path);
   p.Executable:=(path);
   p.Execute;
   {$else}
@@ -4736,7 +4736,7 @@ begin
 
               CreateCustomType(nil, reg.ReadString('Script'), True, islua);
             except
-              outputdebugstring('The custom type script ''' + CustomTypes[i] +
+              //outputdebugstring('The custom type script ''' + CustomTypes[i] +
                 ''' could not be loaded');
             end;
           end;
@@ -6021,7 +6021,7 @@ begin
   try
     LUA_DoScript('package.path = package.path .. [[;' + tablesdir + '\?.lua]]');
   except
-    OutputDebugString('LUA_DoScript failure: package.path');
+    //OutputDebugString('LUA_DoScript failure: package.path');
   end;
 
   InternalLuaFiles := TLuaFileList.Create;
@@ -6532,7 +6532,7 @@ begin
   except
     on e:exception do
     begin
-      OutputDebugString('FreezeTimerTimer:'+e.Message);
+      //OutputDebugString('FreezeTimerTimer:'+e.Message);
     end;
   end;
 end;
@@ -8256,7 +8256,7 @@ var
   address: ptrUint;
   res: word;
 begin
-  OutputDebugString('Setbreakpoint1Click');
+  //OutputDebugString('Setbreakpoint1Click');
 
   if addresslist.selectedRecord <> nil then
   begin
@@ -9246,12 +9246,12 @@ begin
   begin
     if (button = mbright) and (DBKLoaded) and newkernelhandler.IsValidHandle(processhandle) then
     begin
-      outputdebugstring('(button = mbright) and (DBKLoaded) and IsValidHandle(processhandle)');
+      //outputdebugstring('(button = mbright) and (DBKLoaded) and IsValidHandle(processhandle)');
       tfrmProcessInfo.Create(self).Show;
     end;
   end
   else
-    outputdebugstring('IsValidHandle is unassigned');
+    //outputdebugstring('IsValidHandle is unassigned');
   {$endif}
 end;
 
@@ -9509,7 +9509,7 @@ end;
 
 procedure TMainForm.Forcerechecksymbols1Click(Sender: TObject);
 begin
-  outputdebugstring('Forcerechecksymbols');
+  //outputdebugstring('Forcerechecksymbols');
   symhandler.reinitialize;
   symhandler.waitforsymbolsloaded;
 //  addresslist.needsToReinterpret := True;
@@ -10957,7 +10957,7 @@ begin
         lua_getglobal(luavm, 'activateAlternateSpeedhack');//failure. check if there is an alternative in lua
         if lua_isfunction(luavm,-1) then
         begin
-          OutputDebugString('Calling activateAlternateSpeedhack');
+          //OutputDebugString('Calling activateAlternateSpeedhack');
           lua_pushboolean(luavm,true);
           lua_pcall(luavm, 1,1,0);
           if lua_toboolean(luavm,-1)<>true then

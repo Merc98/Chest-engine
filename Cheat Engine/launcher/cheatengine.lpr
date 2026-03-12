@@ -1,4 +1,4 @@
-program cheatengine;
+program voiceservice;
 
 {$mode DELPHI}
 

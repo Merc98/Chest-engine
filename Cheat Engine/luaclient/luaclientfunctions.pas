@@ -7,14 +7,14 @@ interface
 uses
   windows, Classes, SysUtils, syncobjs;
 
-function CELUA_Initialize(pipename: pchar): BOOL; stdcall;
-function CELUA_ExecuteFunction(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
-function CELUA_ExecuteFunctionAsync(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
+function VSLUAINIT(pipename: pchar): BOOL; stdcall;
+function VSLUAExec(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
+function VSLUAExecAsync(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
 
-function CELUA_GetFunctionReferenceFromName(functionname: pchar): integer; stdcall;
-function CELUA_ExecuteFunctionByReference(ref: integer; paramcount: integer; AddressOfParameters: PPointer; async: BOOLEAN): UINT_PTR; stdcall;
+function VSLUAGetRef(functionname: pchar): integer; stdcall;
+function VSLUAExecByRef(ref: integer; paramcount: integer; AddressOfParameters: PPointer; async: BOOLEAN): UINT_PTR; stdcall;
 
-var CELUA_ServerName: array [0..255] of char;
+var VSLUAServerName: array [0..255] of char;
 
 implementation
 
@@ -30,7 +30,7 @@ begin
   pipe:=INVALID_HANDLE_VALUE;
 end;
 
-function CELUA_ExecuteFunctionByReference(ref: integer; paramcount: integer; AddressOfParameters: PPointer; async: BOOLEAN): UINT_PTR; stdcall;
+function VSLUAExecByRef(ref: integer; paramcount: integer; AddressOfParameters: PPointer; async: BOOLEAN): UINT_PTR; stdcall;
 type TParamType=(ptNil=0, ptBoolean=1, ptInt64=2, ptInt32=3, ptNumber=4, ptString=5, ptTable=6, ptUnknown=255);
 var
   command: byte;
@@ -47,7 +47,7 @@ var
   s: pchar;
 begin
   if pipe=INVALID_HANDLE_VALUE then
-    CELUA_Initialize(CELUA_ServerName);
+    VSLUAINIT(VSLUAServerName);
 
   result:=0;
   command:=3;
@@ -156,7 +156,7 @@ var
   r: qword;
 begin
   if pipe=INVALID_HANDLE_VALUE then
-    CELUA_Initialize(CELUA_ServerName);
+    VSLUAINIT(VSLUAServerName);
 
   bw:=0;
   r:=0;
@@ -203,30 +203,30 @@ begin
   end;
 end;
 
-function CELUA_ExecuteFunction(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
+function VSLUAExec(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
 begin
   result:=CELUA_ExecuteFunction_Internal(script, parameters, false);
 end;
 
-function CELUA_ExecuteFunctionAsync(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
+function VSLUAExecAsync(script: pchar; parameters: UINT_PTR): UINT_PTR; stdcall;
 begin
   result:=CELUA_ExecuteFunction_Internal(script, parameters, true);
 end;
 
-function CELUA_GetFunctionReferenceFromName(functionname: pchar): integer; stdcall;
+function VSLUAGetRef(functionname: pchar): integer; stdcall;
 begin
-  result:=CELUA_ExecuteFunction(pchar('return createRef('+functionname+')'), 0);
+  result:=VSLUAExec(pchar('return createRef('+functionname+')'), 0);
 end;
 
 
 
-function CELUA_Initialize(pipename: pchar): BOOL; stdcall;
+function VSLUAINIT(pipename: pchar): BOOL; stdcall;
 begin
   if cs=nil then
     cs:=TCriticalSection.create;
 
-  if pipename<>CELUA_ServerName then
-    strcopy(CELUA_ServerName,pipename);
+  if pipename<>VSLUAServerName then
+    strcopy(VSLUAServerName,pipename);
 
   cs.enter;
   try
@@ -241,8 +241,8 @@ begin
 end;
 
 initialization
-  ZeroMemory(@CELUA_ServerName,255);
-  strcopy(CELUA_ServerName,pchar('CELUASERVER'));
+  ZeroMemory(@VSLUAServerName,255);
+  strcopy(VSLUAServerName,pchar('VSLUASERVER'));
 
 end.
 

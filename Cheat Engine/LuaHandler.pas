@@ -13345,7 +13345,7 @@ var
 begin
   result:=0;
   {$IFDEF windows}
-  lua_getglobal(L, 'CEWindowProcEvent_Internal');
+  lua_getglobal(L, 'VSWindowProcEvent_Internal');
 
 
   if lua_isnil(L, -1) then
@@ -13354,7 +13354,7 @@ begin
 
     s:=TStringList.Create;
     s.add('wndhooklist={}');
-    s.add('function CEWindowProcEvent_Internal(hWnd, Msg, lParam, wParam)');
+    s.add('function VSWindowProcEvent_Internal(hWnd, Msg, lParam, wParam)');
     s.add('  if (wndhooklist[hWnd].f) then');
     s.add('    local r, hWnd2, Msg2, lParam2, wParam2');
     s.add('    r,hWnd2,Msg2,lParam2,wParam2=wndhooklist[hWnd].f(hWnd, Msg, lParam, wParam)');

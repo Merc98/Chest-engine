@@ -34,12 +34,12 @@ implementation
 
 procedure TForm1.Button1Click(Sender: TObject);
 begin
-  CELUA_ExecuteFunction(pchar(memo1.lines.text), 0);
+  VSLUAExec(pchar(memo1.lines.text), 0);
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  if CELUA_Initialize('vsappbla') then
+  if VSLUAINIT('vsappbla') then
     caption:='Connected';
 end;
 
