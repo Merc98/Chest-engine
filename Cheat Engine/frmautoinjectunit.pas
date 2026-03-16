@@ -1477,10 +1477,10 @@ var
   address: string;
   originalCodeMinSize: integer;
 begin
-  if parent is TMemoryBrowser then
+  if parent is TMemViewForm then
   begin
-    a:=min(TMemoryBrowser(parent).disassemblerview.SelectedAddress, TMemoryBrowser(parent).disassemblerview.SelectedAddress2);
-    originalCodeMinSize:=TMemoryBrowser(parent).disassemblerview.selectionsize;
+    a:=min(TMemViewForm(parent).disassemblerview.SelectedAddress, TMemViewForm(parent).disassemblerview.SelectedAddress2);
+    originalCodeMinSize:=TMemViewForm(parent).disassemblerview.selectionsize;
   end
   else
   begin
@@ -2048,8 +2048,8 @@ var address: string;
     injectnr: integer;
 
 begin
-  if parent is TMemoryBrowser then
-    a:=TMemoryBrowser(parent).disassemblerview.SelectedAddress
+  if parent is TMemViewForm then
+    a:=TMemViewForm(parent).disassemblerview.SelectedAddress
   else
     a:=memorybrowser.disassemblerview.SelectedAddress;
 

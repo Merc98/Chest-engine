@@ -273,7 +273,7 @@ type
 
 type
 
-  { TMainForm }
+  { TAppWindow }
 
   TFreezeThread=class(TThread)
   private
@@ -287,7 +287,7 @@ type
 
   //TPreviousResultList=specialize TFPGList<TSavedScanHandler>;
 
-  TMainForm = class(TForm)
+  TAppWindow = class(TForm)
     actOpenLuaEngine: TAction;
     actOpenDissectStructure: TAction;
     btnSetSpeedhack2: TButton;
@@ -1100,7 +1100,7 @@ type
   end;
 
 var
-  MainForm: TMainForm;
+  MainForm: TAppWindow;
   ToggleWindows: TTogglewindows;
   AutoAttachThread: TAutoAttachThread;
 
@@ -1455,7 +1455,7 @@ end;
 
 //--------------TMainThread------------
 
-procedure TMainForm.recentFilesUpdate(filepath: string);
+procedure TAppWindow.recentFilesUpdate(filepath: string);
 var i: integer;
 begin
   i:=recentfiles.IndexOf(filepath);
@@ -1475,12 +1475,12 @@ begin
   cereg.writeStrings('Recent Files', recentfiles);
 end;
 
-function TMainForm.getUseThreadToFreeze: boolean;
+function TAppWindow.getUseThreadToFreeze: boolean;
 begin
   result:=freezeThread<>nil;
 end;
 
-procedure TMainForm.setUseThreadToFreeze(state: boolean);
+procedure TAppWindow.setUseThreadToFreeze(state: boolean);
 begin
   if freezethread<>nil then
   begin
@@ -1503,7 +1503,7 @@ begin
   freezetimer.enabled:=not state;
 end;
 
-procedure TMainForm.setIsProtected(p: boolean); //super unhackable protection yeeeeeh
+procedure TAppWindow.setIsProtected(p: boolean); //super unhackable protection yeeeeeh
 //I'll sue you for DMCA violations if you edit this code!!!! Really! I mean it! I do!!!!
 var
   i: integer;
@@ -1538,7 +1538,7 @@ begin
   end;
 end;
 
-procedure TMainForm.CheckForSpeedhackKey(sender: TObject);
+procedure TAppWindow.CheckForSpeedhackKey(sender: TObject);
 var
   s: integer;
   down: boolean;
@@ -1563,7 +1563,7 @@ begin
   end;
 end;
 
-procedure TMainForm.Hotkey2(command: integer);
+procedure TAppWindow.Hotkey2(command: integer);
 type
   PNotifyEvent = ^TNotifyEvent;
 var
@@ -2070,7 +2070,7 @@ begin
 
 end;
 
-procedure TMainForm.hotkey(var Message: TMessage);
+procedure TAppWindow.hotkey(var Message: TMessage);
 //stays because the old hotkeyhandler is still used in some places
 begin
   {$ifdef windows}
@@ -2159,7 +2159,7 @@ begin
 end;
 
 
-procedure TMainForm.PluginSync(var m: TMessage);
+procedure TAppWindow.PluginSync(var m: TMessage);
 var
   func: TPluginFunc;
   params: pointer;
@@ -2171,7 +2171,7 @@ begin
   m.Result := ptruint(func(params));
 end;
 
-procedure TMainForm.ShowError;
+procedure TAppWindow.ShowError;
 var fn: string;
   nosaveerror: boolean;
   s: string;
@@ -2217,13 +2217,13 @@ end;
 
 //----------------------------------
 
-function TMainForm.getSelectedVariableType: TVariableType;
+function TAppWindow.getSelectedVariableType: TVariableType;
   {wrapper for the new getVarType2 in the new scanroutine}
 begin
   Result := getVarType2;
 end;
 
-function TMainForm.getScanStart: ptruint;
+function TAppWindow.getScanStart: ptruint;
 begin
   try
     Result := symhandler.getAddressFromName(FromAddress.Text);
@@ -2232,12 +2232,12 @@ begin
   end;
 end;
 
-procedure TMainForm.setScanStart(newscanstart: ptruint);
+procedure TAppWindow.setScanStart(newscanstart: ptruint);
 begin
   FromAddress.Text := inttohex(newscanstart, 8);
 end;
 
-function TMainForm.getScanStop: ptruint;
+function TAppWindow.getScanStop: ptruint;
 begin
   try
     Result := symhandler.getAddressFromName(ToAddress.Text);
@@ -2246,18 +2246,18 @@ begin
   end;
 end;
 
-procedure TMainForm.setScanStop(newscanstop: ptruint);
+procedure TAppWindow.setScanStop(newscanstop: ptruint);
 begin
   ToAddress.Text := inttohex(newscanstop, 8);
 end;
 
 
-function TMainForm.getFastscan: boolean;
+function TAppWindow.getFastscan: boolean;
 begin
   Result := cbFastscan.Enabled and cbFastscan.Checked;
 end;
 
-procedure TMainForm.setFastScan(state: boolean);
+procedure TAppWindow.setFastScan(state: boolean);
 begin
   cbFastscan.Checked := state;
 end;
@@ -2265,7 +2265,7 @@ end;
 
 
 
-function TMainForm.GetRoundingType: TRoundingType;
+function TAppWindow.GetRoundingType: TRoundingType;
   {Property function to get the current rounding type}
 begin
   Result := rtTruncated;
@@ -2279,7 +2279,7 @@ begin
     Result := rtTruncated;
 end;
 
-procedure TMainForm.SetRoundingType(rt: TRoundingType);
+procedure TAppWindow.SetRoundingType(rt: TRoundingType);
 {Property function to set the current rounding type}
 begin
   case rt of
@@ -2290,7 +2290,7 @@ begin
 end;
 
 
-procedure TMainForm.setfoundcount(x: int64);
+procedure TAppWindow.setfoundcount(x: int64);
 var
   xdouble: double;
 begin
@@ -2299,7 +2299,7 @@ begin
   foundcountlabel.Caption := Format('%.0n', [xdouble]);
 end;
 
-procedure TMainForm.DestroyCancelButton;
+procedure TAppWindow.DestroyCancelButton;
 begin
   if cancelbutton <> nil then
     FreeAndNil(cancelbutton);
@@ -2307,7 +2307,7 @@ begin
     FreeAndNil(cancelbuttonenabler);
 end;
 
-procedure TMainForm.SpawnCancelButton;
+procedure TAppWindow.SpawnCancelButton;
 begin
   cancelbutton := TButton.Create(self);
   with cancelbutton do
@@ -2347,7 +2347,7 @@ begin
 end;
 
 
-procedure TMainForm.disableGui;
+procedure TAppWindow.disableGui;
 {
 This procedure will disable the gui. E.g while scanning the memory with no wait
 screen.
@@ -2384,7 +2384,7 @@ begin
     scantablist.Enabled:=false;
 end;
 
-procedure TMainForm.enableGui(isnextscan: boolean);
+procedure TAppWindow.enableGui(isnextscan: boolean);
 {
 Enables the gui options according to what type of scan is currently used
 no scan, enable everything
@@ -2446,7 +2446,7 @@ end;
 
 
 
-procedure TMainForm.toggleWindow;
+procedure TAppWindow.toggleWindow;
 var
   c: integer;
 begin
@@ -2464,7 +2464,7 @@ begin
   end;
 end;
 
-procedure TMainForm.exceptionhandler(Sender: TObject; E: Exception);
+procedure TAppWindow.exceptionhandler(Sender: TObject; E: Exception);
 var
   s: string;
   op: string;
@@ -2521,7 +2521,7 @@ end;
 
 
 
-function TMainForm.CheckIfSaved: boolean;
+function TAppWindow.CheckIfSaved: boolean;
 var
   help: word;
 begin
@@ -2554,7 +2554,7 @@ end;
 
 
 //--------------------------cbpercentage--------------
-procedure TMainForm.cbPercentageOnChange(Sender: TObject);
+procedure TAppWindow.cbPercentageOnChange(Sender: TObject);
 begin
   if cbpercentage.Checked then
   begin
@@ -2579,7 +2579,7 @@ begin
   end;
 end;
 
-procedure TMainForm.CreateCbPercentage;
+procedure TAppWindow.CreateCbPercentage;
 begin
   cbpercentage.visible:=true;
 
@@ -2591,13 +2591,13 @@ begin
   UpdateFloatRelatedPositions;
 end;
 
-procedure TMainForm.DestroyCbPercentage;
+procedure TAppWindow.DestroyCbPercentage;
 begin
   cbpercentage.Visible:=false;
 end;
 //------------------
 
-procedure TMainForm.CreateScanValue2;
+procedure TAppWindow.CreateScanValue2;
 begin
   scantext2.Caption := scantext.Caption;
 
@@ -2608,14 +2608,14 @@ begin
   panel5.OnResize(panel5);
 end;
 
-procedure TMainForm.DestroyScanValue2;
+procedure TAppWindow.DestroyScanValue2;
 begin
   scanvalue2.visible:=false;
   scantext2.visible:=false;
   andlabel.visible:=false;
 end;
 
-procedure TMainForm.UpdateScanType;
+procedure TAppWindow.UpdateScanType;
 var
   OldText: string;
   OldIndex: integer;
@@ -2813,7 +2813,7 @@ begin
 end;
 
 
-procedure TMainForm.reinterpretaddresses;
+procedure TAppWindow.reinterpretaddresses;
 begin
   if addresslist <> nil then
     addresslist.ReinterpretAddresses;
@@ -2821,12 +2821,12 @@ end;
 
 
 
-procedure TMainForm.AddAutoAssembleScript(script: string);
+procedure TAppWindow.AddAutoAssembleScript(script: string);
 begin
   addresslist.addAutoAssembleScript(script);
 end;
 
-procedure TMainForm.AddToRecord(Line: integer; node: TTreenode = nil;
+procedure TAppWindow.AddToRecord(Line: integer; node: TTreenode = nil;
   attachmode: TNodeAttachMode = naAdd);
 var
   Address: ptrUint;
@@ -2957,7 +2957,7 @@ begin
 
 end;
 
-procedure TMainForm.SetExpectedTableName;
+procedure TAppWindow.SetExpectedTableName;
 var
   fname: string;
   expectedfilename: string;
@@ -2980,7 +2980,7 @@ end;
 
 
 
-function TMainForm.openprocessPrologue: boolean;
+function TAppWindow.openprocessPrologue: boolean;
 begin
   if (processid<>0) and Globals.SyncSymbols then
     SyncSymbolsNow;
@@ -2998,7 +2998,7 @@ begin
   Result := True;
 end;
 
-procedure TMainForm.openProcessEpilogue(oldprocessname: string; oldprocess: dword; oldprocesshandle: dword; autoattachopen: boolean);
+procedure TAppWindow.openProcessEpilogue(oldprocessname: string; oldprocess: dword; oldprocesshandle: dword; autoattachopen: boolean);
 var
   i, j: integer;
   fname, expectedfilename: string;
@@ -3274,7 +3274,7 @@ begin
     fOnProcessOpened(processid, processhandle, processlabel.Caption);
 end;
 
-procedure TMainForm.ShowProcessListButtonClick(Sender: TObject);
+procedure TAppWindow.ShowProcessListButtonClick(Sender: TObject);
 var
   oldprocess: Dword;
   resu: integer;
@@ -3291,7 +3291,7 @@ begin
   oldprocesshandle := processhandle;
 
   if Processwindow = nil then
-    ProcessWindow := TProcessWindow.Create(application);
+    ProcessWindow := TSelectProcess.Create(application);
 
   resu := ProcessWindow.ShowModal;
 
@@ -3302,7 +3302,7 @@ begin
 end;
 
 
-procedure TMainForm.rbFsmAlignedChange(Sender: TObject);
+procedure TAppWindow.rbFsmAlignedChange(Sender: TObject);
 begin
   if rbfsmLastDigts.Checked then
     alignsizechangedbyuser := False;
@@ -3310,13 +3310,13 @@ begin
   VarType.OnChange(vartype);
 end;
 
-procedure TMainForm.rtChange(Sender: TObject);
+procedure TAppWindow.rtChange(Sender: TObject);
 begin
   cereg.writeInteger('Last Rounding Type',TComponent(sender).tag);
 end;
 
 
-procedure TMainForm.Save1Click(Sender: TObject);
+procedure TAppWindow.Save1Click(Sender: TObject);
 var
   protect: boolean;
 begin
@@ -3329,18 +3329,18 @@ end;
 
 
 
-procedure TMainForm.Description1Click(Sender: TObject);
+procedure TAppWindow.Description1Click(Sender: TObject);
 begin
   addresslist.doDescriptionChange;
 end;
 
-procedure TMainForm.edtAlignmentKeyPress(Sender: TObject; var Key: char);
+procedure TAppWindow.edtAlignmentKeyPress(Sender: TObject; var Key: char);
 begin
   if rbFsmAligned.Checked then
     alignsizechangedbyuser := True;
 end;
 
-procedure TMainForm.FormDropFiles(Sender: TObject; const FileNames: array of string);
+procedure TAppWindow.FormDropFiles(Sender: TObject; const FileNames: array of string);
 var
   merge: boolean;
   app: word;
@@ -3379,13 +3379,13 @@ begin
   end;
 end;
 
-procedure TMainForm.Foundlist3ColumnClick(Sender: TObject; Column: TListColumn);
+procedure TAppWindow.Foundlist3ColumnClick(Sender: TObject; Column: TListColumn);
 begin
   if column.index>=1 then
     setActivePreviousResultColumn(column.index);
 end;
 
-procedure TMainForm.Foundlist3CustomDrawItem(Sender: TCustomListView;
+procedure TAppWindow.Foundlist3CustomDrawItem(Sender: TCustomListView;
   Item: TListItem; State: TCustomDrawState; var DefaultDraw: boolean);
 var
   s: string;
@@ -3399,7 +3399,7 @@ begin
   end;
 end;
 
-procedure TMainForm.Foundlist3CustomDrawSubItem(Sender: TCustomListView;
+procedure TAppWindow.Foundlist3CustomDrawSubItem(Sender: TCustomListView;
   Item: TListItem; SubItem: Integer; State: TCustomDrawState;
   var DefaultDraw: Boolean);
 var r: trect;
@@ -3458,12 +3458,12 @@ begin
   end;
 end;
 
-procedure TMainForm.Address1Click(Sender: TObject);
+procedure TAppWindow.Address1Click(Sender: TObject);
 begin
   addresslist.doAddressChange;
 end;
 
-procedure TMainForm.cbCompareToSavedScanChange(Sender: TObject);
+procedure TAppWindow.cbCompareToSavedScanChange(Sender: TObject);
 var
   s: tstringlist;
   l: TfrmSelectionList;
@@ -3528,28 +3528,28 @@ begin
   end;
 end;
 
-procedure TMainForm.cbLuaFormulaChange(Sender: TObject);
+procedure TAppWindow.cbLuaFormulaChange(Sender: TObject);
 begin
   cbNewLuaState.visible:=cbLuaFormula.Visible and cbLuaFormula.Checked;
 end;
 
-procedure TMainForm.cbCodePageChange(Sender: TObject);
+procedure TAppWindow.cbCodePageChange(Sender: TObject);
 begin
   if cbCodePage.checked then cbunicode.Checked:=false;
 end;
 
-procedure TMainForm.cbRepeatUntilStoppedChange(Sender: TObject);
+procedure TAppWindow.cbRepeatUntilStoppedChange(Sender: TObject);
 begin
   if (cbRepeatUntilStopped.checked=false) and (repeatscantimer<>nil) then
     freeandnil(repeatscantimer);
 end;
 
-procedure TMainForm.cbUnicodeChange(Sender: TObject);
+procedure TAppWindow.cbUnicodeChange(Sender: TObject);
 begin
   if cbunicode.checked then cbCodePage.checked:=false;
 end;
 
-procedure TMainForm.Copyselectedaddresses1Click(Sender: TObject);
+procedure TAppWindow.Copyselectedaddresses1Click(Sender: TObject);
 var
   i: ptruint;
   address: ptruint;
@@ -3577,7 +3577,7 @@ begin
   end;
 end;
 
-procedure TMainForm.EnableLCLClick(Sender: TObject);
+procedure TAppWindow.EnableLCLClick(Sender: TObject);
 var llf: TLazLoggerFile;
 begin
   llf:=GetDebugLogger;
@@ -3605,7 +3605,7 @@ begin
 
 end;
 
-procedure TMainForm.actOpenDissectStructureExecute(Sender: TObject);
+procedure TAppWindow.actOpenDissectStructureExecute(Sender: TObject);
 var address: ptruint;
   i: integer;
   f: TfrmStructures2;
@@ -3662,12 +3662,12 @@ begin
   end;
 end;
 
-procedure TMainForm.actOpenLuaEngineExecute(Sender: TObject);
+procedure TAppWindow.actOpenLuaEngineExecute(Sender: TObject);
 begin
   MemoryBrowser.miLuaEngine.Click;
 end;
 
-procedure TMainForm.cbFastScanChange(Sender: TObject);
+procedure TAppWindow.cbFastScanChange(Sender: TObject);
 begin
   edtAlignment.Enabled := cbFastScan.Checked and cbfastscan.Enabled;
   rbFsmAligned.Enabled := edtAlignment.Enabled;
@@ -3678,7 +3678,7 @@ begin
 end;
 
 
-procedure TMainForm.CreateGroupClick(Sender: TObject);
+procedure TAppWindow.CreateGroupClick(Sender: TObject);
 var
   groupname: string;
   i: integer;
@@ -3700,12 +3700,12 @@ begin
   end;
 end;
 
-procedure TMainForm.gbScanOptionsChangeBounds(Sender: TObject);
+procedure TAppWindow.gbScanOptionsChangeBounds(Sender: TObject);
 begin
   spawnBoundsUpdater;
 end;
 
-procedure TMainForm.Label3Click(Sender: TObject);
+procedure TAppWindow.Label3Click(Sender: TObject);
 begin
 
 end;
@@ -3733,7 +3733,7 @@ begin
 
 end;
 
-procedure TMainForm.miTestAccessViolationThreadClick(Sender: TObject);
+procedure TAppWindow.miTestAccessViolationThreadClick(Sender: TObject);
 var m: Tmethod;
 
   t: TTestthread;
@@ -3755,14 +3755,14 @@ begin
 
 end;
 
-procedure TMainForm.miTriggerAccessViolationClick(Sender: TObject);
+procedure TAppWindow.miTriggerAccessViolationClick(Sender: TObject);
 begin
   triggerAV(nil);
   showmessage('Weeee! Fuck You!');
 end;
 
 
-procedure TMainForm.MenuItem16Click(Sender: TObject);
+procedure TAppWindow.MenuItem16Click(Sender: TObject);
 {$ifdef darwin}
 var p: TProcessUTF8;
   path: string;
@@ -3777,7 +3777,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miClearWorkingSetClick(Sender: TObject);
+procedure TAppWindow.miClearWorkingSetClick(Sender: TObject);
 begin
   {$ifdef windows}
   if assigned(EmptyWorkingSet) then
@@ -3789,7 +3789,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miTutorial64Click(Sender: TObject);
+procedure TAppWindow.miTutorial64Click(Sender: TObject);
 {$ifdef darwin}
 var p: TProcessUTF8;
   path: string;
@@ -3807,7 +3807,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.MenuItem15Click(Sender: TObject);
+procedure TAppWindow.MenuItem15Click(Sender: TObject);
 var nexttut: string;
     filename: string;
 begin
@@ -3839,7 +3839,7 @@ end;
 
 
 
-procedure TMainForm.miDeleteSavedScanResultsClick(Sender: TObject);
+procedure TAppWindow.miDeleteSavedScanResultsClick(Sender: TObject);
 var
   s: tstringlist;
   l: TfrmSelectionList;
@@ -3874,7 +3874,7 @@ begin
 end;
 
 
-procedure TMainForm.miFoundListPreferencesClick(Sender: TObject);
+procedure TAppWindow.miFoundListPreferencesClick(Sender: TObject);
 var
   f: TfrmFoundlistPreferences;
   reg: TRegistry;
@@ -3932,18 +3932,18 @@ begin
 
 end;
 
-procedure TMainForm.miAutoAssembleErrorMessageClick(Sender: TObject);
+procedure TAppWindow.miAutoAssembleErrorMessageClick(Sender: TObject);
 begin
   clipboard.AsText:=miAutoAssembleErrorMessage.Caption;
   addresslist.doValueChange;
 end;
 
-procedure TMainForm.miHelpClick(Sender: TObject);
+procedure TAppWindow.miHelpClick(Sender: TObject);
 begin
   miEnableLCLDebug.visible:=miEnableLCLDebug.checked or (ssCtrl in GetKeyShiftState);
 end;
 
-procedure TMainForm.miLuaDocumentationClick(Sender: TObject);
+procedure TAppWindow.miLuaDocumentationClick(Sender: TObject);
 begin
   {$ifdef darwin}
   OpenDocument(pchar(ExtractFilePath(application.ExeName)+'../Lua/celua.txt'));
@@ -3953,7 +3953,7 @@ begin
 
 end;
 
-procedure TMainForm.miForgotScanClick(Sender: TObject);
+procedure TAppWindow.miForgotScanClick(Sender: TObject);
 begin
   if (foundlist.count=0) or (memscan.lastScanWasRegionScan) then exit;
 
@@ -3978,7 +3978,7 @@ begin
 end;
 
 
-procedure TMainForm.miGetDotNetObjectListClick(Sender: TObject);
+procedure TAppWindow.miGetDotNetObjectListClick(Sender: TObject);
 begin
   {$ifdef windows}
   if frmDotNetObjectList=nil then
@@ -3991,7 +3991,7 @@ end;
 
 
 
-procedure TMainForm.miSignTableClick(Sender: TObject);
+procedure TAppWindow.miSignTableClick(Sender: TObject);
 begin
   {$ifdef windows}
   if Opendialog1.Execute then
@@ -4003,12 +4003,12 @@ end;
 var t: TRemoteMemoryManager;
   {$endif}
 
-procedure TMainForm.miScanDirtyOnlyClick(Sender: TObject);
+procedure TAppWindow.miScanDirtyOnlyClick(Sender: TObject);
 begin
   scan_dirtyonly:=miScanDirtyOnly.checked;
 end;
 
-procedure TMainForm.miCompressionClick(Sender: TObject);
+procedure TAppWindow.miCompressionClick(Sender: TObject);
 begin
   {$ifdef windows}
   if frmNetworkDataCompression=nil then
@@ -4019,7 +4019,7 @@ begin
 end;
 
 
-procedure TMainForm.miManualExpandCollapseClick(Sender: TObject);
+procedure TAppWindow.miManualExpandCollapseClick(Sender: TObject);
 begin
   miManualExpandCollapse.Checked := not miManualExpandCollapse.Checked;
 
@@ -4034,7 +4034,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miSaveClick(Sender: TObject);
+procedure TAppWindow.miSaveClick(Sender: TObject);
 begin
   if fileexists(savedialog1.FileName) then
   begin
@@ -4046,7 +4046,7 @@ begin
     actSave.Execute;
 end;
 
-procedure TMainForm.mi3dClick(Sender: TObject);
+procedure TAppWindow.mi3dClick(Sender: TObject);
 begin
   {$ifdef windows}
   miHookD3D.checked:=(D3DHook<>nil) and (D3DHook.processid=processid);
@@ -4060,14 +4060,14 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miChangeDisplayTypeClick(Sender: TObject);
+procedure TAppWindow.miChangeDisplayTypeClick(Sender: TObject);
 begin
   //set the display type to override the default with
   foundlistDisplayOverride:=TMenuItem(sender).Tag;
   foundlist3.Refresh;
 end;
 
-procedure TMainForm.miOpenFileClick(Sender: TObject);
+procedure TAppWindow.miOpenFileClick(Sender: TObject);
 var
   oldprocess: Dword;
   resu: integer;
@@ -4084,7 +4084,7 @@ begin
   oldprocesshandle := processhandle;
 
   if Processwindow = nil then
-    ProcessWindow := TProcessWindow.Create(application);
+    ProcessWindow := TSelectProcess.Create(application);
 
   ProcessWindow.miOpenFile.click;
 
@@ -4092,12 +4092,12 @@ begin
     openProcessEpilogue(oldprocessname, oldprocess, oldprocesshandle);
 end;
 
-procedure TMainForm.miScanPagedOnlyClick(Sender: TObject);
+procedure TAppWindow.miScanPagedOnlyClick(Sender: TObject);
 begin
   scan_pagedonly:=miScanPagedOnly.checked;
 end;
 
-procedure TMainForm.miSetDropdownOptionsClick(Sender: TObject);
+procedure TAppWindow.miSetDropdownOptionsClick(Sender: TObject);
 var f: TFrmMemoryRecordDropdownSettings;
   memrec: TMemoryRecord;
 begin
@@ -4111,7 +4111,7 @@ begin
 end;
 
 
-procedure TMainForm.miShowAsSignedClick(Sender: TObject);
+procedure TAppWindow.miShowAsSignedClick(Sender: TObject);
 var
   i: integer;
   newstate: boolean;
@@ -4130,22 +4130,22 @@ end;
 
 
 
-procedure TMainForm.MenuItem1Click(Sender: TObject);
+procedure TAppWindow.MenuItem1Click(Sender: TObject);
 begin
   addresslist.SelectAll;
 end;
 
-procedure TMainForm.miShowLuaScriptClick(Sender: TObject);
+procedure TAppWindow.miShowLuaScriptClick(Sender: TObject);
 begin
   frmLuaTableScript.Show;
 end;
 
-procedure TMainForm.miAddAddressClick(Sender: TObject);
+procedure TAppWindow.miAddAddressClick(Sender: TObject);
 begin
   SpeedButton3.Click;
 end;
 
-procedure TMainForm.miAllowCollapseClick(Sender: TObject);
+procedure TAppWindow.miAllowCollapseClick(Sender: TObject);
 begin
   miAllowCollapse.Checked := not miAllowCollapse.Checked;
 
@@ -4158,7 +4158,7 @@ begin
   end;
 end;
 
-procedure TMainForm.updated3dgui;
+procedure TAppWindow.updated3dgui;
 begin
   {$ifdef windows}
   miSetCrosshair.Enabled := d3dhook<>nil;
@@ -4168,7 +4168,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miHookD3DClick(Sender: TObject);
+procedure TAppWindow.miHookD3DClick(Sender: TObject);
 begin
   {$ifdef windows}
   if MessageDlg('Are you sure you wish to hook Direct3D?', mtConfirmation, [mbyes,mbno],0)=mryes then
@@ -4179,7 +4179,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miSnapshothandlerClick(Sender: TObject);
+procedure TAppWindow.miSnapshothandlerClick(Sender: TObject);
 begin
   {$ifdef windows}
   if frmSnapshotHandler=nil then
@@ -4194,7 +4194,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miLockMouseInGameClick(Sender: TObject);
+procedure TAppWindow.miLockMouseInGameClick(Sender: TObject);
 begin
   {$ifdef windows}
   safed3dhook;
@@ -4205,7 +4205,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miPresetAllClick(Sender: TObject);
+procedure TAppWindow.miPresetAllClick(Sender: TObject);
 begin
   cbWritable.State := cbGrayed;
   cbCopyOnWrite.state := cbGrayed;
@@ -4216,7 +4216,7 @@ begin
 
 end;
 
-procedure TMainForm.miAddFileClick(Sender: TObject);
+procedure TAppWindow.miAddFileClick(Sender: TObject);
 var
   f: TOpendialog;
 
@@ -4247,7 +4247,7 @@ begin
   end;
 end;
 
-procedure TMainForm.MenuItem9Click(Sender: TObject);
+procedure TAppWindow.MenuItem9Click(Sender: TObject);
 
 begin
   {$ifdef windows}
@@ -4264,7 +4264,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miPresetWritableClick(Sender: TObject);
+procedure TAppWindow.miPresetWritableClick(Sender: TObject);
 begin
   cbWritable.State := cbchecked;
   cbCopyOnWrite.state := cbGrayed;
@@ -4274,7 +4274,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miResyncFormsWithLuaClick(Sender: TObject);
+procedure TAppWindow.miResyncFormsWithLuaClick(Sender: TObject);
 var
   i: integer;
 begin
@@ -4283,7 +4283,7 @@ begin
 
 end;
 
-procedure TMainForm.DeleteFormClick(Sender: TObject);
+procedure TAppWindow.DeleteFormClick(Sender: TObject);
 var
   f: tceform;
 begin
@@ -4305,7 +4305,7 @@ begin
   end;
 end;
 
-procedure TMainForm.EditFormClick(Sender: TObject);
+procedure TAppWindow.EditFormClick(Sender: TObject);
 var
   f: tceform;
 begin
@@ -4322,7 +4322,7 @@ begin
   f.Show;
 end;
 
-procedure TMainForm.RestoreAndShowFormClick(Sender: TObject);
+procedure TAppWindow.RestoreAndShowFormClick(Sender: TObject);
 var
   f: tceform;
 begin
@@ -4334,7 +4334,7 @@ begin
   f.Show;
 end;
 
-procedure TMainForm.FormDesignerClose(Sender: TObject; var CloseAction: TCloseAction);
+procedure TAppWindow.FormDesignerClose(Sender: TObject; var CloseAction: TCloseAction);
 var
   i: integer;
   f: TCEForm;
@@ -4352,7 +4352,7 @@ begin
 end;
 
 
-procedure TMainForm.RenameFileClick(Sender: TObject);
+procedure TAppWindow.RenameFileClick(Sender: TObject);
 var
   lf: TLuafile;
   newname: string;
@@ -4367,7 +4367,7 @@ begin
     MessageDlg(Format(rsIsNotAValidX, [newname]), mtError, [mbok], 0);
 end;
 
-procedure TMainForm.SaveFileClick(Sender: TObject);
+procedure TAppWindow.SaveFileClick(Sender: TObject);
 var
   lf: TLuafile;
   f: TSavedialog;
@@ -4384,7 +4384,7 @@ begin
   end;
 end;
 
-procedure TMainForm.DeleteFileClick(Sender: TObject);
+procedure TAppWindow.DeleteFileClick(Sender: TObject);
 var
   lf: TLuafile;
 begin
@@ -4396,7 +4396,7 @@ begin
 
 end;
 
-procedure TMainForm.UpdateMenu;
+procedure TAppWindow.UpdateMenu;
 var
   i: integer;
   mi: tmenuitem;
@@ -4516,7 +4516,7 @@ begin
 
 end;
 
-procedure TMainForm.createFormdesigner;
+procedure TAppWindow.createFormdesigner;
 begin
   if FormDesigner = nil then
   begin
@@ -4526,7 +4526,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miCreateLuaFormClick(Sender: TObject);
+procedure TAppWindow.miCreateLuaFormClick(Sender: TObject);
 var
   f: tceform;
   i, j, k: integer;
@@ -4583,12 +4583,12 @@ begin
   updatemenu;
 end;
 
-procedure TMainForm.MenuItem7Click(Sender: TObject);
+procedure TAppWindow.MenuItem7Click(Sender: TObject);
 begin
   Close;
 end;
 
-procedure TMainForm.miSetCrosshairClick(Sender: TObject);
+procedure TAppWindow.miSetCrosshairClick(Sender: TObject);
 begin
   {$ifdef windows}
   if frmSetCrosshair = nil then
@@ -4598,12 +4598,12 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miTableClick(Sender: TObject);
+procedure TAppWindow.miTableClick(Sender: TObject);
 begin
   UpdateMenu;
 end;
 
-procedure TMainForm.miResetRangeClick(Sender: TObject);
+procedure TAppWindow.miResetRangeClick(Sender: TObject);
 begin
   {$ifdef cpu64}
   FromAddress.Text := '0000000000000000';
@@ -4617,7 +4617,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miChangeColorClick(Sender: TObject);
+procedure TAppWindow.miChangeColorClick(Sender: TObject);
 var
   i: integer;
 begin
@@ -4634,7 +4634,7 @@ end;
 
 
 
-procedure TMainForm.miBindActivationClick(Sender: TObject);
+procedure TAppWindow.miBindActivationClick(Sender: TObject);
 begin
   miBindActivation.Checked := not miBindActivation.Checked;
 
@@ -4647,7 +4647,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miBindDeactivationClick(Sender: TObject);
+procedure TAppWindow.miBindDeactivationClick(Sender: TObject);
 begin
   miBindDeactivation.Checked := not miBindDeactivation.Checked;
 
@@ -4660,7 +4660,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miDisassembleClick(Sender: TObject);
+procedure TAppWindow.miDisassembleClick(Sender: TObject);
 begin
   if addresslist.selectedrecord <> nil then
   begin
@@ -4673,7 +4673,7 @@ end;
 
 
 
-procedure TMainForm.miHideChildrenClick(Sender: TObject);
+procedure TAppWindow.miHideChildrenClick(Sender: TObject);
 begin
   miHideChildren.Checked := not miHideChildren.Checked;
 
@@ -4688,7 +4688,7 @@ begin
   end;
 end;
 
-procedure TMainForm.setGbScanOptionsEnabled(state: boolean);
+procedure TAppWindow.setGbScanOptionsEnabled(state: boolean);
 procedure setstaterecursive(c: TWinControl);
 var i: integer;
 begin
@@ -4706,7 +4706,7 @@ begin
   setstaterecursive(gbScanOptions);
 end;
 
-procedure TMainForm.LoadCustomTypesFromRegistry;
+procedure TAppWindow.LoadCustomTypesFromRegistry;
 var
   reg: TRegistry;
   customtypes: TStringList;
@@ -4755,7 +4755,7 @@ begin
   end;
 end;
 
-procedure TMainForm.RefreshCustomTypes;
+procedure TAppWindow.RefreshCustomTypes;
 {
 In short: remove all custom scan types and add them back
 }
@@ -4785,7 +4785,7 @@ begin
   addresslist.refreshcustomtypes;
 end;
 
-procedure TMainForm.miDeleteCustomTypeClick(Sender: TObject);
+procedure TAppWindow.miDeleteCustomTypeClick(Sender: TObject);
 var
   reg: TRegistry;
   ct: TCustomType;
@@ -4805,7 +4805,7 @@ begin
   end;
 end;
 
-procedure TMainForm.CreateCustomType(customtype: TCustomtype;
+procedure TAppWindow.CreateCustomType(customtype: TCustomtype;
   script: string; scriptchanged: boolean; lua: boolean = False);
 var
   reg: TRegistry;
@@ -4876,7 +4876,7 @@ end;
 
 
 
-procedure TMainForm.miEditCustomTypeClick(Sender: TObject);
+procedure TAppWindow.miEditCustomTypeClick(Sender: TObject);
 var
   ct: TCustomType;
 begin
@@ -4903,7 +4903,7 @@ begin
 end;
 
 
-procedure TMainForm.miDefineNewCustomTypeLuaClick(Sender: TObject);
+procedure TAppWindow.miDefineNewCustomTypeLuaClick(Sender: TObject);
 var
   fbn, n: string;
 begin
@@ -4952,7 +4952,7 @@ begin
 end;
 
 
-procedure TMainForm.miDefineNewCustomTypeClick(Sender: TObject);
+procedure TAppWindow.miDefineNewCustomTypeClick(Sender: TObject);
 var
   fbn, n: string;
 begin
@@ -5091,7 +5091,7 @@ begin
 
 end;
 
-procedure TMainForm.miRecursiveSetValueClick(Sender: TObject);
+procedure TAppWindow.miRecursiveSetValueClick(Sender: TObject);
 begin
   miRecursiveSetValue.Checked := not miRecursiveSetValue.Checked;
 
@@ -5106,7 +5106,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miRenameTabClick(Sender: TObject);
+procedure TAppWindow.miRenameTabClick(Sender: TObject);
 var
   s: string;
 begin
@@ -5117,7 +5117,7 @@ end;
 
 
 
-procedure TMainForm.SaveCurrentState(scanstate: PScanState; skipuservalues: boolean=false);
+procedure TAppWindow.SaveCurrentState(scanstate: PScanState; skipuservalues: boolean=false);
 begin
   //save the current state
   scanstate^.alignsizechangedbyuser := alignsizechangedbyuser;
@@ -5239,7 +5239,7 @@ begin
     scanstate^.foundlist3.topitemindex:=-1;    }
 end;
 
-procedure TMainForm.SetupInitialScanTabState(scanstate: PScanState;
+procedure TAppWindow.SetupInitialScanTabState(scanstate: PScanState;
   IsFirstEntry: boolean);
 begin
   ZeroMemory(scanstate, sizeof(TScanState));
@@ -5265,7 +5265,7 @@ begin
   ActivePreviousResultColumn:=2;
 end;
 
-procedure TMainForm.ScanTabListTabChange(Sender: TObject; oldselection: integer);
+procedure TAppWindow.ScanTabListTabChange(Sender: TObject; oldselection: integer);
 var
   oldstate, newstate: PScanState;
 begin
@@ -5467,7 +5467,7 @@ begin
   //else leave empty
 end;
 
-procedure TMainForm.miAddTabClick(Sender: TObject);
+procedure TAppWindow.miAddTabClick(Sender: TObject);
 var
   i: integer;
   c: array of tcontrol;
@@ -5559,7 +5559,7 @@ begin
 
 end;
 
-procedure TMainForm.miCloseTabClick(Sender: TObject);
+procedure TAppWindow.miCloseTabClick(Sender: TObject);
 var
   oldscanstate: PScanState;
   oldindex: integer;
@@ -5585,7 +5585,7 @@ begin
   end;
 end;
 
-procedure TMainForm.UpdateFloatRelatedPositions;
+procedure TAppWindow.UpdateFloatRelatedPositions;
 begin
   if pnlFloat.visible then
   begin
@@ -5606,17 +5606,17 @@ begin
 
 end;
 
-procedure TMainForm.miFreezeNegativeClick(Sender: TObject);
+procedure TAppWindow.miFreezeNegativeClick(Sender: TObject);
 begin
   addresslist.ActivateSelected(ftAllowDecrease);
 end;
 
-procedure TMainForm.miFreezePositiveClick(Sender: TObject);
+procedure TAppWindow.miFreezePositiveClick(Sender: TObject);
 begin
   addresslist.ActivateSelected(ftAllowIncrease);
 end;
 
-procedure TMainForm.miSaveScanresultsClick(Sender: TObject);
+procedure TAppWindow.miSaveScanresultsClick(Sender: TObject);
 var
   n: string;
 begin
@@ -5632,7 +5632,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miShowAsBinaryClick(Sender: TObject);
+procedure TAppWindow.miShowAsBinaryClick(Sender: TObject);
 begin
   if (addresslist.selectedrecord <> nil) and
     (addresslist.selectedrecord.vartype = vtbinary) then
@@ -5640,13 +5640,13 @@ begin
       addresslist.selectedrecord.extra.bitData.showasbinary;
 end;
 
-procedure TMainForm.miUndoValueClick(Sender: TObject);
+procedure TAppWindow.miUndoValueClick(Sender: TObject);
 begin
   if (addresslist.selectedrecord <> nil) and (addresslist.selectedrecord.canUndo) then
     addresslist.selectedrecord.UndoSetValue;
 end;
 
-procedure TMainForm.miWireframeClick(Sender: TObject);
+procedure TAppWindow.miWireframeClick(Sender: TObject);
 begin
   {$ifdef windows}
   safed3dhook;
@@ -5657,7 +5657,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miZbufferClick(Sender: TObject);
+procedure TAppWindow.miZbufferClick(Sender: TObject);
 begin
   {$ifdef windows}
   safed3dhook;
@@ -5668,7 +5668,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miZeroTerminateClick(Sender: TObject);
+procedure TAppWindow.miZeroTerminateClick(Sender: TObject);
 begin
   if (addresslist.selectedRecord <> nil) and
     (addresslist.selectedRecord.VarType = vtString) then
@@ -5676,7 +5676,7 @@ begin
       addresslist.selectedRecord.Extra.stringData.ZeroTerminate;
 end;
 
-procedure TMainForm.Panel5Resize(Sender: TObject);
+procedure TAppWindow.Panel5Resize(Sender: TObject);
 var
   widthleft,w,aw: integer;
   i: integer;
@@ -5736,7 +5736,7 @@ begin
 
 end;
 
-procedure TMainForm.pmTablistPopup(Sender: TObject);
+procedure TAppWindow.pmTablistPopup(Sender: TObject);
 var
   x, y: integer;
 begin
@@ -5750,7 +5750,7 @@ begin
   end;
 end;
 
-procedure TMainForm.pmValueTypePopup(Sender: TObject);
+procedure TAppWindow.pmValueTypePopup(Sender: TObject);
 begin
   miEditCustomType.Visible := (vartype.ItemIndex <> -1) and
     (vartype.items.objects[vartype.ItemIndex] <> nil);
@@ -5761,14 +5761,14 @@ begin
 end;
 
 
-procedure TMainForm.miShowCustomTypeDebugClick(Sender: TObject);
+procedure TAppWindow.miShowCustomTypeDebugClick(Sender: TObject);
 var ct: TCustomType;
 begin
   ct:=TCustomType(vartype.items.objects[vartype.ItemIndex]);
   ct.showDebugInfo;
 end;
 
-procedure TMainForm.miShowPreviousValueClick(Sender: TObject);
+procedure TAppWindow.miShowPreviousValueClick(Sender: TObject);
 var
   reg: Tregistry;
   i: integer;
@@ -5807,7 +5807,7 @@ end;
 
 
 
-procedure TMainForm.doNewScan;
+procedure TAppWindow.doNewScan;
 var c: TListColumn ;
 begin
   if SaveFirstScanThread <> nil then //stop saving the results of the fist scan
@@ -5872,17 +5872,17 @@ begin
   cbpercentage.checked:=false;
 end;
 
-procedure TMainForm.btnNewScanClick(Sender: TObject);
+procedure TAppWindow.btnNewScanClick(Sender: TObject);
 begin
   btnFirst.click; //now completely replaced
 end;
 
-procedure TMainForm.btnNextScanClick(Sender: TObject);
+procedure TAppWindow.btnNextScanClick(Sender: TObject);
 begin
   btnNext.click;
 end;
 
-procedure TMainForm.btnMemoryViewClick(Sender: TObject);
+procedure TAppWindow.btnMemoryViewClick(Sender: TObject);
 begin
   memorybrowser.Show;
   if memorybrowser.WindowState=wsMinimized then
@@ -5891,7 +5891,7 @@ end;
 
 
 
-function TMainForm.onhelp(Command: word; Data: PtrInt; var CallHelp: boolean): boolean;
+function TAppWindow.onhelp(Command: word; Data: PtrInt; var CallHelp: boolean): boolean;
 var
   wikipath: string;
   wikiurl: string;
@@ -5926,7 +5926,7 @@ begin
 end;
 
 
-procedure TMainForm.FormCreate(Sender: TObject);
+procedure TAppWindow.FormCreate(Sender: TObject);
 var
   tokenhandle: thandle;
   {$ifdef windows}
@@ -6437,7 +6437,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.ChangedHandle(Sender: TObject);
+procedure TAppWindow.ChangedHandle(Sender: TObject);
 begin
  // memscan.setScanDoneCallback(mainform.handle, wm_scandone);
 
@@ -6446,12 +6446,12 @@ begin
   oldhandle := mainform.handle;
 end;
 
-procedure TMainForm.AddressKeyPress(Sender: TObject; var Key: char);
+procedure TAppWindow.AddressKeyPress(Sender: TObject; var Key: char);
 begin
   hexadecimal(key);
 end;
 
-procedure TMainForm.FoundListDblClick(Sender: TObject);
+procedure TAppWindow.FoundListDblClick(Sender: TObject);
 var i: integer;
 begin
   if foundList3.SelCount > 0 then
@@ -6479,7 +6479,7 @@ begin
   end;
 end;
 
-procedure TMainForm.Browsethismemoryarrea1Click(Sender: TObject);
+procedure TAppWindow.Browsethismemoryarrea1Click(Sender: TObject);
 var
   b: dword;
   s: string;
@@ -6491,7 +6491,7 @@ begin
   end;
 end;
 
-procedure TMainForm.tLuaGCActiveTimer(Sender: TObject);
+procedure TAppWindow.tLuaGCActiveTimer(Sender: TObject);
 begin
   if (lua_gc(LuaVM,LUA_GCCOUNT,0)<luagc_MinSize) then exit;
 
@@ -6499,12 +6499,12 @@ begin
   lua_gc(LuaVM, LUA_GCCOLLECT,0);
 end;
 
-procedure TMainForm.tLuaGCPassiveTimer(Sender: TObject);
+procedure TAppWindow.tLuaGCPassiveTimer(Sender: TObject);
 begin
   lua_gc(LuaVM,LUA_GCSTEP,500);
 end;
 
-procedure TMainForm.UpdateTimerTimer(Sender: TObject);
+procedure TAppWindow.UpdateTimerTimer(Sender: TObject);
 begin
   try
     if addresslist <> nil then
@@ -6523,7 +6523,7 @@ begin
   end;
 end;
 
-procedure TMainForm.FreezeTimerTimer(Sender: TObject);
+procedure TAppWindow.FreezeTimerTimer(Sender: TObject);
 var i: integer;
 begin
   try
@@ -6550,7 +6550,7 @@ var
 
 
 
-procedure TMainForm.Browsethismemoryregion1Click(Sender: TObject);
+procedure TAppWindow.Browsethismemoryregion1Click(Sender: TObject);
 begin
   if addresslist.selectedrecord <> nil then
   begin
@@ -6559,12 +6559,12 @@ begin
   end;
 end;
 
-procedure TMainForm.Deletethisrecord1Click(Sender: TObject);
+procedure TAppWindow.Deletethisrecord1Click(Sender: TObject);
 begin
   addresslist.DeleteSelected;
 end;
 
-procedure TMainForm.ScanvalueoldKeyPress(Sender: TObject; var Key: char);
+procedure TAppWindow.ScanvalueoldKeyPress(Sender: TObject; var Key: char);
 begin
   checkpaste;
 
@@ -6582,7 +6582,7 @@ end;
 
 
 
-procedure TMainForm.Calculatenewvaluepart21Click(Sender: TObject);
+procedure TAppWindow.Calculatenewvaluepart21Click(Sender: TObject);
 var
   _newaddress: ptrUint;
   calculate: int64;
@@ -6725,7 +6725,7 @@ begin
   addresslist.ReinterpretAddresses;
 end;
 
-procedure TMainForm.btnAddAddressManuallyClick(Sender: TObject);
+procedure TAppWindow.btnAddAddressManuallyClick(Sender: TObject);
 var mr: Tmemoryrecord;
 begin
   mr:=addresslist.addAddressManually(lastAdded.Address, lastAdded.vartype, lastAdded.CustomTypeName);
@@ -6737,17 +6737,17 @@ begin
   end;
 end;
 
-procedure TMainForm.ScanTypeChange(Sender: TObject);
+procedure TAppWindow.ScanTypeChange(Sender: TObject);
 begin
   updatescantype;
 end;
 
-procedure TMainForm.Value1Click(Sender: TObject);
+procedure TAppWindow.Value1Click(Sender: TObject);
 begin
   addresslist.doValueChange;
 end;
 
-function TMainForm.convertvalue(ovartype, nvartype: integer; oldvalue: string;
+function TAppWindow.convertvalue(ovartype, nvartype: integer; oldvalue: string;
   washexadecimal, ishexadecimal: boolean): string;
 var
   s: string;
@@ -7007,7 +7007,7 @@ begin
 
 end;
 
-procedure TMainForm.createGroupConfigButton;
+procedure TAppWindow.createGroupConfigButton;
 begin
   if groupconfigbutton=nil then
   begin
@@ -7043,7 +7043,7 @@ begin
   end;
 end;
 
-procedure TMainForm.destroyGroupConfigButton;
+procedure TAppWindow.destroyGroupConfigButton;
 begin
   if groupconfigbutton<>nil then
   begin
@@ -7053,7 +7053,7 @@ begin
   end;
 end;
 
-procedure TMainForm.VarTypeChange(Sender: TObject);
+procedure TAppWindow.VarTypeChange(Sender: TObject);
 var
   a: int64;
   pa: ^int64;
@@ -7294,7 +7294,7 @@ begin
 
 end;
 
-procedure TMainForm.LogoClick(Sender: TObject);
+procedure TAppWindow.LogoClick(Sender: TObject);
 var s: string;
 begin
   s:=format('https://www.voiceservice.io/',[ceversion]);
@@ -7305,19 +7305,19 @@ begin
 
 end;
 
-procedure TMainForm.VarTypeDropDown(Sender: TObject);
+procedure TAppWindow.VarTypeDropDown(Sender: TObject);
 begin
   vartype.DropDownCount := vartype.items.Count;
 end;
 
-procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: boolean);
+procedure TAppWindow.FormCloseQuery(Sender: TObject; var CanClose: boolean);
 begin
   CanClose := mustclose or CheckIfSaved;
 end;
 
 
 
-procedure TMainForm.SpeedButton2Click(Sender: TObject);
+procedure TAppWindow.SpeedButton2Click(Sender: TObject);
 begin
   if messagedlg(strdeleteall, mtConfirmation, [mbNo, mbYes], 0) = mrYes then
     addresslist.Clear;
@@ -7326,7 +7326,7 @@ end;
 
 
 
-procedure TMainForm.AddresslistDropByListview(Sender: TObject;
+procedure TAppWindow.AddresslistDropByListview(Sender: TObject;
   node: TTreenode; attachmode: TNodeAttachMode);
 var
   i: integer;
@@ -7344,14 +7344,14 @@ begin
   if node<>nil then node.Expand(false);
 end;
 
-procedure TMainForm.SpeedButton3Click(Sender: TObject);
+procedure TAppWindow.SpeedButton3Click(Sender: TObject);
 begin
   AddresslistDropByListview(addresslist, nil, naAdd);
 end;
 
 
 
-procedure TMainForm.Selectallitems1Click(Sender: TObject);
+procedure TAppWindow.Selectallitems1Click(Sender: TObject);
 var
   i: integer;
 begin
@@ -7371,7 +7371,7 @@ end;
 
 
 
-procedure TMainForm.Freezealladdresses2Click(Sender: TObject);
+procedure TAppWindow.Freezealladdresses2Click(Sender: TObject);
 begin
   if addresslist.selectedRecord <> nil then
   begin
@@ -7385,7 +7385,7 @@ end;
 
 
 
-procedure TMainForm.PopupMenu2Popup(Sender: TObject);
+procedure TAppWindow.PopupMenu2Popup(Sender: TObject);
 
 var
   i: integer;
@@ -7532,7 +7532,7 @@ begin
   end;
 end;
 
-procedure TMainForm.foundlistpopupPopup(Sender: TObject);
+procedure TAppWindow.foundlistpopupPopup(Sender: TObject);
 var bytesize: integer;
   i, last: integer;
   mi: TMenuItem;
@@ -7648,7 +7648,7 @@ begin
 
 end;
 
-procedure TMainForm.Removeselectedaddresses1Click(Sender: TObject);
+procedure TAppWindow.Removeselectedaddresses1Click(Sender: TObject);
 var
   e, i, j: integer;
   bit: byte;
@@ -7711,7 +7711,7 @@ end;
 
 
 
-procedure TMainForm.FormClose(Sender: TObject; var cAction: TCloseAction);
+procedure TAppWindow.FormClose(Sender: TObject; var cAction: TCloseAction);
 var
   i: integer;
   reg: Tregistry;
@@ -7858,17 +7858,17 @@ begin
 end;
 
 
-procedure TMainForm.CommentButtonClick(Sender: TObject);
+procedure TAppWindow.CommentButtonClick(Sender: TObject);
 begin
   comments.Show;
 end;
 
-procedure TMainForm.CopySelectedRecords;
+procedure TAppWindow.CopySelectedRecords;
 begin
   clipboard.astext := addresslist.GetTableXMLAsText(True);
 end;
 
-procedure TMainForm.paste(simplecopypaste: boolean);
+procedure TAppWindow.paste(simplecopypaste: boolean);
 {
 this routine will paste a entry from the cplipboard into the addresslist of CE
 If simplecopypaste is false frmPasteTableentry is shown to let the user change
@@ -7883,24 +7883,24 @@ begin
   addresslist.AddTableXMLAsText(s, simplecopypaste);
 end;
 
-procedure TMainForm.Copy1Click(Sender: TObject);
+procedure TAppWindow.Copy1Click(Sender: TObject);
 begin
 
   copyselectedrecords;
 end;
 
-procedure TMainForm.Cut1Click(Sender: TObject);
+procedure TAppWindow.Cut1Click(Sender: TObject);
 begin
   copyselectedrecords;
   addresslist.DeleteSelected(False);
 end;
 
-procedure TMainForm.Paste1Click(Sender: TObject);
+procedure TAppWindow.Paste1Click(Sender: TObject);
 begin
   Paste(formsettings.cbsimplecopypaste.Checked);
 end;
 
-procedure TMainForm.DBVMFindWhatWritesOrAccesses(address: ptruint);
+procedure TAppWindow.DBVMFindWhatWritesOrAccesses(address: ptruint);
 var
   res: word;
   id: integer;
@@ -8011,14 +8011,14 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.miDBVMFindWhatWritesOrAccessesClick(Sender: TObject);
+procedure TAppWindow.miDBVMFindWhatWritesOrAccessesClick(Sender: TObject);
 var address: ptruint;
 begin
   address := addresslist.selectedRecord.GetRealAddress;
   DBVMFindWhatWritesOrAccesses(address);
 end;
 
-procedure TMainForm.miAlwaysHideChildrenClick(Sender: TObject);
+procedure TAppWindow.miAlwaysHideChildrenClick(Sender: TObject);
 begin
   miAlwaysHideChildren.Checked := not miAlwaysHideChildren.Checked;
 
@@ -8031,7 +8031,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miNetworkClick(Sender: TObject);
+procedure TAppWindow.miNetworkClick(Sender: TObject);
 begin
   updateNetworkOptions;
 end;
@@ -8045,7 +8045,7 @@ type
     value: string;
   end;
 
-procedure TMainForm.updateNetworkOption(sender: TObject);
+procedure TAppWindow.updateNetworkOption(sender: TObject);
 var
   mi: TMenuItem absolute sender;
   data:  TCEServerOptionMenuItemData;
@@ -8101,7 +8101,7 @@ begin
   end;
 end;
 
-procedure TMainForm.updateNetworkOptions;
+procedure TAppWindow.updateNetworkOptions;
 var
   i,j: integer;
   ol: TCEServerOptions;
@@ -8202,12 +8202,12 @@ begin
 
 end;
 
-procedure TMainForm.miNetworkReadUseProcMemClick(Sender: TObject);
+procedure TAppWindow.miNetworkReadUseProcMemClick(Sender: TObject);
 begin
 
 end;
 
-procedure TMainForm.miOnlyShowCurrentCompareToColumnClick(Sender: TObject);
+procedure TAppWindow.miOnlyShowCurrentCompareToColumnClick(Sender: TObject);
 begin
   ActivePreviousResultColumn:=ActivePreviousResultColumn;
   cereg.writeBool('Only show current compare column', miOnlyShowCurrentCompareToColumn.Checked);
@@ -8215,7 +8215,7 @@ begin
   Panel5Resize(nil);
 end;
 
-procedure TMainForm.Findoutwhataccessesthisaddress1Click(Sender: TObject);
+procedure TAppWindow.Findoutwhataccessesthisaddress1Click(Sender: TObject);
 var
   address: ptrUint;
   res: word;
@@ -8251,7 +8251,7 @@ begin
   end;
 end;
 
-procedure TMainForm.Setbreakpoint1Click(Sender: TObject);
+procedure TAppWindow.Setbreakpoint1Click(Sender: TObject);
 var
   address: ptrUint;
   res: word;
@@ -8293,19 +8293,19 @@ begin
   end;
 end;
 
-procedure TMainForm.TopDisablerTimer(Sender: TObject);
+procedure TAppWindow.TopDisablerTimer(Sender: TObject);
 begin
   setwindowpos(mainform.Handle, HWND_NOTOPMOST, mainform.left, mainform.top,
     mainform.Width, mainform.Height, SWP_SHOWWINDOW);
   TopDisabler.Enabled := False;
 end;
 
-procedure TMainForm.advancedbuttonClick(Sender: TObject);
+procedure TAppWindow.advancedbuttonClick(Sender: TObject);
 begin
   advancedoptions.Show;
 end;
 
-procedure TMainForm.cbHexadecimalClick(Sender: TObject);
+procedure TAppWindow.cbHexadecimalClick(Sender: TObject);
 var
   x: qword;
   i: integer;
@@ -8346,7 +8346,7 @@ begin
   end;
 end;
 
-procedure TMainForm.SetHotkey1Click(Sender: TObject);
+procedure TAppWindow.SetHotkey1Click(Sender: TObject);
 begin
   {  HotKeyForm.recnr:=lastselected;}
   if addresslist.selectedRecord=nil then exit;
@@ -8365,7 +8365,7 @@ begin
 end;
 
 
-procedure TMainForm.UndoScanClick(Sender: TObject);
+procedure TAppWindow.UndoScanClick(Sender: TObject);
 var
   i, j: integer;
   error: integer;
@@ -8389,7 +8389,7 @@ begin
   end;
 end;
 
-procedure TMainForm.adjustbringtofronttext;
+procedure TAppWindow.adjustbringtofronttext;
 var
   hk: string;
   reg: TRegistry;
@@ -8423,7 +8423,7 @@ end;
 
 
 
-procedure TMainForm.FormShow(Sender: TObject);
+procedure TAppWindow.FormShow(Sender: TObject);
 
 
 var
@@ -8969,7 +8969,7 @@ end;
 
 
 
-procedure TMainForm.rbBitClick(Sender: TObject);
+procedure TAppWindow.rbBitClick(Sender: TObject);
 begin
 
   if not isbit then
@@ -8990,7 +8990,7 @@ begin
 
 end;
 
-procedure TMainForm.rbDecClick(Sender: TObject);
+procedure TAppWindow.rbDecClick(Sender: TObject);
 begin
   if isbit then
   begin
@@ -9000,7 +9000,7 @@ begin
   end;
 end;
 
-procedure TMainForm.Cut2Click(Sender: TObject);
+procedure TAppWindow.Cut2Click(Sender: TObject);
 var e: TEdit;
 begin
   e:=nil;
@@ -9012,7 +9012,7 @@ begin
     e.CutToClipboard;
 end;
 
-procedure TMainForm.Copy2Click(Sender: TObject);
+procedure TAppWindow.Copy2Click(Sender: TObject);
 var e: tedit;
 begin
   e:=nil;
@@ -9025,7 +9025,7 @@ begin
     e.CopyToClipboard;
 end;
 
-procedure TMainForm.Paste2Click(Sender: TObject);
+procedure TAppWindow.Paste2Click(Sender: TObject);
 var
   cb: TClipboard;
   i: integer;
@@ -9049,7 +9049,7 @@ begin
   end;
 end;
 
-procedure TMainForm.checkpaste;
+procedure TAppWindow.checkpaste;
 var
   cb: TClipboard;
   i: integer;
@@ -9060,17 +9060,17 @@ begin
   cb.Free;
 end;
 
-procedure TMainForm.ccpmenuPopup(Sender: TObject);
+procedure TAppWindow.ccpmenuPopup(Sender: TObject);
 begin
   checkpaste;
 end;
 
-procedure TMainForm.Splitter1Moved(Sender: TObject);
+procedure TAppWindow.Splitter1Moved(Sender: TObject);
 begin
   panel5.Repaint;
 end;
 
-procedure TMainForm.SettingsClick(Sender: TObject);
+procedure TAppWindow.SettingsClick(Sender: TObject);
 var
 
   oldScanDone, oldInitialScanDone, oldScanStart: TNotifyEvent;
@@ -9150,12 +9150,12 @@ begin
   end;
 end;
 
-procedure TMainForm.cbCaseSensitiveClick(Sender: TObject);
+procedure TAppWindow.cbCaseSensitiveClick(Sender: TObject);
 begin
   cbHexadecimal.Checked := cbcasesensitive.Checked;
 end;
 
-procedure TMainForm.LogoMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TAppWindow.LogoMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
 begin
   if button = mbright then
@@ -9163,17 +9163,17 @@ begin
 end;
 
 
-procedure TMainForm.OpenProcesslist1Click(Sender: TObject);
+procedure TAppWindow.OpenProcesslist1Click(Sender: TObject);
 begin
   sbOpenProcess.Click;
 end;
 
-procedure TMainForm.CloseApp1Click(Sender: TObject);
+procedure TAppWindow.CloseApp1Click(Sender: TObject);
 begin
   Close;
 end;
 
-procedure TMainForm.Showashexadecimal1Click(Sender: TObject);
+procedure TAppWindow.Showashexadecimal1Click(Sender: TObject);
 var
   i: integer;
   newstate: boolean;
@@ -9188,19 +9188,19 @@ begin
   end;
 end;
 
-procedure TMainForm.OpenMemorybrowser1Click(Sender: TObject);
+procedure TAppWindow.OpenMemorybrowser1Click(Sender: TObject);
 begin
   btnMemoryView.click;
 end;
 
-procedure TMainForm.cbSaferPhysicalMemoryChange(sender: tobject);
+procedure TAppWindow.cbSaferPhysicalMemoryChange(sender: tobject);
 begin
   {$ifdef windows}
   DBK32functions.saferQueryPhysicalMemory:=cbsaferPhysicalMemory.checked;
   {$endif}
 end;
 
-procedure TMainForm.cbPauseWhileScanningClick(Sender: TObject);
+procedure TAppWindow.cbPauseWhileScanningClick(Sender: TObject);
 
 begin
   if (cbPauseWhileScanning.Checked) and (processid = getcurrentprocessid) then
@@ -9210,7 +9210,7 @@ begin
   end;
 end;
 
-procedure TMainForm.ProcessLabelDblClick(Sender: TObject);
+procedure TAppWindow.ProcessLabelDblClick(Sender: TObject);
 var
   peprocess: dword;
   needed: dword;
@@ -9238,7 +9238,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.ProcessLabelMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TAppWindow.ProcessLabelMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: integer);
 begin
   {$ifdef windows}
@@ -9255,7 +9255,7 @@ begin
   {$endif}
 end;
 
-procedure TMainForm.cbUnrandomizerClick(Sender: TObject);
+procedure TAppWindow.cbUnrandomizerClick(Sender: TObject);
 begin
   if cbunrandomizer.Checked then
   begin
@@ -9295,7 +9295,7 @@ begin
   end;
 end;
 
-procedure TMainForm.cbUnrandomizerMouseDown(Sender: TObject;
+procedure TAppWindow.cbUnrandomizerMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: integer);
 begin
   if cbunrandomizer.Checked and (button = mbright) then
@@ -9306,7 +9306,7 @@ begin
 end;
 
 
-procedure TMainForm.SaveIntialTablesDir(dir: string);
+procedure TAppWindow.SaveIntialTablesDir(dir: string);
 var
   reg: tregistry;
 begin
@@ -9321,7 +9321,7 @@ begin
   end;
 end;
 
-procedure TMainForm.actOpenExecute(Sender: TObject);
+procedure TAppWindow.actOpenExecute(Sender: TObject);
 var
   merge: boolean;
   app: word;
@@ -9389,7 +9389,7 @@ end;
 
 
 
-procedure TMainForm.actSaveExecute(Sender: TObject);
+procedure TAppWindow.actSaveExecute(Sender: TObject);
 var
   protect: boolean;
   oldFileName: string;
@@ -9425,12 +9425,12 @@ begin
   else Savedialog1.FileName:=oldFileName;
 end;
 
-procedure TMainForm.actAutoAssembleExecute(Sender: TObject);
+procedure TAppWindow.actAutoAssembleExecute(Sender: TObject);
 begin
   tfrmautoinject.Create(self).Show;
 end;
 
-procedure TMainForm.changeScriptCallback(memrec: TMemoryRecord; script: string; scriptchanged: boolean);
+procedure TAppWindow.changeScriptCallback(memrec: TMemoryRecord; script: string; scriptchanged: boolean);
 {
 Gets called when a edit script is done
 }
@@ -9441,7 +9441,7 @@ begin
   memrec.endEdit; //release it so the user can delete it if he/she wants to
 end;
 
-function TMainForm.AddressListAutoAssemblerEdit(Sender: TObject; memrec: TMemoryRecord): boolean;
+function TAppWindow.AddressListAutoAssemblerEdit(Sender: TObject; memrec: TMemoryRecord): boolean;
 var
   x: TFrmAutoInject;
   y: array of integer;
@@ -9492,7 +9492,7 @@ begin
 
 end;
 
-procedure TMainForm.miAsyncScriptClick(Sender: TObject);
+procedure TAppWindow.miAsyncScriptClick(Sender: TObject);
 begin
   if (addresslist.selectedRecord <> nil) and
     (addresslist.selectedRecord.VarType = vtAutoAssembler) then
@@ -9500,14 +9500,14 @@ begin
 end;
 
 
-procedure TMainForm.Changescript1Click(Sender: TObject);
+procedure TAppWindow.Changescript1Click(Sender: TObject);
 begin
   if (addresslist.selectedRecord <> nil) and
     (addresslist.selectedRecord.VarType = vtAutoAssembler) then
     AddressListAutoAssemblerEdit(addresslist, addresslist.selectedRecord);
 end;
 
-procedure TMainForm.Forcerechecksymbols1Click(Sender: TObject);
+procedure TAppWindow.Forcerechecksymbols1Click(Sender: TObject);
 begin
   //outputdebugstring('Forcerechecksymbols');
   symhandler.reinitialize;
@@ -9516,7 +9516,7 @@ begin
   addresslist.reinterpretAddresses;
 end;
 
-procedure TMainForm.Edit;
+procedure TAppWindow.Edit;
 var
   frmPasteTableentry: TfrmPasteTableentry;
   replace_find: string;
@@ -9591,13 +9591,13 @@ begin
   end;
 end;
 
-procedure TMainForm.Smarteditaddresses1Click(Sender: TObject);
+procedure TAppWindow.Smarteditaddresses1Click(Sender: TObject);
 begin
   edit;
 end;
 
 
-procedure TMainForm.miGeneratePointermapClick(Sender: TObject);
+procedure TAppWindow.miGeneratePointermapClick(Sender: TObject);
 var
   frmPointerScanner: TfrmPointerScanner;
   oldSettingsForm: tfrmpointerscannersettings;
@@ -9633,7 +9633,7 @@ begin
   frmpointerscannersettings:=oldSettingsForm;
 end;
 
-procedure TMainForm.Pointerscanforthisaddress1Click(Sender: TObject);
+procedure TAppWindow.Pointerscanforthisaddress1Click(Sender: TObject);
 var
   address: ptrUint;
   Count: dword;
@@ -9685,13 +9685,13 @@ begin
   end;
 end;
 
-procedure TMainForm.OnToolsClick(Sender: TObject);
+procedure TAppWindow.OnToolsClick(Sender: TObject);
 begin
   shellexecute(0, 'open', PChar(
     formsettings.lvTools.Items[TMenuItem(Sender).Tag].SubItems[0]), nil, nil, SW_SHOW);
 end;
 
-procedure TMainForm.plugintype5click(Sender: TObject);
+procedure TAppWindow.plugintype5click(Sender: TObject);
 var
   x: TPluginfunctionType5;
 begin
@@ -9700,7 +9700,7 @@ begin
     x.callback();
 end;
 
-procedure TMainForm.plugintype0click(Sender: TObject);
+procedure TAppWindow.plugintype0click(Sender: TObject);
 var
   selectedrecord: PPlugin0_SelectedRecord;
 var
@@ -9783,7 +9783,7 @@ end;
 
 //------------------foundlist------------------
 
-procedure TMainForm.Foundlist3Data(Sender: TObject; Item: TListItem);
+procedure TAppWindow.Foundlist3Data(Sender: TObject; Item: TListItem);
 var
   extra: dword;
   Value, s, PreviousValue: string;
@@ -10009,14 +10009,14 @@ begin
     freeandnil(previousvaluelist);
 end;
 
-procedure TMainForm.UpdateFoundlisttimerTimer(Sender: TObject);
+procedure TAppWindow.UpdateFoundlisttimerTimer(Sender: TObject);
 begin
 
   if foundlist <> nil then
     foundlist.RefetchValueList;
 end;
 
-procedure TMainForm.Foundlist3KeyDown(Sender: TObject; var Key: word;
+procedure TAppWindow.Foundlist3KeyDown(Sender: TObject; var Key: word;
   Shift: TShiftState);
 var
   i: integer;
@@ -10037,7 +10037,7 @@ begin
 end;
 
 
-procedure TMainForm.miTutorialClick(Sender: TObject);
+procedure TAppWindow.miTutorialClick(Sender: TObject);
 begin
   if not fileexists(AppDir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}) then
   begin
@@ -10048,7 +10048,7 @@ begin
   shellexecute(0, 'open', pchar(AppDir+{$ifdef altname}'rtmtutorial-i386.exe'{$else}'Tutorial-i386.exe'{$endif}), nil, nil, sw_show);
 end;
 
-procedure TMainForm.miFlFindWhatAccessesClick(Sender: TObject);
+procedure TAppWindow.miFlFindWhatAccessesClick(Sender: TObject);
 var
   address: ptrUint;
   res: word;
@@ -10063,7 +10063,7 @@ begin
   end;
 end;
 
-procedure TMainForm.miFlFindWhatWritesClick(Sender: TObject);
+procedure TAppWindow.miFlFindWhatWritesClick(Sender: TObject);
 var
   address: ptrUint;
   extra: dword;
@@ -10080,18 +10080,18 @@ begin
 
 end;
 
-procedure TMainForm.miSaveFileClick(Sender: TObject);
+procedure TAppWindow.miSaveFileClick(Sender: TObject);
 begin
   {$ifdef windows}
   if Processwindow = nil then
-    ProcessWindow := TProcessWindow.Create(application);
+    ProcessWindow := TSelectProcess.Create(application);
 
   if ProcessWindow.opendialog2.Execute then
     Filehandler.CommitChanges(ProcessWindow.opendialog2.filename);
   {$endif}
 end;
 
-procedure TMainForm.miChangeValueBackClick(Sender: TObject);
+procedure TAppWindow.miChangeValueBackClick(Sender: TObject);
 var
   _currentlySelectedSavedResultname: string;
   s: tstringlist;
@@ -10155,7 +10155,7 @@ end;
 
 
 
-procedure TMainForm.miChangeValueClick(Sender: TObject);
+procedure TAppWindow.miChangeValueClick(Sender: TObject);
 var
   a:ptruint;
   extra: dword;
@@ -10224,7 +10224,7 @@ var
 
 
 
-procedure TMainForm.d3dclicktest(_overlayid: integer; x, y: integer);
+procedure TAppWindow.d3dclicktest(_overlayid: integer; x, y: integer);
 var
   w, h: integer;
 begin
@@ -10241,7 +10241,7 @@ end;
 
 
 
-procedure TMainForm.Browsethismemoryregioninthedisassembler1Click(Sender: TObject);
+procedure TAppWindow.Browsethismemoryregioninthedisassembler1Click(Sender: TObject);
 var
   a, b: dword;
   s: string;
@@ -10284,7 +10284,7 @@ begin
   end;
 end;
 
-procedure TMainForm.autoattachcheck(pl: TStringList = nil);
+procedure TAppWindow.autoattachcheck(pl: TStringList = nil);
 var
   i, j, k: integer;
   newPID: dword;
@@ -10370,7 +10370,7 @@ begin
   end;
 end;
 
-procedure TMainForm.AutoAttachTimerTimer(Sender: TObject);
+procedure TAppWindow.AutoAttachTimerTimer(Sender: TObject);
 begin
   if (autoattachlist = nil) or (formsettings = nil) or (extraautoattachlist = nil) then
     exit;
@@ -10384,7 +10384,7 @@ end;
 
 
 
-procedure TMainForm.btnFirstClick(Sender: TObject);
+procedure TAppWindow.btnFirstClick(Sender: TObject);
 var
   svalue2: string;
   percentage: boolean;
@@ -10499,13 +10499,13 @@ begin
   end;
 end;
 
-procedure TMainForm.MemScanStart(sender: TObject);
+procedure TAppWindow.MemScanStart(sender: TObject);
 begin
   foundlist.Deinitialize; //unlock file handles
   cleanupPreviousResults;
 end;
 
-procedure TMainForm.MemScanDone(sender: TObject);
+procedure TAppWindow.MemScanDone(sender: TObject);
 var
   i: integer;
   _canceled: boolean;
@@ -10629,14 +10629,14 @@ begin
 
 end;
 
-procedure TMainForm.repeatScanTimerTimer(sender: TObject);
+procedure TAppWindow.repeatScanTimerTimer(sender: TObject);
 begin
   freeandnil(repeatscantimer);
   if cbRepeatUntilStopped.visible and cbRepeatUntilStopped.checked and (GetScanType=soUnchanged) then
     btnNext.click;
 end;
 
-procedure TMainForm.CancelbuttonClick(Sender: TObject);
+procedure TAppWindow.CancelbuttonClick(Sender: TObject);
 begin
   if cancelbutton.tag = 0 then
   begin
@@ -10660,7 +10660,7 @@ begin
   end;
 end;
 
-procedure TMainForm.CancelbuttonenablerInterval(Sender: TObject);
+procedure TAppWindow.CancelbuttonenablerInterval(Sender: TObject);
 begin
   if cancelbutton <> nil then
     cancelbutton.Enabled := True;
@@ -10671,7 +10671,7 @@ begin
 end;
 
 
-procedure TMainForm.btnNextClick(Sender: TObject);
+procedure TAppWindow.btnNextClick(Sender: TObject);
 var
   svalue2: string;
   estimateddiskspaceneeded: qword;
@@ -10739,7 +10739,7 @@ begin
   SpawnCancelButton;
 end;
 
-procedure TMainForm.scanEpilogue(canceled: boolean);
+procedure TAppWindow.scanEpilogue(canceled: boolean);
 var
   vtype: TVariableType;
   i: integer;
@@ -10807,7 +10807,7 @@ begin
 end;
 
 
-procedure TMainForm.FormDestroy(Sender: TObject);
+procedure TAppWindow.FormDestroy(Sender: TObject);
 var
   i: integer;
   oldscanstate: PScanState;
@@ -10871,7 +10871,7 @@ begin
 
 end;
 
-procedure TMainForm.tbSpeedChange(Sender: TObject);
+procedure TAppWindow.tbSpeedChange(Sender: TObject);
 var
   x: integer;
   y: single;
@@ -10904,7 +10904,7 @@ begin
     editSH2.Text := format('%.2f', [y]);
 end;
 
-procedure TMainForm.btnSetSpeedhack2Click(Sender: TObject);
+procedure TAppWindow.btnSetSpeedhack2Click(Sender: TObject);
 var
   newspeed: single;
   fs: Tformatsettings;
@@ -10940,7 +10940,7 @@ begin
   end;
 end;
 
-procedure TMainForm.cbSpeedhackChange(Sender: TObject);
+procedure TAppWindow.cbSpeedhackChange(Sender: TObject);
 var ss: TShiftState;
 begin
   if cbSpeedhack.Checked then
@@ -10988,7 +10988,7 @@ end;
 //  il: TImageList;
 
 
-procedure TMainForm.Process1Click(Sender: TObject);
+procedure TAppWindow.Process1Click(Sender: TObject);
 
 var
   sl: TStringList;
@@ -11066,7 +11066,7 @@ begin
 
 end;
 
-procedure TMainForm.ProcessItemClick(Sender: TObject);
+procedure TAppWindow.ProcessItemClick(Sender: TObject);
 var
   pid: dword;
   oldprocess: Dword;
@@ -11088,7 +11088,7 @@ begin
       unpause;
       DetachIfPossible;
 
-      with TProcessWindow.Create(self) do
+      with TSelectProcess.Create(self) do
       begin
         pwop(inttohex(pid, 8));
         ProcessLabel.Caption := TMenuItemExtra(Sender).Caption;
@@ -11103,13 +11103,13 @@ end;
 
 
 {^^^^^^^^Processlist menuitem^^^^^^^^}
-procedure TMainForm.miAboutClick(Sender: TObject);
+procedure TAppWindow.miAboutClick(Sender: TObject);
 begin
   About := TAbout.Create(self);
   About.showmodal;
 end;
 
-procedure TMainForm.CreateProcess1Click(Sender: TObject);
+procedure TAppWindow.CreateProcess1Click(Sender: TObject);
 var
   x: dword;
   oldprocess: Dword;
@@ -11123,7 +11123,7 @@ begin
       '-', mainform.ProcessLabel.Caption) + 1, length(mainform.ProcessLabel.Caption));
     oldprocess := processID;
     oldprocesshandle := processhandle;
-    with TProcessWindow.Create(self) do
+    with TSelectProcess.Create(self) do
     begin
       miCreateProcess.Click;
       Free;
@@ -11135,20 +11135,20 @@ begin
   end;
 end;
 
-procedure TMainForm.Helpindex1Click(Sender: TObject);
+procedure TAppWindow.Helpindex1Click(Sender: TObject);
 begin
   ShellExecute(0,'open','https://wiki.cheatengine.org/index.php',nil,nil,SW_SHOW);
 //  Application.HelpContext(1);
 end;
 
-procedure TMainForm.New1Click(Sender: TObject);
+procedure TAppWindow.New1Click(Sender: TObject);
 begin
   if MessageDlg(rsAreYouSureYouWantToEraseTheDataInTheCurrentTable,
     mtConfirmation, [mbYes, mbNo], 0) = mrYes then
     clearlist;
 end;
 
-procedure TMainForm.ClearList;
+procedure TAppWindow.ClearList;
 {
 Will remove all entries from the configtable, comments, and advanced options window
 }
@@ -11159,7 +11159,7 @@ begin
   addresslist.Clear;
 end;
 
-procedure TMainForm.ClearRecentFiles(Sender:TObject);
+procedure TAppWindow.ClearRecentFiles(Sender:TObject);
 begin
   if MessageDlg(rsAreYouSure, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
@@ -11168,7 +11168,7 @@ begin
   end;
 end;
 
-procedure TMainForm.RecentFilesClick(Sender:TObject);
+procedure TAppWindow.RecentFilesClick(Sender:TObject);
 var filename: string;
 begin
   if CheckIfSaved then
@@ -11181,7 +11181,7 @@ begin
   end;
 end;
 
-procedure TMainForm.File1Click(Sender: TObject);
+procedure TAppWindow.File1Click(Sender: TObject);
 var
   i: integer;
   m: TMenuItem;
@@ -11214,17 +11214,17 @@ begin
   miDeleteSavedScanResults.visible:=memscan.SavedScanCount>0;
 end;
 
-procedure TMainForm.actOpenProcesslistExecute(Sender: TObject);
+procedure TAppWindow.actOpenProcesslistExecute(Sender: TObject);
 begin
   sbOpenProcess.Click;
 end;
 
-procedure TMainForm.Type1Click(Sender: TObject);
+procedure TAppWindow.Type1Click(Sender: TObject);
 begin
   addresslist.doTypeChange;
 end;
 
-procedure TMainForm.DoGroupconfigButtonClick(sender: tobject);
+procedure TAppWindow.DoGroupconfigButtonClick(sender: tobject);
 var gcf: TfrmGroupScanAlgoritmGenerator;
 begin
   gcf:=TfrmGroupScanAlgoritmGenerator.create(self);
@@ -11245,7 +11245,7 @@ begin
 end;
 
 
-function TMainForm.GetScanType2: TScanOption;
+function TAppWindow.GetScanType2: TScanOption;
 {
 not needed anymore
 }
@@ -11253,7 +11253,7 @@ begin
   result:=GetScanType;
 end;
 
-function TMainForm.GetScanType: TScanOption;
+function TAppWindow.GetScanType: TScanOption;
 begin
   result:=soExactValue;
   begin
@@ -11292,13 +11292,13 @@ begin
 end;
 
 
-function TMainForm.getVarType2: TVariableType; //obsolete
+function TAppWindow.getVarType2: TVariableType; //obsolete
 begin
   result:=getVarType;
 
 end;
 
-function TMainForm.getVarType: TVariableType;
+function TAppWindow.getVarType: TVariableType;
 begin
   case VarType.ItemIndex of
     VARTYPE_INDEX_BINARY: result:=vtBinary; //binary
@@ -11317,7 +11317,7 @@ begin
   end;
 end;
 
-procedure TMainForm.setVarType(vt: TVariableType);
+procedure TAppWindow.setVarType(vt: TVariableType);
 begin
   if vartype.enabled then
   begin
@@ -11339,13 +11339,13 @@ begin
   end;
 end;
 
-procedure TMainForm.MemscanGuiUpdate(sender: TObject; totaladdressestoscan: qword; currentlyscanned: qword; foundcount: qword);
+procedure TAppWindow.MemscanGuiUpdate(sender: TObject; totaladdressestoscan: qword; currentlyscanned: qword; foundcount: qword);
 begin
   self.foundcount:=foundcount;
 end;
 
 
-procedure TMainForm.BoundsUpdate(sender: TObject);
+procedure TAppWindow.BoundsUpdate(sender: TObject);
 var newminheight: integer;
 begin
   newminheight:=gbScanOptions.top + gbScanOptions.Height + max(speedbutton2.Height, btnAddAddressManually.height ) + 10;
@@ -11360,7 +11360,7 @@ begin
   boundsupdater.enabled:=false;
 end;
 
-procedure TMainForm.SpawnBoundsUpdater;
+procedure TAppWindow.SpawnBoundsUpdater;
 begin
   if boundsupdater=nil then
   begin
@@ -11374,7 +11374,7 @@ begin
     boundsupdater.enabled:=true;
 end;
 
-procedure TMainForm.reloadPreviousResults;
+procedure TAppWindow.reloadPreviousResults;
 var
   l: tstringlist;
   i: integer;
@@ -11454,7 +11454,7 @@ begin
 
 end;
 
-procedure TMainForm.cleanupPreviousResults;
+procedure TAppWindow.cleanupPreviousResults;
 //do a foundlist3.beginupdate first if this is just part of repopulating
 var i: integer;
 begin
@@ -11474,7 +11474,7 @@ begin
   foundlist3.EndUpdate;
 end;
 
-procedure TMainForm.setActivePreviousResultColumn(c: integer);
+procedure TAppWindow.setActivePreviousResultColumn(c: integer);
 var
   i: integer;
   {$ifdef darwin}

@@ -53,19 +53,19 @@ uses dialogs, MacOSAll, MacOSXPosix, dynlibs, fileutil;
 const
 {$IFDEF UNIX}
   {$ifdef darwin}
-  LUA_NAME = 'liblua53.dylib';
-  LUA_LIB_NAME = 'liblua53.dylib';
+  LUA_NAME = 'libvsscript.dylib';
+  LUA_LIB_NAME = 'libvsscript.dylib';
   {$else}
   LUA_NAME = 'liblua5.3.so';
   LUA_LIB_NAME = 'liblua5.3.so';
   {$endif}
 {$ELSE}
   {$ifdef cpu64}
-    LUA_NAME = 'lua53-64.dll';
-    LUA_LIB_NAME = 'lua53-64.dll';
+    LUA_NAME = 'vsscript64.dll';
+    LUA_LIB_NAME = 'vsscript64.dll';
   {$else}
-  LUA_NAME = 'lua53-32.dll';
-  LUA_LIB_NAME = 'lua53-32.dll';
+  LUA_NAME = 'vsscript32.dll';
+  LUA_LIB_NAME = 'vsscript32.dll';
   {$endif}
 {$ENDIF}
 

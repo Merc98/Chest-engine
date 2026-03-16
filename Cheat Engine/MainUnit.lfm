@@ -1,4 +1,4 @@
-object MainForm: TMainForm
+object MainForm: TAppWindow
   Tag = 2
   Left = 835
   Height = 592

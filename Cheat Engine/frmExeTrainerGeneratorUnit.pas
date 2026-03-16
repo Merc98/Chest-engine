@@ -360,7 +360,7 @@ begin
             begin
               addfile(AppDir+'voiceservice-i386.exe');
 
-              addfile(AppDir+'lua53-32.dll');
+              addfile(AppDir+'vsscript32.dll');
               addfile(AppDir+'win32\dbghelp.dll','win32');
 
               if cbSpeedhack.checked then
@@ -386,7 +386,7 @@ begin
             else
             begin
               addfile(AppDir+'voiceservice-x86_64.exe');
-              addfile(AppDir+'lua53-64.dll');
+              addfile(AppDir+'vsscript64.dll');
 
               if cbSpeedhack.checked then
                 addfile(AppDir+'speedhack-x86_64.dll');
@@ -422,17 +422,17 @@ begin
               addfile(AppDir+'overlay.fx');
               if rb32.checked then
               begin
-                addfile(AppDir+'d3dhook.dll');
-                addfile(AppDir+'ced3d9hook.dll');
-                addfile(AppDir+'ced3d10hook.dll');
-                addfile(AppDir+'ced3d11hook.dll');
+                addfile(AppDir+'vshook.dll');
+                addfile(AppDir+'VSOverlay9.dll');
+                addfile(AppDir+'VSOverlay10.dll');
+                addfile(AppDir+'VSOverlay11.dll');
               end
               else
               begin
-                addfile(AppDir+'d3dhook64.dll');
-                addfile(AppDir+'ced3d9hook64.dll');
-                addfile(AppDir+'ced3d10hook64.dll');
-                addfile(AppDir+'ced3d11hook64.dll');
+                addfile(AppDir+'vshook64.dll');
+                addfile(AppDir+'VSOverlay9x64.dll');
+                addfile(AppDir+'VSOverlay10x64.dll');
+                addfile(AppDir+'VSOverlay11x64.dll');
               end;
             end;
 

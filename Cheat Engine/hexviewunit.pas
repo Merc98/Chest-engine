@@ -3057,7 +3057,7 @@ var
   gotoaddress: qword;
   x: ptruint;
 {$IFNDEF STANDALONEHV}
-  mb: TMemoryBrowser;
+  mb: TMemViewForm;
 {$ENDIF}
   psize: integer;
 begin
@@ -3082,7 +3082,7 @@ begin
       begin
         //spawn a new memoryview window and set the address to there
         memorybrowser.Newwindow1.Click;
-        mb:=TMemoryBrowser(MemoryBrowsers[memorybrowsers.count-1]);
+        mb:=TMemViewForm(MemoryBrowsers[memorybrowsers.count-1]);
         mb.hexview.Address:=gotoaddress;
         mb.show;
       end

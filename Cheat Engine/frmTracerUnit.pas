@@ -1291,8 +1291,8 @@ var tcount: integer;
     memneeded: integer;
     StayInsideModule: boolean;
 begin
-  if (owner is TMemoryBrowser) then
-    fromaddress:=(owner as TMemoryBrowser).disassemblerview.SelectedAddress
+  if (owner is TMemViewForm) then
+    fromaddress:=(owner as TMemViewForm).disassemblerview.SelectedAddress
   else
     fromaddress:=memorybrowser.disassemblerview.SelectedAddress;
 
@@ -1455,8 +1455,8 @@ begin
             bpTrigger:=bptWrite;
 
           //get address to break on
-          if (owner is TMemoryBrowser) then
-            (owner as TMemoryBrowser).hexview.GetSelectionRange(fromaddress,toaddress)
+          if (owner is TMemViewForm) then
+            (owner as TMemViewForm).hexview.GetSelectionRange(fromaddress,toaddress)
           else
             memorybrowser.hexview.GetSelectionRange(fromaddress,toaddress);
 
@@ -1465,8 +1465,8 @@ begin
         end
         else
         begin
-          if (owner is TMemoryBrowser) then
-            debuggerthread.setBreakAndTraceBreakpoint(self, (owner as TMemoryBrowser).disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, stepoverrep, Nosystem, stayinsidemodule)
+          if (owner is TMemViewForm) then
+            debuggerthread.setBreakAndTraceBreakpoint(self, (owner as TMemViewForm).disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, stepoverrep, Nosystem, stayinsidemodule)
           else
             debuggerthread.setBreakAndTraceBreakpoint(self, memorybrowser.disassemblerview.SelectedAddress, bptExecute, breakpointmethod, 1, tcount, startcondition, stopcondition, StepOver, stepoverrep, nosystem, StayInsideModule);
         end;

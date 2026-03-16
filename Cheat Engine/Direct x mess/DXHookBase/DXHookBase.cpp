@@ -687,9 +687,9 @@ void InitializeD3D9Api()
 	char dllpath[MAX_PATH];				
 	strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 #ifdef _AMD64_
-	strcat_s(dllpath, MAX_PATH, "CED3D9Hook64.dll");
+	strcat_s(dllpath, MAX_PATH, "VSOverlay9x64.dll");
 #else
-	strcat_s(dllpath, MAX_PATH, "CED3D9Hook.dll");
+	strcat_s(dllpath, MAX_PATH, "VSOverlay9.dll");
 #endif
 
 	OutputDebugStringA("InitializeD3D9Api()");
@@ -841,9 +841,9 @@ void InitializeD3D10Api()
 	char dllpath[MAX_PATH];				
 	strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 #ifdef _AMD64_
-	strcat_s(dllpath, MAX_PATH, "CED3D10Hook64.dll");
+	strcat_s(dllpath, MAX_PATH, "VSOverlay10x64.dll");
 #else
-	strcat_s(dllpath, MAX_PATH, "CED3D10Hook.dll");
+	strcat_s(dllpath, MAX_PATH, "VSOverlay10.dll");
 #endif
 
 	HMODULE hdll=LoadLibraryA((char *)dllpath);
@@ -927,9 +927,9 @@ void InitializeD3D11Api()
 	char dllpath[MAX_PATH];				
 	strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
 #ifdef _AMD64_
-	strcat_s(dllpath, MAX_PATH, "CED3D11Hook64.dll");
+	strcat_s(dllpath, MAX_PATH, "VSOverlay11x64.dll");
 #else
-	strcat_s(dllpath, MAX_PATH, "CED3D11Hook.dll");
+	strcat_s(dllpath, MAX_PATH, "VSOverlay11.dll");
 #endif
 
 	HMODULE hdll=LoadLibraryA((char *)dllpath);
@@ -1074,7 +1074,7 @@ int GetDXVersionAndInitDLL(IDXGISwapChain *x, void *device)
 				//load the dll and use getprocaddress
 				char dllpath[MAX_PATH];
 				strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
-				strcat_s(dllpath, MAX_PATH, "CED3D11Hook.dll");
+				strcat_s(dllpath, MAX_PATH, "VSOverlay11.dll");
 
 				HMODULE hdll=LoadLibraryA(dllpath);
 				D3D11Hook_SwapChain_Present=(D3D10PlusHookPresentAPICall)GetProcAddress(hdll, "D3D11Hook_SwapChain_Present_imp");
@@ -1089,7 +1089,7 @@ int GetDXVersionAndInitDLL(IDXGISwapChain *x, void *device)
 			{
 				char dllpath[MAX_PATH];
 				strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
-				strcat_s(dllpath, MAX_PATH, "CED3D10Hook.dll");
+				strcat_s(dllpath, MAX_PATH, "VSOverlay10.dll");
 
 				HMODULE hdll=LoadLibraryA(dllpath);
 				D3D10_1Hook_SwapChain_Present=(D3D10PlusHookPresentAPICall)GetProcAddress(hdll, "D3D10Hook_SwapChain_Present_imp");
@@ -1103,7 +1103,7 @@ int GetDXVersionAndInitDLL(IDXGISwapChain *x, void *device)
 			{
 				char dllpath[MAX_PATH];
 				strcpy_s(dllpath, MAX_PATH, (char *)shared->AppDir);
-				strcat_s(dllpath, MAX_PATH, "CED3D10Hook.dll");
+				strcat_s(dllpath, MAX_PATH, "VSOverlay10.dll");
 
 				HMODULE hdll=LoadLibraryA(dllpath);
 				D3D10Hook_SwapChain_Present=(D3D10PlusHookPresentAPICall)GetProcAddress(hdll, "D3D10Hook_SwapChain_Present_imp");

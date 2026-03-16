@@ -1,4 +1,4 @@
-object MemoryBrowser: TMemoryBrowser
+object MemoryBrowser: TMemViewForm
   Left = 670
   Height = 530
   Top = 193

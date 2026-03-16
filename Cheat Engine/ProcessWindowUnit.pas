@@ -57,9 +57,9 @@ type
 
 type
 
-  { TProcessWindow }
+  { TSelectProcess }
 
-  TProcessWindow = class(TForm)
+  TSelectProcess = class(TForm)
     btnNetwork: TButton;
     btnAttachDebugger: TButton;
     CancelButton: TButton;
@@ -155,7 +155,7 @@ type
   end;
 
 var
-  ProcessWindow: TProcessWindow;
+  ProcessWindow: TSelectProcess;
   commonProcessesList: tstringlist;
 
 implementation
@@ -482,7 +482,7 @@ begin
   result:=false;
 end;
 
-procedure TProcessWindow.filterlist;
+procedure TSelectProcess.filterlist;
 var
     i:integer;
 {$IFDEF WINDOWS}
@@ -531,7 +531,7 @@ begin
   refreshlist;
 end;
 
-procedure TProcessWindow.CancelButtonClick(Sender: TObject);
+procedure TSelectProcess.CancelButtonClick(Sender: TObject);
 begin
   mainform.canceled:=true;
 
@@ -540,7 +540,7 @@ begin
 end;
 
 {$ifdef windows}
-procedure TProcessWindow.iconFetchedEvent(sender: TObject; processid: dword; index: integer; icon: hicon);
+procedure TSelectProcess.iconFetchedEvent(sender: TObject; processid: dword; index: integer; icon: hicon);
 var
   i: integer;
   pli: PProcessListInfo;
@@ -573,7 +573,7 @@ begin
 end;
 {$endif}
 
-procedure TProcessWindow.FormCreate(Sender: TObject);
+procedure TSelectProcess.FormCreate(Sender: TObject);
 var
   x: array of integer;
   reg: tregistry;
@@ -634,7 +634,7 @@ begin
 
 end;
 
-procedure TProcessWindow.FormDestroy(Sender: TObject);
+procedure TSelectProcess.FormDestroy(Sender: TObject);
 var x: array of integer;
 begin
   setlength(x,3);
@@ -643,18 +643,18 @@ begin
   SaveFormPosition(self,x);
 end;
 
-procedure TProcessWindow.MenuItem5Click(Sender: TObject);
+procedure TSelectProcess.MenuItem5Click(Sender: TObject);
 begin
 
 
 end;
 
-procedure TProcessWindow.miProcessListLongClick(Sender: TObject);
+procedure TSelectProcess.miProcessListLongClick(Sender: TObject);
 begin
   btnProcessListLongClick(nil);
 end;
 
-procedure TProcessWindow.miChangeFontClick(Sender: TObject);
+procedure TSelectProcess.miChangeFontClick(Sender: TObject);
 var reg: tregistry;
 begin
   fontdialog1.font.assign(processlist.font);
@@ -680,18 +680,18 @@ begin
   end;
 end;
 
-procedure TProcessWindow.miOwnProcessesOnlyClick(Sender: TObject);
+procedure TSelectProcess.miOwnProcessesOnlyClick(Sender: TObject);
 begin
   ProcessesCurrentUserOnly:=miOwnProcessesOnly.checked;
   refreshlist;
 end;
 
-procedure TProcessWindow.miRefreshClick(Sender: TObject);
+procedure TSelectProcess.miRefreshClick(Sender: TObject);
 begin
   refreshList;
 end;
 
-procedure TProcessWindow.btnNetworkClick(Sender: TObject);
+procedure TSelectProcess.btnNetworkClick(Sender: TObject);
 var
   host: string;
   port: word;
@@ -771,17 +771,17 @@ begin
   end;
 end;
 
-procedure TProcessWindow.Button1Click(Sender: TObject);
+procedure TSelectProcess.Button1Click(Sender: TObject);
 begin
 
 end;
 
-procedure TProcessWindow.setbuttons;
+procedure TSelectProcess.setbuttons;
 begin
 
 end;
 
-procedure TProcessWindow.PWOP(ProcessIDString:string);
+procedure TSelectProcess.PWOP(ProcessIDString:string);
 var i:integer;
 begin
 
@@ -870,7 +870,7 @@ begin
 
 end;
 
-procedure TProcessWindow.OKButtonClick(Sender: TObject);
+procedure TSelectProcess.OKButtonClick(Sender: TObject);
 var ProcessIDString: String; 
 begin
   try
@@ -905,7 +905,7 @@ end;
 
 
 //button1click specific:
-procedure TProcessWindow.btnProcesslistClick(Sender: TObject);
+procedure TSelectProcess.btnProcesslistClick(Sender: TObject);
 begin
 
 
@@ -913,14 +913,14 @@ begin
 
 end;
 
-procedure TProcessWindow.btnWindowListClick(Sender: TObject);
+procedure TSelectProcess.btnWindowListClick(Sender: TObject);
 begin
   //miSkipSystemProcesses.visible:=false;
 
 
 end;
 
-procedure TProcessWindow.btnCreateThreadClick(Sender: TObject);
+procedure TSelectProcess.btnCreateThreadClick(Sender: TObject);
 var parameters: string;
 begin
   if Opendialog1.Execute then
@@ -948,7 +948,7 @@ begin
   end;
 end;
 
-procedure TProcessWindow.btnAttachDebuggerClick(Sender: TObject);
+procedure TSelectProcess.btnAttachDebuggerClick(Sender: TObject);
 var ProcessIDString: String;
     i:               Integer;
     oldpid,newpid: dword;
@@ -1009,7 +1009,7 @@ begin
 
 end;
 
-procedure TProcessWindow.btnOpenFileClick(Sender: TObject);
+procedure TSelectProcess.btnOpenFileClick(Sender: TObject);
 begin
   {$ifdef windows}
   if opendialog2.execute then
@@ -1037,7 +1037,7 @@ begin
 
 end;
 
-procedure TProcessWindow.InputPIDmanually1Click(Sender: TObject);
+procedure TSelectProcess.InputPIDmanually1Click(Sender: TObject);
 var pid: string;
 begin
   pid:='0';
@@ -1053,7 +1053,7 @@ begin
 
 end;
 
-procedure TProcessWindow.Filter1Click(Sender: TObject);
+procedure TSelectProcess.Filter1Click(Sender: TObject);
 var fltr: string;
 begin
   fltr:=filter;
@@ -1061,7 +1061,7 @@ begin
     filter:=fltr;
 end;
 
-procedure TProcessWindow.btnProcessWatchClick(Sender: TObject);
+procedure TSelectProcess.btnProcessWatchClick(Sender: TObject);
 begin
   if frmprocesswatcher=nil then
     frmprocesswatcher:=tfrmprocesswatcher.Create(mainform);
@@ -1070,13 +1070,13 @@ begin
   modalresult:=mrcancel;
 end;
 
-procedure TProcessWindow.FormResize(Sender: TObject);
+procedure TSelectProcess.FormResize(Sender: TObject);
 begin
 //reset the button positions
 //  setbuttons;
 end;
 
-procedure TProcessWindow.btnProcessListLongClick(Sender: TObject);
+procedure TSelectProcess.btnProcessListLongClick(Sender: TObject);
 begin
   if processlistlong=nil then
   begin
@@ -1096,7 +1096,7 @@ begin
   end;
 end;
 
-procedure TProcessWindow.FormClose(Sender: TObject;
+procedure TSelectProcess.FormClose(Sender: TObject;
   var Action: TCloseAction);
 begin
   if processlistlong<>nil then
@@ -1112,12 +1112,12 @@ begin
   position:=poDesigned;
 end;
 
-procedure TProcessWindow.PopupMenu1Popup(Sender: TObject);
+procedure TSelectProcess.PopupMenu1Popup(Sender: TObject);
 begin
   miShowInvisibleItems.visible:=tabheader.TabIndex=2;
 end;
 
-procedure TProcessWindow.ProcessListDrawItem(Control: TWinControl;
+procedure TSelectProcess.ProcessListDrawItem(Control: TWinControl;
   Index: Integer; Rect: TRect; State: TOwnerDrawState);
 var
   i: integer;
@@ -1180,7 +1180,7 @@ begin
   {$endif}
 end;
 
-procedure TProcessWindow.FormShow(Sender: TObject);
+procedure TSelectProcess.FormShow(Sender: TObject);
 var
   tr: trect;
   preferedwidth: integer;
@@ -1252,7 +1252,7 @@ begin
 
 end;
 
-procedure TProcessWindow.ProcessListKeyPress(Sender: TObject; var Key: char);
+procedure TSelectProcess.ProcessListKeyPress(Sender: TObject; var Key: char);
 begin
   if key=#8 then
     filter:=copy(filter, 1, length(filter)-1)
@@ -1261,7 +1261,7 @@ begin
     filter:=filter+key;
 end;
 
-procedure TProcessWindow.RefreshList;
+procedure TSelectProcess.RefreshList;
 var
     i: integer;
     oldselectionindex: integer;
@@ -1357,17 +1357,17 @@ begin
   end;
 end;
 
-procedure TProcessWindow.miShowInvisibleItemsClick(Sender: TObject);
+procedure TSelectProcess.miShowInvisibleItemsClick(Sender: TObject);
 begin
   refreshList;
 end;
 
-procedure TProcessWindow.TabHeaderChange(Sender: TObject);
+procedure TSelectProcess.TabHeaderChange(Sender: TObject);
 begin
   refreshList;
 end;
 
-procedure TProcessWindow.TabHeaderResize(Sender: TObject);
+procedure TSelectProcess.TabHeaderResize(Sender: TObject);
 var p: tpoint;
 begin
   p:=TabHeader.ClientToParent(point(0,0));
@@ -1386,7 +1386,7 @@ begin
  //   processlist.Height:=tabheader.Height;
 end;
 
-procedure TProcessWindow.Timer1Timer(Sender: TObject);
+procedure TSelectProcess.Timer1Timer(Sender: TObject);
 var
   i: integer;
   {$ifdef windows}

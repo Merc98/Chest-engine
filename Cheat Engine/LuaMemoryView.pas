@@ -15,12 +15,12 @@ uses luahandler, luaclass, MemoryBrowserFormUnit;
 
 function createMemoryView(L: PLua_state): integer; cdecl;
 begin
-  luaclass_newClass(L, TMemoryBrowser.Create(application));
+  luaclass_newClass(L, TMemViewForm.Create(application));
   result:=1;
 end;
 
 function memoryview_getHexadecimalView(L: PLua_state): integer; cdecl;
-var m: TMemoryBrowser;
+var m: TMemViewForm;
 begin
   m:=luaclass_getClassObject(L);
   luaclass_newClass(L, m.hexview);
@@ -28,7 +28,7 @@ begin
 end;
 
 function memoryview_getDisassemblerView(L: PLua_state): integer; cdecl;
-var m: TMemoryBrowser;
+var m: TMemViewForm;
 begin
   m:=luaclass_getClassObject(L);
   luaclass_newClass(L, m.disassemblerview);

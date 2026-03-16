@@ -27,9 +27,9 @@ uses
 
 type
 
-  { TMemoryBrowser }
+  { TMemViewForm }
 
-  TMemoryBrowser = class(TForm)
+  TMemViewForm = class(TForm)
     aflabel: TLabel;
     cflabel: TLabel;
     CSLabel: TLabel;
@@ -738,7 +738,7 @@ type
   end;
 
 var
-  MemoryBrowser: TMemoryBrowser;
+  MemoryBrowser: TMemViewForm;
   mbchildcount: integer; //global so all other children can increase it as well
 
 
@@ -845,12 +845,12 @@ resourcestring
   rsSetCustomAlignment = 'Set custom alignment';
 
 //property functions:
-function TMemoryBrowser.getShowValues: boolean;
+function TMemViewForm.getShowValues: boolean;
 begin
   result:=FShowValues;
 end;
 
-procedure TMemoryBrowser.setShowValues(newstate: boolean);
+procedure TMemViewForm.setShowValues(newstate: boolean);
 begin
   Showvaluesofstaticaddresses1.checked:=newstate;
   FShowValues:=newstate;
@@ -858,7 +858,7 @@ begin
     disassemblerview.setCommentsTab(FShowValues);
 end;
 
-procedure TMemoryBrowser.setShowDebugPanels(state: boolean);
+procedure TMemViewForm.setShowDebugPanels(state: boolean);
 var
   oldstackwidth: integer;
   oldpanel3width: integer;
@@ -883,7 +883,7 @@ begin
   pnlStacktrace.width:=oldstackwidth;
 end;
 
-procedure TMemoryBrowser.SetStacktraceSize(size: integer);
+procedure TMemViewForm.SetStacktraceSize(size: integer);
 var x: ptrUint;
 begin
   if (context=nil) or (contexthandler=nil) then exit;
@@ -898,7 +898,7 @@ begin
   reloadStacktrace;
 end;
 
-procedure TMemoryBrowser.setCaption(c: string);
+procedure TMemViewForm.setCaption(c: string);
 var cr3pos, cr3posend: integer;
 begin
   cr3pos:=pos(' (CR3 ',c);
@@ -916,7 +916,7 @@ begin
   inherited caption:=c;
 end;
 
-function TMemoryBrowser.getCaption: string;
+function TMemViewForm.getCaption: string;
 begin
   result:=inherited caption;
 end;
@@ -924,7 +924,7 @@ end;
 //^^^^
 
 
-function TMemoryBrowser.ReadProcessMemory(hProcess: THandle; lpBaseAddress, lpBuffer: Pointer; nSize: size_t; var lpNumberOfBytesRead: PTRUINT): BOOL;
+function TMemViewForm.ReadProcessMemory(hProcess: THandle; lpBaseAddress, lpBuffer: Pointer; nSize: size_t; var lpNumberOfBytesRead: PTRUINT): BOOL;
 begin
   if fcr3=0 then
     result:={$ifdef windows}newkernelhandler.{$endif}{$ifdef darwin}macport.{$endif}ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nsize, lpNumberOfBytesRead)
@@ -935,12 +935,12 @@ end;
 
 
 
-procedure TMemoryBrowser.Splitter1Moved(Sender: TObject);
+procedure TMemViewForm.Splitter1Moved(Sender: TObject);
 begin
   disassemblerview.Update;
 end;
 
-procedure TMemoryBrowser.miLockRowsizeClick(Sender: TObject);
+procedure TMemViewForm.miLockRowsizeClick(Sender: TObject);
 var
   rs: string;
   waslocked: boolean;
@@ -972,7 +972,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.ShowDebugToolbar;
+procedure TMemViewForm.ShowDebugToolbar;
 begin
   tbDebug.Visible:=true;
   tbDebug.Tag:=0;
@@ -980,20 +980,20 @@ begin
   showDebugPanels:=true;
 end;
 
-procedure TMemoryBrowser.HideDebugToolbar;
+procedure TMemViewForm.HideDebugToolbar;
 begin
   tbDebug.Visible:=false;
   Showdebugtoolbar1.Checked:=false;
   showDebugPanels:=false;
 end;
 
-procedure TMemoryBrowser.Showdebugtoolbar1Click(Sender: TObject);
+procedure TMemViewForm.Showdebugtoolbar1Click(Sender: TObject);
 begin
   if tbDebug.Visible=false then ShowDebugToolbar
   else HideDebugToolbar;
 end;
 
-procedure TMemoryBrowser.RegisterMouseDown(Sender: TObject;
+procedure TMemViewForm.RegisterMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var s: string;
 i: integer;
@@ -1014,7 +1014,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDebugEventsClick(Sender: TObject);
+procedure TMemViewForm.miDebugEventsClick(Sender: TObject);
 begin
   if frmDebugEvents=nil then
     frmDebugEvents:=tfrmDebugEvents.create(application);
@@ -1022,7 +1022,7 @@ begin
   frmDebugEvents.show;
 end;
 
-procedure TMemoryBrowser.miLuaEngineClick(Sender: TObject);
+procedure TMemViewForm.miLuaEngineClick(Sender: TObject);
 begin
   //start lua engine window
   if frmLuaEngine=nil then
@@ -1032,12 +1032,12 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miPagingClick(Sender: TObject);
+procedure TMemViewForm.miPagingClick(Sender: TObject);
 begin
   TfrmPaging.create(application).show;
 end;
 
-procedure TMemoryBrowser.miUserdefinedCommentClick(Sender: TObject);
+procedure TMemViewForm.miUserdefinedCommentClick(Sender: TObject);
 var
   s: tstringlist;
 begin
@@ -1053,7 +1053,7 @@ begin
   disassemblerview.Refresh;
 end;
 
-procedure TMemoryBrowser.miUserDefinedHeaderClick(Sender: TObject);
+procedure TMemViewForm.miUserDefinedHeaderClick(Sender: TObject);
 var
   s: tstringlist;
 begin
@@ -1069,34 +1069,34 @@ begin
   disassemblerview.Refresh;
 end;
 
-procedure TMemoryBrowser.Panel5Click(Sender: TObject);
+procedure TMemViewForm.Panel5Click(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.miLockOnClick(Sender: TObject);
+procedure TMemViewForm.miLockOnClick(Sender: TObject);
 begin
   hexview.unlock;
 end;
 
-procedure TMemoryBrowser.miLockMemviewClick(sender: TObject);
+procedure TMemViewForm.miLockMemviewClick(sender: TObject);
 begin
-  hexview.Lock(TMemoryBrowser(MemoryBrowsers[(sender as TMenuItem).tag]).hexview);
+  hexview.Lock(TMemViewForm(MemoryBrowsers[(sender as TMenuItem).tag]).hexview);
 end;
 
-procedure TMemoryBrowser.miDifferenceClick(Sender: TObject);
+procedure TMemViewForm.miDifferenceClick(Sender: TObject);
 begin
-  hexview.ShowDifference(TMemoryBrowser(MemoryBrowsers[(sender as TMenuItem).tag]).hexview);
+  hexview.ShowDifference(TMemViewForm(MemoryBrowsers[(sender as TMenuItem).tag]).hexview);
 end;
 
-procedure TMemoryBrowser.miStopDifferenceClick(Sender: TObject);
+procedure TMemViewForm.miStopDifferenceClick(Sender: TObject);
 begin
   hexview.EndDifferenceView;
 end;
 
 
 
-procedure TMemoryBrowser.memorypopupPopup(Sender: TObject);
+procedure TMemViewForm.memorypopupPopup(Sender: TObject);
 var
   m: TMemorybrowser;
   mi: menus.tmenuitem;
@@ -1256,7 +1256,7 @@ begin
 end;
 
 
-procedure TMemoryBrowser.MenuItem10Click(Sender: TObject);
+procedure TMemViewForm.MenuItem10Click(Sender: TObject);
 begin
   if frmStringMap=nil then
     frmStringMap:=TfrmStringMap.Create(application);
@@ -1264,13 +1264,13 @@ begin
   frmStringMap.show;
 end;
 
-procedure TMemoryBrowser.miClearCacheClick(Sender: TObject);
+procedure TMemViewForm.miClearCacheClick(Sender: TObject);
 begin
   if (CurrentDebuggerInterface is TGDBServerDebuggerInterface) then
     TGDBServerDebuggerInterface(CurrentDebuggerInterface).ClearRPMCachePage(hexview.Address);
 end;
 
-procedure TMemoryBrowser.miSearchForAccessibleStringsClick(Sender: TObject);
+procedure TMemViewForm.miSearchForAccessibleStringsClick(Sender: TObject);
 begin
   if frmStringPointerscan=nil then
     frmStringpointerscan:=Tfrmstringpointerscan.create(MemoryBrowser);
@@ -1281,7 +1281,7 @@ begin
   frmStringpointerscan.show;
 end;
 
-procedure TMemoryBrowser.MenuItem12Click(Sender: TObject);
+procedure TMemViewForm.MenuItem12Click(Sender: TObject);
 var f: Tfrmfilepatcher;
 begin
   f:=tfrmfilepatcher.create(self);
@@ -1291,12 +1291,12 @@ end;
 
 
 
-procedure TMemoryBrowser.MenuItem14Click(Sender: TObject);
+procedure TMemViewForm.MenuItem14Click(Sender: TObject);
 begin
   EnableWindowsSymbols(true);
 end;
 
-procedure TMemoryBrowser.MenuItem8Click(Sender: TObject);
+procedure TMemViewForm.MenuItem8Click(Sender: TObject);
 begin
 
 end;
@@ -1329,13 +1329,13 @@ begin
   caption:=caption;
 end;
 
-procedure TMemoryBrowser.cr3switcherCR3Change(sender: TObject);
+procedure TMemViewForm.cr3switcherCR3Change(sender: TObject);
 begin
   //cr3 changed, notify the disassembler and hexview
   cr3:=cr3switcher.cr3;
 end;
 
-procedure TMemoryBrowser.createcr3switcher;
+procedure TMemViewForm.createcr3switcher;
 begin
   if fcr3switcher=nil then
   begin
@@ -1344,25 +1344,25 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miCR3SwitcherClick(Sender: TObject);
+procedure TMemViewForm.miCR3SwitcherClick(Sender: TObject);
 begin
   //the cr3 switcher is unique for each memview window
   createcr3switcher;
   fcr3switcher.Show;
 end;
 
-procedure TMemoryBrowser.miDBVMFindoutwhataddressesthisinstructionaccessesClick(Sender: TObject);
+procedure TMemViewForm.miDBVMFindoutwhataddressesthisinstructionaccessesClick(Sender: TObject);
 begin
   DBVMFindwhatThiscodeAccesses(disassemblerview.SelectedAddress);
 end;
 
-procedure TMemoryBrowser.MenuItem4Click(Sender: TObject);
+procedure TMemViewForm.MenuItem4Click(Sender: TObject);
 begin
   if tbDebug.Visible=true then HideDebugToolbar;
   tbDebug.Tag:=-1;
 end;
 
-procedure TMemoryBrowser.miIPTLogClick(Sender: TObject);
+procedure TMemViewForm.miIPTLogClick(Sender: TObject);
 var log: pointer;
     logsize: integer;
 begin
@@ -1409,7 +1409,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miOpenInDissectDataClick(Sender: TObject);
+procedure TMemViewForm.miOpenInDissectDataClick(Sender: TObject);
 begin
   //create it
   with tfrmstructures2.create(application) do
@@ -1420,7 +1420,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miShowRelativeDisassemblerClick(Sender: TObject);
+procedure TMemViewForm.miShowRelativeDisassemblerClick(Sender: TObject);
 begin
   if miShowRelativeDisassembler.checked then
   begin
@@ -1443,7 +1443,7 @@ end;
 
 
 
-procedure TMemoryBrowser.miUndoLastEditClick(Sender: TObject);
+procedure TMemViewForm.miUndoLastEditClick(Sender: TObject);
 begin
   if logWrites then
   begin
@@ -1451,13 +1451,13 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.ApplyFollowRegister;
+procedure TMemViewForm.ApplyFollowRegister;
 begin
   if (followRegister<>nil) and (context<>nil) then
     hexview.address:=followRegister^.getValue(context);
 end;
 
-procedure TMemoryBrowser.miFollowInHexviewClick(Sender: TObject);
+procedure TMemViewForm.miFollowInHexviewClick(Sender: TObject);
 begin
   if miFollowInHexview.checked then
     followRegister:=PContextElement_register(pmRegisters.PopupComponent.Tag)
@@ -1465,12 +1465,12 @@ begin
     followRegister:=nil;
 end;
 
-procedure TMemoryBrowser.miSetSpecificBreakpointClick(Sender: TObject);
+procedure TMemViewForm.miSetSpecificBreakpointClick(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.miSetBreakpointClick(Sender: TObject);
+procedure TMemViewForm.miSetBreakpointClick(Sender: TObject);
 var bpm: TBreakpointMethod;
 begin
   if startdebuggerifneeded(true) then
@@ -1494,7 +1494,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miCodeFilterClick(Sender: TObject);
+procedure TMemViewForm.miCodeFilterClick(Sender: TObject);
 begin
   if frmcodefilter=nil then
     frmcodefilter:=tfrmcodefilter.create(application);
@@ -1502,7 +1502,7 @@ begin
   frmcodefilter.show;
 end;
 
-procedure TMemoryBrowser.miDBVMActivateCloakClick(Sender: TObject);
+procedure TMemViewForm.miDBVMActivateCloakClick(Sender: TObject);
 var
   PA,VA: qword;
 begin
@@ -1519,7 +1519,7 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.miDBVMDisableCloakClick(Sender: TObject);
+procedure TMemViewForm.miDBVMDisableCloakClick(Sender: TObject);
 var PA,VA: Qword;
 begin
   {$ifdef windows}
@@ -1528,12 +1528,12 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.miHideToolbarClick(Sender: TObject);
+procedure TMemViewForm.miHideToolbarClick(Sender: TObject);
 begin
   if tbDebug.Visible=true then HideDebugToolbar;
 end;
 
-procedure TMemoryBrowser.miUltimapClick(Sender: TObject);
+procedure TMemViewForm.miUltimapClick(Sender: TObject);
 begin
   if frmUltimap=nil then
     frmUltimap:=TfrmUltimap.create(application);
@@ -1541,17 +1541,17 @@ begin
   frmUltimap.show;
 end;
 
-procedure TMemoryBrowser.MenuItem17Click(Sender: TObject);
+procedure TMemViewForm.MenuItem17Click(Sender: TObject);
 begin
   //build a structure using a registered template and the current data stream
 end;
 
-procedure TMemoryBrowser.MenuItem18Click(Sender: TObject);
+procedure TMemViewForm.MenuItem18Click(Sender: TObject);
 begin
   TfrmMemoryViewEx.create(self).show;
 end;
 
-procedure TMemoryBrowser.miLoadTraceClick(Sender: TObject);
+procedure TMemViewForm.miLoadTraceClick(Sender: TObject);
 var t: Tfrmtracer;
 begin
   t:=TFrmTracer.create(self,false,true);
@@ -1571,7 +1571,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miWatchMemoryPageAccessClick(Sender: TObject);
+procedure TMemViewForm.miWatchMemoryPageAccessClick(Sender: TObject);
 begin
   if frmAccessedMemory=nil then
     frmAccessedMemory:=TfrmAccessedMemory.Create(application);
@@ -1579,7 +1579,7 @@ begin
   frmAccessedMemory.Show;
 end;
 
-procedure TMemoryBrowser.miUserWriteIntegerClick(Sender: TObject);
+procedure TMemViewForm.miUserWriteIntegerClick(Sender: TObject);
 begin
   if frmEditHistory=nil then
     frmEditHistory:=tfrmEditHistory.create(application);
@@ -1588,7 +1588,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miUltimap2Click(Sender: TObject);
+procedure TMemViewForm.miUltimap2Click(Sender: TObject);
 begin
   if frmUltimap2=nil then
     frmUltimap2:=TfrmUltimap2.create(application);
@@ -1596,7 +1596,7 @@ begin
   frmUltimap2.show;
 end;
 
-procedure TMemoryBrowser.miWatchListClick(Sender: TObject);
+procedure TMemViewForm.miWatchListClick(Sender: TObject);
 begin
   if frmWatchlist=nil then
     frmWatchlist:=tfrmWatchlist.create(Application);
@@ -1605,7 +1605,7 @@ begin
   frmWatchlist.show;
 end;
 
-procedure TMemoryBrowser.miCompareStructuresClick(Sender: TObject);
+procedure TMemViewForm.miCompareStructuresClick(Sender: TObject);
 begin
   if frmStructureCompare=nil then
     frmStructureCompare:=tfrmStructureCompare.create(application);
@@ -1615,7 +1615,7 @@ end;
 
 
 
-procedure TMemoryBrowser.miDebugSetAddressClick(Sender: TObject);
+procedure TMemViewForm.miDebugSetAddressClick(Sender: TObject);
 begin
   if (debuggerthread<>nil) and (debuggerthread.isWaitingToContinue) then
   begin
@@ -1627,7 +1627,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miGNUAssemblerClick(Sender: TObject);
+procedure TMemViewForm.miGNUAssemblerClick(Sender: TObject);
 var gnua: TfrmAutoInject;
 begin
   gnua:=TfrmAutoInject.Create(self);
@@ -1635,7 +1635,7 @@ begin
   gnua.show;
 end;
 
-procedure TMemoryBrowser.miBinutilsSelectClick(Sender: TObject);
+procedure TMemViewForm.miBinutilsSelectClick(Sender: TObject);
 var id: integer;
 begin
   if (sender is TMenuItem) then
@@ -1654,7 +1654,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miRunUnhandledClick(Sender: TObject);
+procedure TMemViewForm.miRunUnhandledClick(Sender: TObject);
 begin
   if debuggerthread<>nil then
     debuggerthread.continueDebugging(co_run, 0, false);
@@ -1663,7 +1663,7 @@ begin
   caption:=rsMemoryViewerRunning;
 end;
 
-procedure TMemoryBrowser.miShowRelativeClick(Sender: TObject);
+procedure TMemViewForm.miShowRelativeClick(Sender: TObject);
 begin
   if miShowRelative.checked then
   begin
@@ -1684,7 +1684,7 @@ begin
   hexview.update;
 end;
 
-procedure TMemoryBrowser.miSVCopyClick(Sender: TObject);
+procedure TMemViewForm.miSVCopyClick(Sender: TObject);
 var
   i,j: integer;
   s: tstringlist;
@@ -1715,7 +1715,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miUnexpectedExceptionBreakOptionClick(Sender: TObject);
+procedure TMemViewForm.miUnexpectedExceptionBreakOptionClick(Sender: TObject);
 begin
   case TMenuItem(Sender).tag of
     0: UnexpectedExceptionAction:=ueaIgnore;
@@ -1724,12 +1724,12 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.pmRegistersPopup(Sender: TObject);
+procedure TMemViewForm.pmRegistersPopup(Sender: TObject);
 begin
   miFollowInHexview.checked:=(followRegister<>nil) and (pmRegisters.PopupComponent<>nil) and (pmRegisters.PopupComponent.Tag=ptruint(followRegister));
 end;
 
-procedure TMemoryBrowser.pmStacktracePopup(Sender: TObject);
+procedure TMemViewForm.pmStacktracePopup(Sender: TObject);
 var
   i: integer;
   x: ptruint;
@@ -1760,7 +1760,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.RegisterViewResize(Sender: TObject);
+procedure TMemViewForm.RegisterViewResize(Sender: TObject);
 begin
   {$ifndef darwin}
   if scrollbox1.VertScrollBar.IsScrollBarVisible then
@@ -1770,7 +1770,7 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.miAddRefClick(Sender: TObject);
+procedure TMemViewForm.miAddRefClick(Sender: TObject);
 var
   i: integer;
   s: string;
@@ -1799,7 +1799,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miBreakOnExceptionsClick(Sender: TObject);
+procedure TMemViewForm.miBreakOnExceptionsClick(Sender: TObject);
 var n: TNotifyEvent;
 begin
   miExceptionRegionSeperator.Visible:=UnexpectedExceptionAction in [ueaBreak, ueaBreakIfInRegion];
@@ -1819,7 +1819,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miChangeProtectionClick(Sender: TObject);
+procedure TMemViewForm.miChangeProtectionClick(Sender: TObject);
 var
   protection: dword;
   oldprotect: dword;
@@ -1847,7 +1847,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miExceptionIgnoreListClick(Sender: TObject);
+procedure TMemViewForm.miExceptionIgnoreListClick(Sender: TObject);
 begin
   if frmExceptionIgnoreList=nil then
     frmExceptionIgnoreList:=tfrmExceptionIgnoreList.Create(self);
@@ -1855,7 +1855,7 @@ begin
   frmExceptionIgnoreList.show;
 end;
 
-procedure TMemoryBrowser.miExceptionRegionAutoAddAllocsClick(Sender: TObject);
+procedure TMemViewForm.miExceptionRegionAutoAddAllocsClick(Sender: TObject);
 var n: TNotifyEvent;
 begin
   if frmExceptionRegionList<>nil then
@@ -1869,7 +1869,7 @@ begin
   allocsAddToUnexpectedExceptionList:=miExceptionRegionAutoAddAllocs.checked;
 end;
 
-procedure TMemoryBrowser.miExceptionRegionManageListClick(Sender: TObject);
+procedure TMemViewForm.miExceptionRegionManageListClick(Sender: TObject);
 begin
   if frmExceptionRegionList=nil then
     frmExceptionRegionList:=tfrmExceptionRegionList.Create(self);
@@ -1877,17 +1877,17 @@ begin
   frmExceptionRegionList.show;
 end;
 
-procedure TMemoryBrowser.miHVBackClick(Sender: TObject);
+procedure TMemViewForm.miHVBackClick(Sender: TObject);
 begin
   hexview.back;
 end;
 
-procedure TMemoryBrowser.miHVFollowClick(Sender: TObject);
+procedure TMemViewForm.miHVFollowClick(Sender: TObject);
 begin
   hexview.follow;
 end;
 
-procedure TMemoryBrowser.SetBookmarkClick(Sender: TObject);
+procedure TMemViewForm.SetBookmarkClick(Sender: TObject);
 var
   id: integer;
 begin
@@ -1914,7 +1914,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.GotoBookmarkClick(Sender: TObject);
+procedure TMemViewForm.GotoBookmarkClick(Sender: TObject);
 var
   err: boolean;
   id: integer;
@@ -1937,21 +1937,21 @@ end;
 
 
 
-procedure TMemoryBrowser.Makepagewritable1Click(Sender: TObject);
+procedure TMemViewForm.Makepagewritable1Click(Sender: TObject);
 begin
 end;
 
-procedure TMemoryBrowser.FormActivate(Sender: TObject);
+procedure TMemViewForm.FormActivate(Sender: TObject);
 begin
   disassemblerview.LastFormActiveEvent:=getTickCount64;
 end;
 
-procedure TMemoryBrowser.Debug1Click(Sender: TObject);
+procedure TMemViewForm.Debug1Click(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.miTextEncodingClick(Sender: TObject);
+procedure TMemViewForm.miTextEncodingClick(Sender: TObject);
 begin
   if miTextEncodingAscii.checked then
     hexview.CharEncoding:=ceAscii
@@ -1968,7 +1968,7 @@ end;
 
 
 
-procedure TMemoryBrowser.miCopyBytesOnlyClick(Sender: TObject);
+procedure TMemViewForm.miCopyBytesOnlyClick(Sender: TObject);
 var start, stop: ptruint;
    l,i: integer;
    x: string;
@@ -2005,7 +2005,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDissectData2Click(Sender: TObject);
+procedure TMemViewForm.miDissectData2Click(Sender: TObject);
 begin
   if frmStructures2.count>0 then
   begin
@@ -2026,7 +2026,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miPointerSpiderClick(Sender: TObject);
+procedure TMemViewForm.miPointerSpiderClick(Sender: TObject);
 begin
   if frmStringPointerscan=nil then
     frmStringpointerscan:=Tfrmstringpointerscan.create(application);
@@ -2037,7 +2037,7 @@ begin
   frmStringpointerscan.show;
 end;
 
-procedure TMemoryBrowser.miSelectCurrentFunctionClick(Sender: TObject);
+procedure TMemViewForm.miSelectCurrentFunctionClick(Sender: TObject);
 var start,stop: ptrUint;
   pa, a: ptruint;
 
@@ -2179,12 +2179,12 @@ begin
   disassemblerview.SelectedAddress2:=stop;
 end;
 
-procedure TMemoryBrowser.miDataBreakPointMenuClick(Sender: TObject);
+procedure TMemViewForm.miDataBreakPointMenuClick(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.miWatchAccessClick(Sender: TObject);
+procedure TMemViewForm.miWatchAccessClick(Sender: TObject);
 var
   a,a2: ptruint;
   bpm: TBreakpointMethod;
@@ -2211,7 +2211,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miWatchWriteClick(Sender: TObject);
+procedure TMemViewForm.miWatchWriteClick(Sender: TObject);
 var
   a,a2: ptruint;
   bpm: TBreakpointMethod;
@@ -2240,7 +2240,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miBreakAndTraceClick(Sender: TObject);
+procedure TMemViewForm.miBreakAndTraceClick(Sender: TObject);
 var
   bpm: TBreakpointMethod;
 begin
@@ -2254,7 +2254,7 @@ begin
   TFrmTracer.createWithBreakpointMethodSet(self,true,false,bpm).show;
 end;
 
-procedure TMemoryBrowser.MenuItem9Click(Sender: TObject);
+procedure TMemViewForm.MenuItem9Click(Sender: TObject);
 var stime: string;
 begin
   stime:=inttostr(hexview.fadetimer);
@@ -2262,14 +2262,14 @@ begin
     hexview.fadeTimer:=strtoint(stime);
 end;
 
-procedure TMemoryBrowser.miAddESPClick(Sender: TObject);
+procedure TMemViewForm.miAddESPClick(Sender: TObject);
 begin
   reloadStacktrace;
 end;
 
 
 
-procedure TMemoryBrowser.miConditionalBreakClick(Sender: TObject);
+procedure TMemViewForm.miConditionalBreakClick(Sender: TObject);
 var
   script: string;
   easy: boolean;
@@ -2327,7 +2327,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDeleteBPClick(Sender: TObject);
+procedure TMemViewForm.miDeleteBPClick(Sender: TObject);
 var bp: PBreakpoint;
   a,a2: ptruint;
 begin
@@ -2350,7 +2350,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miArchChangeClick(Sender: TObject);
+procedure TMemViewForm.miArchChangeClick(Sender: TObject);
 begin
   if miArchAutodetect.checked then
     visibleDisassembler.architecture:=darchAutoDetect
@@ -2371,7 +2371,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDisassemblyAutodetectClick(Sender: TObject);
+procedure TMemViewForm.miDisassemblyAutodetectClick(Sender: TObject);
 begin
   if miDisassemblyAutodetect.checked then
     visibleDisassembler.is64bitOverride:=false
@@ -2402,7 +2402,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miFindWhatAccessesClick(Sender: TObject);
+procedure TMemViewForm.miFindWhatAccessesClick(Sender: TObject);
 var
   a,a2: ptruint;
   bpm: TBreakpointMethod;
@@ -2424,7 +2424,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miFindWhatWritesClick(Sender: TObject);
+procedure TMemViewForm.miFindWhatWritesClick(Sender: TObject);
 var
   a,a2: ptruint;
   bpm: TBreakpointMethod;
@@ -2447,17 +2447,17 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miSepClick(Sender: TObject);
+procedure TMemViewForm.miSepClick(Sender: TObject);
 begin
   hexview.bytesPerSeperator:=TMenuItem(sender).Tag;
 end;
 
-procedure TMemoryBrowser.miShowInHexviewClick(Sender: TObject);
+procedure TMemViewForm.miShowInHexviewClick(Sender: TObject);
 begin
   hexview.address:=PContextElement_register(pmRegisters.PopupComponent.Tag)^.getValue(context);
 end;
 
-procedure TMemoryBrowser.miTextPreferencesClick(Sender: TObject);
+procedure TMemViewForm.miTextPreferencesClick(Sender: TObject);
 var
   x: TfrmMemviewPreferences;
   i: TDisassemblerViewColorsState;
@@ -2678,7 +2678,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.FormShow(Sender: TObject);
+procedure TMemViewForm.FormShow(Sender: TObject);
 var
   w: integer;
   addressSize: integer;
@@ -2750,7 +2750,7 @@ begin
   HasBeenShown:=true;
 end;
 
-procedure TMemoryBrowser.disassemblerviewDblClick(Sender: TObject);
+procedure TMemViewForm.disassemblerviewDblClick(Sender: TObject);
 var m: TPoint;
   a: ptruint;
   lni: PLineNumberInfo;
@@ -2785,7 +2785,7 @@ begin
   assemble1.Click;
 end;
 
-procedure TMemoryBrowser.FormCreate(Sender: TObject);
+procedure TMemViewForm.FormCreate(Sender: TObject);
 var x: array of integer;
   reg: tregistry;
   f: TFont;
@@ -3073,12 +3073,12 @@ begin
 
 end;
 
-procedure TMemoryBrowser.Scrollboxscroll(sender: TObject);
+procedure TMemViewForm.Scrollboxscroll(sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.Goto1Click(Sender: TObject);
+procedure TMemViewForm.Goto1Click(Sender: TObject);
 var newaddress: string;
     canceled: boolean;
     old: ptruint;
@@ -3111,7 +3111,7 @@ begin
   hexview.SetFocus;
 end;
 
-procedure TMemoryBrowser.FormResize(Sender: TObject);
+procedure TMemViewForm.FormResize(Sender: TObject);
 begin
 
   if disassemblerview<>nil then
@@ -3119,12 +3119,12 @@ begin
 
 end;
 
-procedure TMemoryBrowser.Splitter2Moved(Sender: TObject);
+procedure TMemViewForm.Splitter2Moved(Sender: TObject);
 begin
   //caption:=inttostr(registerview.width);
 end;
 
-procedure TMemoryBrowser.Timer2Timer(Sender: TObject);
+procedure TMemViewForm.Timer2Timer(Sender: TObject);
 var
   mm: TMemoryManager;
   h: THeapStatus;
@@ -3200,7 +3200,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miReplacewithnopsClick(Sender: TObject);
+procedure TMemViewForm.miReplacewithnopsClick(Sender: TObject);
 var codelength: dword;
     written: dword;
     bla:string;
@@ -3265,7 +3265,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.hexviewKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TMemViewForm.hexviewKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 var a: qword;
   psize: integer;
   gotoaddress: qword;
@@ -3339,7 +3339,7 @@ begin
 end;
 
 //key control for the disassembler
-procedure TMemoryBrowser.FControl1KeyDown(Sender: TObject; var Key: Word;
+procedure TMemViewForm.FControl1KeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 var rct: trect;
     ignore: string;
@@ -3438,12 +3438,12 @@ begin
   //key:=0;
 end;
 
-procedure TMemoryBrowser.FControl1KeyPress(Sender: TObject; var Key: Char);
+procedure TMemViewForm.FControl1KeyPress(Sender: TObject; var Key: Char);
 begin
   //key:=chr(0);
 end;
 
-procedure TMemoryBrowser.Gotoaddress1Click(Sender: TObject);
+procedure TMemViewForm.Gotoaddress1Click(Sender: TObject);
 var newaddress: string;
     oldoptions: dword;
     canceled: boolean;
@@ -3466,7 +3466,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Search1Click(Sender: TObject);
+procedure TMemViewForm.Search1Click(Sender: TObject);
 begin
 
   if findwindow=nil then findwindow:=TFindwindow.create(self);
@@ -3476,12 +3476,12 @@ begin
   findwindow.ShowModal;
 end;
 
-procedure TMemoryBrowser.Change1Click(Sender: TObject);
+procedure TMemViewForm.Change1Click(Sender: TObject);
 begin
   hexview.changeSelected;
 end;
 
-procedure TMemoryBrowser.Addthisaddresstothelist1Click(Sender: TObject);
+procedure TMemViewForm.Addthisaddresstothelist1Click(Sender: TObject);
 var i: integer;
     ad: ptrUint;
 begin
@@ -3491,7 +3491,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miAddToTheCodelistClick(Sender: TObject);
+procedure TMemViewForm.miAddToTheCodelistClick(Sender: TObject);
 var {start,stop: string;
     a,b: dword;
     i: integer;}
@@ -3509,7 +3509,7 @@ begin
   frmAddToCodeList.showmodal;
 end;
 
-procedure TMemoryBrowser.Splitter1CanResize(Sender: TObject;
+procedure TMemViewForm.Splitter1CanResize(Sender: TObject;
   var NewSize: Integer; var Accept: Boolean);
 begin
 
@@ -3529,13 +3529,13 @@ begin
 
 end;
 
-procedure TMemoryBrowser.ScrollBar2Scroll(Sender: TObject;
+procedure TMemViewForm.ScrollBar2Scroll(Sender: TObject;
   ScrollCode: TScrollCode; var ScrollPos: Integer);
 begin
 
 end;
 
-procedure TMemoryBrowser.FormClose(Sender: TObject;
+procedure TMemViewForm.FormClose(Sender: TObject;
   var Action: TCloseAction);
 begin
   if ischild then
@@ -3557,7 +3557,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDebugRunClick(Sender: TObject);
+procedure TMemViewForm.miDebugRunClick(Sender: TObject);
 begin
   if miDebugRun.Enabled then
   begin
@@ -3571,7 +3571,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDebugStepClick(Sender: TObject);
+procedure TMemViewForm.miDebugStepClick(Sender: TObject);
 begin
   begin
     if debuggerthread<>nil then
@@ -3584,7 +3584,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDebugStepOverClick(Sender: TObject);
+procedure TMemViewForm.miDebugStepOverClick(Sender: TObject);
 var x: ptrUint;
     i,j: integer;
     s,s1,s2,temp:string;
@@ -3597,7 +3597,7 @@ begin
   caption:=rsMemoryViewerRunning;
 end;
 
-procedure TMemoryBrowser.miDebugRunTillClick(Sender: TObject);
+procedure TMemViewForm.miDebugRunTillClick(Sender: TObject);
 var x: ptrUint;
     i: integer;
     temp:string;
@@ -3614,7 +3614,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.Stacktrace1Click(Sender: TObject);
+procedure TMemViewForm.Stacktrace1Click(Sender: TObject);
 begin
   if frmstacktrace=nil then
     frmstacktrace:=tfrmstacktrace.create(application);
@@ -3622,7 +3622,7 @@ begin
   frmstacktrace.Show;
 end;
 
-procedure TMemoryBrowser.Threadlist1Click(Sender: TObject);
+procedure TMemViewForm.Threadlist1Click(Sender: TObject);
 begin
 
   if frmThreadlist=nil then
@@ -3631,7 +3631,7 @@ begin
   frmThreadlist.show;
 end;
 
-procedure TMemoryBrowser.AssemblePopup(x:string);
+procedure TMemViewForm.AssemblePopup(x:string);
 var assemblercode,desc,s: string;
     totalbytes: TAssemblerBytes;
     bytes: tassemblerbytes;
@@ -3860,7 +3860,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Assemble1Click(Sender: TObject);
+procedure TMemViewForm.Assemble1Click(Sender: TObject);
 begin
   try
     AssemblePopup('');
@@ -3870,7 +3870,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.HexEditKeyPress(Sender: TObject; var Key: Char);
+procedure TMemViewForm.HexEditKeyPress(Sender: TObject; var Key: Char);
 begin
   case key of
     chr(8)   : ;
@@ -3885,25 +3885,25 @@ begin
   editing:=false;
 end;
 
-procedure TMemoryBrowser.HexEditExit(Sender: TObject);
+procedure TMemViewForm.HexEditExit(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.HexEditKeyDown(Sender: TObject; var Key: Word;
+procedure TMemViewForm.HexEditKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 
 begin
 end;
 
-procedure TMemoryBrowser.miShowIndisassemblerClick(Sender: TObject);
+procedure TMemViewForm.miShowIndisassemblerClick(Sender: TObject);
 begin
   if context<>nil then
     disassemblerview.SelectedAddress:=PContextElement_register(pmRegisters.PopupComponent.Tag)^.getValue(context);
 end;
 
 
-procedure TMemoryBrowser.RegisterLabelDblClick(Sender: TObject);
+procedure TMemViewForm.RegisterLabelDblClick(Sender: TObject);
 var x: dword;
     i: integer;
     regname,input: string;
@@ -3936,7 +3936,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.miDebugBreakClick(Sender: TObject);
+procedure TMemViewForm.miDebugBreakClick(Sender: TObject);
 //var threadhandle: thandle;
 var
   threadlist: TList;
@@ -3997,7 +3997,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Reservememory1Click(Sender: TObject);
+procedure TMemViewForm.Reservememory1Click(Sender: TObject);
 var count: string;
     memsize: dword;
     baseaddress: pointer;
@@ -4043,7 +4043,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Savememoryregion1Click(Sender: TObject);
+procedure TMemViewForm.Savememoryregion1Click(Sender: TObject);
 {will save a voiceservice memory region file .CEM}
 begin
   if frmSaveMemoryRegion=nil then
@@ -4067,7 +4067,7 @@ begin
   frmSaveMemoryRegion.show;
 end;
 
-procedure TMemoryBrowser.Loadmemolryregion1Click(Sender: TObject);
+procedure TMemViewForm.Loadmemolryregion1Click(Sender: TObject);
 begin
 
   if openmemory.Execute then
@@ -4076,12 +4076,12 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.HexEditDblClick(Sender: TObject);
+procedure TMemViewForm.HexEditDblClick(Sender: TObject);
 begin
   change1.Click;
 end;
 
-procedure TMemoryBrowser.Debugstrings1Click(Sender: TObject);
+procedure TMemViewForm.Debugstrings1Click(Sender: TObject);
 begin
   {$ifndef net}
 
@@ -4090,18 +4090,18 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.TextEditExit(Sender: TObject);
+procedure TMemViewForm.TextEditExit(Sender: TObject);
 var bt: byte;
     aw: dword;
 begin
 end;
 
-procedure TMemoryBrowser.TextEditKeyDown(Sender: TObject; var Key: Word;
+procedure TMemViewForm.TextEditKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
 end;
 
-procedure TMemoryBrowser.CreateThread1Click(Sender: TObject);
+procedure TMemViewForm.CreateThread1Click(Sender: TObject);
 var startaddress: ptrUint;
     parameter: ptrUint;
     ThreadID: dword;
@@ -4131,19 +4131,19 @@ begin
 
 end;
 
-procedure TMemoryBrowser.MemoryRegions1Click(Sender: TObject);
+procedure TMemViewForm.MemoryRegions1Click(Sender: TObject);
 begin
   formmemoryregions:=tformmemoryregions.Create(self);
   formmemoryregions.show;
 end;
 
 
-procedure TMemoryBrowser.TextEditKeyPress(Sender: TObject; var Key: Char);
+procedure TMemViewForm.TextEditKeyPress(Sender: TObject; var Key: Char);
 begin
 
 end;
 
-procedure TMemoryBrowser.FillMemory1Click(Sender: TObject);
+procedure TMemViewForm.FillMemory1Click(Sender: TObject);
 begin
 
   frmFillMemory:=TFrmFillMemory.create(self);
@@ -4156,7 +4156,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.Disectwindow1Click(Sender: TObject);
+procedure TMemViewForm.Disectwindow1Click(Sender: TObject);
 begin
 
   {$ifndef net}
@@ -4165,7 +4165,7 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.Savedisassemledoutput1Click(Sender: TObject);
+procedure TMemViewForm.Savedisassemledoutput1Click(Sender: TObject);
 var x,y: string;
     start,stop: ptrUint;
     output: textfile;
@@ -4183,7 +4183,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Heaps1Click(Sender: TObject);
+procedure TMemViewForm.Heaps1Click(Sender: TObject);
 begin
   if processid=0 then
   begin
@@ -4207,7 +4207,7 @@ begin
   frmheaps.show;
 end;
 
-procedure TMemoryBrowser.EnumeratedllsandSymbols1Click(Sender: TObject);
+procedure TMemViewForm.EnumeratedllsandSymbols1Click(Sender: TObject);
 begin
   symhandler.reinitialize;
   
@@ -4218,7 +4218,7 @@ begin
   frmEnumerateDLLs.enumerate;
 end;
 
-procedure TMemoryBrowser.InjectDLL1Click(Sender: TObject);
+procedure TMemViewForm.InjectDLL1Click(Sender: TObject);
 var dll: string;
     functionname: string;
     dllList: tstringlist;
@@ -4277,12 +4277,12 @@ begin
 
 end;
 
-procedure TMemoryBrowser.AutoInject1Click(Sender: TObject);
+procedure TMemViewForm.AutoInject1Click(Sender: TObject);
 begin
   tfrmautoinject.create(self).show;
 end;
 
-procedure TMemoryBrowser.Dissectcode1Click(Sender: TObject);
+procedure TMemViewForm.Dissectcode1Click(Sender: TObject);
 begin
 
   {$ifndef net}
@@ -4304,12 +4304,12 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.Createjumptocodecave1Click(Sender: TObject);
+procedure TMemViewForm.Createjumptocodecave1Click(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.Findstaticpointers1Click(Sender: TObject);
+procedure TMemViewForm.Findstaticpointers1Click(Sender: TObject);
 begin
 
 {$ifndef net}
@@ -4320,7 +4320,7 @@ begin
 {$endif}
 end;
 
-procedure TMemoryBrowser.Scanforcodecaves1Click(Sender: TObject);
+procedure TMemViewForm.Scanforcodecaves1Click(Sender: TObject);
 begin
 
   if frmcodecavescanner=nil then
@@ -4329,13 +4329,13 @@ begin
   frmCodecavescanner.show;
 end;
 
-procedure TMemoryBrowser.Changestateofregisteratthislocation1Click(
+procedure TMemViewForm.Changestateofregisteratthislocation1Click(
   Sender: TObject);
 begin
   tfrmModifyRegisters.create(self,disassemblerview.SelectedAddress).showmodal;
 end;
 
-procedure TMemoryBrowser.miTogglebreakpointClick(Sender: TObject);
+procedure TMemViewForm.miTogglebreakpointClick(Sender: TObject);
 var
   bpm: TBreakpointMethod;
   b: byte;
@@ -4379,7 +4379,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Breakpointlist1Click(Sender: TObject);
+procedure TMemViewForm.Breakpointlist1Click(Sender: TObject);
 begin
   if frmbreakpointlist=nil then
   begin
@@ -4393,7 +4393,7 @@ end;
 
 
 
-procedure TMemoryBrowser.Dissectdata1Click(Sender: TObject);
+procedure TMemViewForm.Dissectdata1Click(Sender: TObject);
 begin
 
 {$ifndef net}
@@ -4402,26 +4402,26 @@ begin
 {$endif}
 end;
 
-procedure TMemoryBrowser.miShowSymbolsClick(Sender: TObject);
+procedure TMemViewForm.miShowSymbolsClick(Sender: TObject);
 begin
   symhandler.showsymbols:=miShowSymbols.Checked;
   disassemblerview.Update;
 end;
 
-procedure TMemoryBrowser.miShowModuleAddressesClick(Sender: TObject);
+procedure TMemViewForm.miShowModuleAddressesClick(Sender: TObject);
 begin
   symhandler.showmodules:=miShowModuleAddresses.Checked;
   disassemblerview.Update;
 end;
 
-procedure TMemoryBrowser.miShowSectionAddressesClick(Sender: TObject);
+procedure TMemViewForm.miShowSectionAddressesClick(Sender: TObject);
 begin
   symhandler.showsections:=miShowSectionAddresses.checked;
   disassemblerview.Update;
 end;
 
 
-procedure TMemoryBrowser.miDissectDataClick(Sender: TObject);
+procedure TMemViewForm.miDissectDataClick(Sender: TObject);
 begin
   {
   if length(frmStructures)>0 then
@@ -4441,7 +4441,7 @@ begin
   end; }
 end;
 
-procedure TMemoryBrowser.miUserdefinedSymbolsClick(Sender: TObject);
+procedure TMemViewForm.miUserdefinedSymbolsClick(Sender: TObject);
 begin
   if frmSymbolhandler=nil then
     frmSymbolhandler:=TfrmSymbolhandler.create(self);
@@ -4449,7 +4449,7 @@ begin
   frmSymbolhandler.show;
 end;
 
-procedure TMemoryBrowser.Allocatenonpagedmemory1Click(Sender: TObject);
+procedure TMemViewForm.Allocatenonpagedmemory1Click(Sender: TObject);
 var count: string;
     memsize: integer;
     baseaddress: pointer;
@@ -4479,7 +4479,7 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.Getaddress1Click(Sender: TObject);
+procedure TMemViewForm.Getaddress1Click(Sender: TObject);
 var p: pointer;
     s: string;
     ws: widestring;
@@ -4497,12 +4497,12 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.Findmemory1Click(Sender: TObject);
+procedure TMemViewForm.Findmemory1Click(Sender: TObject);
 begin
   search1.Click;
 end;
 
-procedure TMemoryBrowser.Assemblycode1Click(Sender: TObject);
+procedure TMemViewForm.Assemblycode1Click(Sender: TObject);
 var
   fromaddress: ptruint;
   toaddress: ptruint;
@@ -4534,7 +4534,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Driverlist1Click(Sender: TObject);
+procedure TMemViewForm.Driverlist1Click(Sender: TObject);
 begin
   {$ifndef net}
 
@@ -4543,7 +4543,7 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.plugintype6click(sender:tobject);
+procedure TMemViewForm.plugintype6click(sender:tobject);
 var
   x: TPluginfunctionType6;
   selectedaddress: ptrUint;
@@ -4557,7 +4557,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.plugintype1click(sender:tobject);
+procedure TMemViewForm.plugintype1click(sender:tobject);
 var x: TPluginfunctionType1;
 address: ptrUint;
 hexviewaddress: ptrUint;
@@ -4578,7 +4578,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Sericedescriptortable1Click(Sender: TObject);
+procedure TMemViewForm.Sericedescriptortable1Click(Sender: TObject);
 begin
 {$ifndef net}
 
@@ -4589,22 +4589,22 @@ begin
 {$endif}
 end;
 
-procedure TMemoryBrowser.MBCanvasMouseDown(Sender: TObject;
+procedure TMemViewForm.MBCanvasMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
 end;
 
-procedure TMemoryBrowser.Cut1Click(Sender: TObject);
+procedure TMemViewForm.Cut1Click(Sender: TObject);
 begin
   hexview.CopySelectionToClipboard;
 end;
 
-procedure TMemoryBrowser.Pastefromclipboard1Click(Sender: TObject);
+procedure TMemViewForm.Pastefromclipboard1Click(Sender: TObject);
 begin
   hexview.PasteFromClipboard;
 end;
 
-procedure TMemoryBrowser.Setsymbolsearchpath1Click(Sender: TObject);
+procedure TMemViewForm.Setsymbolsearchpath1Click(Sender: TObject);
 var searchpath: string;
 begin
   searchpath:=symhandler.getsearchpath;
@@ -4616,7 +4616,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miKernelmodeSymbolsClick(Sender: TObject);
+procedure TMemViewForm.miKernelmodeSymbolsClick(Sender: TObject);
 begin
 {$ifndef net}
 
@@ -4628,7 +4628,7 @@ begin
 {$endif}
 end;
 
-procedure TMemoryBrowser.Breakandtraceinstructions1Click(Sender: TObject);
+procedure TMemViewForm.Breakandtraceinstructions1Click(Sender: TObject);
 var f: TFrmTracer;
 begin
   f:=TFrmTracer.create(self);
@@ -4636,7 +4636,7 @@ begin
   f.miNewTrace.Click;
 end;
 
-procedure TMemoryBrowser.debuggerpopupPopup(Sender: TObject);
+procedure TMemViewForm.debuggerpopupPopup(Sender: TObject);
 var x: ptrUint;
   i: integer;
   a,a2: ptruint;
@@ -4782,13 +4782,13 @@ begin
     miUndoLastEdit.visible:=false;
 end;
 
-procedure TMemoryBrowser.GDTlist1Click(Sender: TObject);
+procedure TMemViewForm.GDTlist1Click(Sender: TObject);
 begin
 
   Tfrmgdtinfo.create(self).show;
 end;
 
-procedure TMemoryBrowser.IDTlist1Click(Sender: TObject);
+procedure TMemViewForm.IDTlist1Click(Sender: TObject);
 begin
 
   TfrmIDT.create(self).show;
@@ -4796,7 +4796,7 @@ end;
 
 
 
-procedure TMemoryBrowser.FormDestroy(Sender: TObject);
+procedure TMemViewForm.FormDestroy(Sender: TObject);
 var
   h0,h1,h2,h3: integer;
   params: array of integer;
@@ -4860,7 +4860,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.Newwindow1Click(Sender: TObject);
+procedure TMemViewForm.Newwindow1Click(Sender: TObject);
 var
   s: string;
   ns: string;
@@ -4897,7 +4897,7 @@ begin
 end;
 
 
-procedure TMemoryBrowser.Follow1Click(Sender: TObject);
+procedure TMemViewForm.Follow1Click(Sender: TObject);
 {
 will change the selected disassembler address to the address this instructions jump so if it is an jump instruction
 }
@@ -4909,7 +4909,7 @@ end;
 
 
 
-procedure TMemoryBrowser.copyBytesAndOpcodesClick(Sender: TObject);
+procedure TMemViewForm.copyBytesAndOpcodesClick(Sender: TObject);
 var a,b: ptrUint;
     _tag: integer;
 begin
@@ -4943,14 +4943,14 @@ begin
 
 end;
 
-procedure TMemoryBrowser.DissectPEheaders1Click(Sender: TObject);
+procedure TMemViewForm.DissectPEheaders1Click(Sender: TObject);
 begin
 
   with TfrmPEInfo.create(self) do
     show;
 end;
 
-procedure TMemoryBrowser.GetEntryPointAndDataBase(var code: ptrUint; var data: ptrUint);
+procedure TMemViewForm.GetEntryPointAndDataBase(var code: ptrUint; var data: ptrUint);
 var modulelist: tstringlist=nil;
     base: ptrUint;
     header: pointer=nil;
@@ -5030,7 +5030,7 @@ begin
   modulelist.free;
 end;
 
-procedure TMemoryBrowser.setcodeanddatabase;
+procedure TMemViewForm.setcodeanddatabase;
 var code,data: ptrUint;
 begin
   if processid=$ffffffff then  //file instead of process
@@ -5048,26 +5048,26 @@ begin
 end;
 
 
-procedure TMemoryBrowser.Back1Click(Sender: TObject);
+procedure TMemViewForm.Back1Click(Sender: TObject);
 begin
   disassemblerview.GoBack;
 end;
 
-procedure TMemoryBrowser.Showvaluesofstaticaddresses1Click(
+procedure TMemViewForm.Showvaluesofstaticaddresses1Click(
   Sender: TObject);
 begin
   showvalues:=not showvalues;
 end;
 
 
-procedure TMemoryBrowser.FindwhatThiscodeAccesses(address: ptrUint);
+procedure TMemViewForm.FindwhatThiscodeAccesses(address: ptrUint);
 begin
   if not startdebuggerifneeded then exit;
   if debuggerthread<>nil then
     debuggerthread.FindWhatCodeAccesses(address);
 end;
 
-procedure TMemoryBrowser.DBVMFindwhatThiscodeAccesses(address: ptruint);
+procedure TMemViewForm.DBVMFindwhatThiscodeAccesses(address: ptruint);
 const
   IA32_VMX_BASIC_MSR=$480;
   IA32_VMX_TRUE_PROCBASED_CTLS_MSR=$48e;
@@ -5176,7 +5176,7 @@ begin
   {$endif}
 end;
 
-procedure TMemoryBrowser.Findoutwhataddressesthisinstructionaccesses1Click(
+procedure TMemViewForm.Findoutwhataddressesthisinstructionaccesses1Click(
   Sender: TObject);
 begin
   try
@@ -5190,7 +5190,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.sbShowFloatsClick(Sender: TObject);
+procedure TMemViewForm.sbShowFloatsClick(Sender: TObject);
 var
   x: tpoint;
   z: trect;
@@ -5213,12 +5213,12 @@ begin
   frmFloatingPointPanel.show;//pop to foreground
 end;
 
-procedure TMemoryBrowser.ScriptConsole1Click(Sender: TObject);
+procedure TMemViewForm.ScriptConsole1Click(Sender: TObject);
 begin
 
 end;
 
-procedure TMemoryBrowser.DisplayTypeClick(Sender: TObject);
+procedure TMemViewForm.DisplayTypeClick(Sender: TObject);
 var x: tmenuitem;
 begin
 //vtByte, vtWord, vtDword, vtDwordDec, vtSingle, vtDouble
@@ -5250,7 +5250,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Showjumplines1Click(Sender: TObject);
+procedure TMemViewForm.Showjumplines1Click(Sender: TObject);
 begin
   showjumplines1.checked:=not showjumplines1.checked;
   disassemblerview.showjumplines:=showjumplines1.checked;
@@ -5258,7 +5258,7 @@ begin
   Onlyshowjumplineswithinrange1.Enabled:=showjumplines1.checked;
 end;
 
-procedure TMemoryBrowser.Onlyshowjumplineswithinrange1Click(
+procedure TMemViewForm.Onlyshowjumplineswithinrange1Click(
   Sender: TObject);
 begin
   Onlyshowjumplineswithinrange1.checked:=not Onlyshowjumplineswithinrange1.checked;
@@ -5269,13 +5269,13 @@ begin
 
 end;
 
-procedure TMemoryBrowser.View1Click(Sender: TObject);
+procedure TMemViewForm.View1Click(Sender: TObject);
 begin
   miIPTLog.visible:=systemSupportsIntelPT and not hideiptcapability;
   miIPTLog.enabled:=debuggerthread<>nil;
 end;
 
-procedure TMemoryBrowser.Watchmemoryallocations1Click(Sender: TObject);
+procedure TMemViewForm.Watchmemoryallocations1Click(Sender: TObject);
 begin
   if processid=0 then
   begin
@@ -5300,7 +5300,7 @@ begin
   frmMemoryAllocHandler.Show;
 end;
 
-procedure TMemoryBrowser.reloadStacktrace;
+procedure TMemViewForm.reloadStacktrace;
 var s: pptrUintarray;
     x: ptrUint;
     
@@ -5429,7 +5429,7 @@ begin
 
 end;
 
-procedure TMemoryBrowser.Maxstacktracesize1Click(Sender: TObject);
+procedure TMemViewForm.Maxstacktracesize1Click(Sender: TObject);
 var
   s: string;
 begin
@@ -5442,7 +5442,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.All1Click(Sender: TObject);
+procedure TMemViewForm.All1Click(Sender: TObject);
 begin
   all1.checked:=true;
   Modulesonly1.Checked:=false;
@@ -5451,7 +5451,7 @@ begin
   reloadstacktrace;
 end;
 
-procedure TMemoryBrowser.Modulesonly1Click(Sender: TObject);
+procedure TMemViewForm.Modulesonly1Click(Sender: TObject);
 begin
   all1.checked:=false;
   Modulesonly1.Checked:=true;
@@ -5460,7 +5460,7 @@ begin
   reloadstacktrace;
 end;
 
-procedure TMemoryBrowser.Nonsystemmodulesonly1Click(Sender: TObject);
+procedure TMemViewForm.Nonsystemmodulesonly1Click(Sender: TObject);
 begin
   all1.checked:=false;
   Modulesonly1.Checked:=false;
@@ -5469,7 +5469,7 @@ begin
   reloadstacktrace;
 end;
 
-procedure TMemoryBrowser.stacktrace2Click(Sender: TObject);
+procedure TMemViewForm.stacktrace2Click(Sender: TObject);
 begin
   all1.checked:=false;
   Modulesonly1.Checked:=false;
@@ -5478,7 +5478,7 @@ begin
   reloadstacktrace;
 end;
 
-procedure TMemoryBrowser.miReferencedFunctionsClick(Sender: TObject);
+procedure TMemViewForm.miReferencedFunctionsClick(Sender: TObject);
 begin
   if (dissectcode=nil) then
   begin
@@ -5497,7 +5497,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.Referencedstrings1Click(Sender: TObject);
+procedure TMemViewForm.Referencedstrings1Click(Sender: TObject);
 begin
 
   if (dissectcode=nil) then
@@ -5518,7 +5518,7 @@ begin
 end;
 
 
-function TMemoryBrowser.GetReturnaddress: ptrUint;
+function TMemViewForm.GetReturnaddress: ptrUint;
 var
   haserror: boolean;
   stack: array [0..1023] of ptrUint;
@@ -5555,7 +5555,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.miDebugExecuteTillReturnClick(Sender: TObject);
+procedure TMemViewForm.miDebugExecuteTillReturnClick(Sender: TObject);
 var x: ptrUint;
 begin
   begin
@@ -5568,7 +5568,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.lvStacktraceDataData(Sender: TObject; Item: TListItem);
+procedure TMemViewForm.lvStacktraceDataData(Sender: TObject; Item: TListItem);
 var
   x: dword;
   value: ptrUint;
@@ -5690,7 +5690,7 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.lvStacktraceDataDblClick(Sender: TObject);
+procedure TMemViewForm.lvStacktraceDataDblClick(Sender: TObject);
 var
   hasError: boolean;
   x: ptrUint;
@@ -5782,13 +5782,13 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.setHexviewAddress(a: ptrUint);
+procedure TMemViewForm.setHexviewAddress(a: ptrUint);
 begin
   if hexview<>nil then
     hexview.address:=a;
 end;
 
-function TMemoryBrowser.getHexviewAddress:ptrUint;
+function TMemViewForm.getHexviewAddress:ptrUint;
 begin
   if hexview<>nil then
     result:=hexview.address
@@ -5796,7 +5796,7 @@ begin
     result:=0;
 end;
 
-procedure TMemoryBrowser.OnMemoryViewerRunning;
+procedure TMemViewForm.OnMemoryViewerRunning;
 begin
   {Disable debug functions & toolbar}
   //tbDebug.enabled:=false; //disable toolbar
@@ -5847,14 +5847,14 @@ begin
   end;
 end;
 
-procedure TMemoryBrowser.setRegisterPanelFont(f: TFont);
+procedure TMemViewForm.setRegisterPanelFont(f: TFont);
 begin
   registerpanelfont.Assign(f);
   scrollbox1.ControlCount;
   setControlFontKeepColor(scrollbox1,f);
 end;
 
-procedure TMemoryBrowser.showDebugPaneltimertimer(sender: tobject);
+procedure TMemViewForm.showDebugPaneltimertimer(sender: tobject);
 begin
   showdebugpaneltimer.enabled:=false;
   showDebugPanels:=true;
@@ -5863,7 +5863,7 @@ begin
   scrollbox1.Invalidate;
 end;
 
-procedure TMemoryBrowser.UpdateDebugContext(threadhandle: THandle; threadid: dword; changeselection: boolean=true; _debuggerthread: TDebuggerThread=nil);
+procedure TMemViewForm.UpdateDebugContext(threadhandle: THandle; threadid: dword; changeselection: boolean=true; _debuggerthread: TDebuggerThread=nil);
 var temp: string='';
     temp2: string;
     Regstart: string='';

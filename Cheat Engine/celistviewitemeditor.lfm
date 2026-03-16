@@ -1,4 +1,4 @@
-object frmCEListviewItemEditor: TfrmCEListviewItemEditor
+object frmListviewItemEditor: TfrmListviewItemEditor
   Left = 524
   Height = 231
   Top = 402

@@ -1,4 +1,4 @@
-object ProcessWindow: TProcessWindow
+object ProcessWindow: TSelectProcess
   Left = 451
   Height = 402
   Top = 248

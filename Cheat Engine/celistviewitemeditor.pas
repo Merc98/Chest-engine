@@ -10,9 +10,9 @@ uses
 
 type
 
-  { TfrmCEListviewItemEditor }
+  { TfrmListviewItemEditor }
 
-  TfrmCEListviewItemEditor = class(TForm)
+  TfrmListviewItemEditor = class(TForm)
     btnDelete: TButton;
     btnCancel: TButton;
     btnOk: TButton;
@@ -53,7 +53,7 @@ implementation
 
 uses ceguicomponents;
 
-procedure TfrmCEListviewItemEditor.btnOkClick(Sender: TObject);
+procedure TfrmListviewItemEditor.btnOkClick(Sender: TObject);
 var
   lv: TCEListView;
   lvi: Tlistitem;
@@ -84,13 +84,13 @@ begin
   modalresult:=mrok;
 end;
 
-procedure TfrmCEListviewItemEditor.edtTextChange(Sender: TObject);
+procedure TfrmListviewItemEditor.edtTextChange(Sender: TObject);
 begin
   if treeview1.selected<>nil then
     treeview1.Selected.text:=edtText.text;
 end;
 
-procedure TfrmCEListviewItemEditor.FormShow(Sender: TObject);
+procedure TfrmListviewItemEditor.FormShow(Sender: TObject);
 var i: integer;
 begin
   i:=max(btnOk.width, btnCancel.Width);
@@ -98,19 +98,19 @@ begin
   btnCancel.width:=i;
 end;
 
-procedure TfrmCEListviewItemEditor.TreeView1Change(Sender: TObject;
+procedure TfrmListviewItemEditor.TreeView1Change(Sender: TObject;
   Node: TTreeNode);
 begin
 
 end;
 
-procedure TfrmCEListviewItemEditor.TreeView1SelectionChanged(Sender: TObject);
+procedure TfrmListviewItemEditor.TreeView1SelectionChanged(Sender: TObject);
 begin
   btnAddSubItem.Enabled:=treeview1.selected<>nil;
   btnDelete.enabled:=treeview1.selected<>nil;
 end;
 
-procedure TfrmCEListviewItemEditor.btnAddItemClick(Sender: TObject);
+procedure TfrmListviewItemEditor.btnAddItemClick(Sender: TObject);
 var tn: TTreeNode;
 begin
   tn:=treeview1.items.Add(nil, edtText.text);
@@ -118,7 +118,7 @@ begin
   treeview1.MakeSelectionVisible;
 end;
 
-procedure TfrmCEListviewItemEditor.btnAddSubItemClick(Sender: TObject);
+procedure TfrmListviewItemEditor.btnAddSubItemClick(Sender: TObject);
 var tn: TTreeNode;
 begin
   tn:=treeview1.selected;
@@ -135,13 +135,13 @@ begin
   end;
 end;
 
-procedure TfrmCEListviewItemEditor.btnDeleteClick(Sender: TObject);
+procedure TfrmListviewItemEditor.btnDeleteClick(Sender: TObject);
 begin
   if treeview1.selected<>nil then
     treeview1.Selected.Delete;
 end;
 
-procedure TfrmCEListviewItemEditor.setControl(wc: twincontrol);
+procedure TfrmListviewItemEditor.setControl(wc: twincontrol);
 var
   lv: TCEListView;
   i,j: integer;
@@ -168,7 +168,7 @@ var lv: TCEListview;
 begin
   lv:=TCEListView(GetComponent(0));
 
-  with TfrmCEListviewItemEditor.create(application) do
+  with TfrmListviewItemEditor.create(application) do
   begin
     setControl(lv);
     if showmodal=mrok then
