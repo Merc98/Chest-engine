@@ -5,7 +5,13 @@ unit GnuAssembler;
 interface
 
 uses
-  windows, Classes, SysUtils, NewKernelHandler, ProcessHandlerUnit, strutils,
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  Classes, SysUtils, NewKernelHandler, ProcessHandlerUnit, strutils,
   dialogs, commonTypeDefs;
 
 {
@@ -59,7 +65,8 @@ procedure gnuassemble(originalscript: tstrings);
 
 implementation
 
-uses simpleaobscanner, symbolhandler, binutils, elftypes, elfconsts, MemoryQuery;
+uses simpleaobscanner, symbolhandler, binutils, elftypes, elfconsts, MemoryQuery,
+  globals, UnexpectedExceptionsHelper;
 
 resourcestring
   rsInvalidELFFile = 'Invalid ELF file';
@@ -210,14 +217,16 @@ var
   lnkfile: Tstringlist;
   lnkfilename: string;
 
-  undefinedimports: Tstringlist;
+  defined, undefinedimports: Tstringlist;
   x: ptruint;
   op: dword;
 
   extraparams_as, extraparams_ld: string;
 
   bu: TBinUtils;
+  vpe: boolean;
 begin
+  result:=false;
   if (binutilslist.count=0) then
     raise exception.create(rsConfigureAValidBinutilsSetupFirst);
 
@@ -377,7 +386,7 @@ begin
                   sections[j].name:='_'+p1;
 
                   try
-                    sections[j].address:=strtoint(p2)
+                    sections[j].address:=StrToQWord(p2)
                   except
                     sections[j].address:=symhandler.getAddressFromName(p2);
                   end;
@@ -475,6 +484,9 @@ begin
             sections[i].address:=ptrUint(virtualallocex(processhandle,nil,sections[i].actualsize+1024, MEM_RESERVE or MEM_COMMIT,page_execute_readwrite))
           else //allocate this memory at the given address
             sections[i].address:=ptrUint(virtualallocex(processhandle,FindFreeBlockForRegion(sections[i].address,sections[i].actualsize+1024),sections[i].actualsize+1024, MEM_RESERVE or MEM_COMMIT,page_execute_readwrite));
+
+          if allocsAddToUnexpectedExceptionList then
+            AddUnexpectedExceptionRegion(sections[i].address, sections[i].actualsize+1024);
         end;
       end;
 
@@ -496,7 +508,8 @@ begin
       begin
         //if nm hasn't been disabled call nm and then check which symbols are undefined and add them to the import list (if they aren't in there already)
         undefinedimports:=tstringlist.create;
-        bu.nm(o, undefinedimports);
+        defined:=tstringlist.create;
+        bu.nm(o, defined, undefinedimports);
 
         for i:=0 to undefinedimports.count-1 do
         begin
@@ -516,6 +529,7 @@ begin
           end;
         end;
         undefinedimports.free;
+        defined.free;
 
       end;
 
@@ -552,9 +566,9 @@ begin
         begin
           if sections[i].name=binarysections[j].sectionname then
           begin
-            virtualprotectex(processhandle,  pointer(sections[i].address), length(binarysections[j].data),PAGE_EXECUTE_READWRITE,op);
+            vpe:=(SkipVirtualProtectEx=false) and virtualprotectex(processhandle,  pointer(sections[i].address), length(binarysections[j].data),PAGE_EXECUTE_READWRITE,op);
             WriteProcessMemory(processhandle, pointer(sections[i].address), @binarysections[j].data[0], length(binarysections[j].data), x);
-            virtualprotectex(processhandle,  pointer(sections[i].address), length(binarysections[j].data),op,op);
+            if vpe then virtualprotectex(processhandle,  pointer(sections[i].address), length(binarysections[j].data),op,op);
           end;
         end;
       end;
@@ -564,6 +578,7 @@ begin
       deletefile(lnkfilename);
       deletefile(o);
 
+      result:=true;
     finally
       script.free;
     end;

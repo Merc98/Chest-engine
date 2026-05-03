@@ -7,21 +7,32 @@ The TPointerscanresultReader will read the results from the pointerfile and pres
 }
 interface
 
-uses windows, LCLIntf, sysutils, classes, CEFuncProc, NewKernelHandler, symbolhandler, math, dialogs;
+{$ifdef darwin}
+uses macport, MacTypes, LCLIntf, sysutils, classes, CEFuncProc, NewKernelHandler,
+  symbolhandler, math, dialogs, LazUTF8,macportdefines;
+{$endif}
+
+
+{$ifdef windows}
+uses windows, LCLIntf, sysutils, classes, CEFuncProc, NewKernelHandler,
+  symbolhandler, math, dialogs, LazUTF8;
+{$endif}
 
 resourcestring
   rsPSRCorruptedPointerscanFile = 'Corrupted pointerscan file';
   rsPSRInvalidPointerscanFileVersion = 'Invalid pointerscan file version';
   rsBuggedList = 'BuggedList';
 
+  {$ifdef windows}
 function GetFileSizeEx(hFile:HANDLE; FileSize:PQWord):BOOL; stdcall; external 'kernel32.dll' name 'GetFileSizeEx';
+{$endif}
 
 
 type TPointerscanResult=packed record
   modulenr: integer;
   moduleoffset: int64;
   offsetcount: integer;
-  offsets: array [0..1000] of dword;
+  offsets: array [0..1000] of integer;
 end;
 type PPointerscanResult= ^TPointerscanResult;
 
@@ -35,17 +46,17 @@ type
     maxlevel: integer;
     modulelist: tstringlist;
 
-    FFileName: string;
+    FFileName: widestring;
     files: array of record
       startindex: qword;
       lastindex: qword;
-      filename: string;
+      filename: widestring;
       filesize: qword;
       f,fm: Thandle;
     end;
 
     cacheStart: integer;
-    cacheSize: integer;
+    cacheSize: size_t;
     cache: pointer;
 
     cacheStart2: integer;
@@ -100,12 +111,12 @@ type
 
     procedure ReleaseFiles;
 
-    constructor create(filename: string; original: TPointerscanresultReader=nil);
+    constructor create(filename: widestring; original: TPointerscanresultReader=nil);
 
     destructor destroy; override;
     property count: qword read FCount;
     property offsetCount: integer read maxlevel;
-    property filename: string read FFilename;
+    property filename: widestring read FFilename;
     property entrySize: integer read sizeOfEntry;
     property modulelistCount: integer read getModuleListcount;
     property modulename[index: integer]: string read getModuleName;
@@ -127,14 +138,14 @@ type
     property BaseScanRange: qword read foriginalBaseScanRange;
 end;
 
-procedure findAllResultFilesForThisPtr(filename: string; rs: TStrings);
+procedure findAllResultFilesForThisPtr(filename: string; rs: TStrings; lookupmode: integer=0);
 
 implementation
 
 uses ProcessHandlerUnit, PointerscanStructures, Maps, AvgLvlTree;
 
 
-procedure findAllResultFilesForThisPtr(filename: string; rs: TStrings);
+procedure findAllResultFilesForThisPtr(filename: string; rs: TStrings; lookupmode: integer=0);
 var
   fr: TRawbyteSearchRec;
   i,j: integer;
@@ -160,7 +171,11 @@ begin
   //search the folder this ptr file is in for .result.* files
   //extract1
 
+  rs.clear;
   filemap:=TMap.Create(its8, sizeof(pointer));
+
+  if lookupmode=1 then
+    filename:=UTF8ToWinCP(filename);
 
   path:=ExtractFilePath(filename);
 
@@ -170,7 +185,11 @@ begin
       ext1:=ExtractFileExt(fr.name);
       ext1:=copy(ext1, 2, length(ext1)-1);
 
-      if TryStrToInt64('$'+ext1, v1) then
+      if copy(ext1,1,5)='child' then
+      begin
+        rs.add(path+fr.name); //no need to sort
+      end
+      else if TryStrToInt64('$'+ext1, v1) then
       begin
         f:=path+fr.name;
         getmem(fn, length(f)+1);
@@ -181,7 +200,16 @@ begin
     until FindNext(fr)<>0;
 
     FindClose(fr);
+  end
+  else
+  begin
+    if lookupmode<1 then
+    begin
+      findAllResultFilesForThisPtr(filename, rs, lookupmode+1);
+      exit;
+    end;
   end;
+
 
   it:=TMapIterator.Create(filemap);
   it.First;
@@ -189,13 +217,13 @@ begin
   begin
     it.GetData(fn);
     rs.add(fn);
-    freemem(fn);
+    freememandnil(fn);
     it.Next;
   end;
 
   it.free;
   filemap.Clear;
-  filemap.Free;
+  freeandnil(filemap);
 
 end;
 
@@ -285,10 +313,6 @@ begin
 
   if i>=fcount then exit;
 
-
-
-
-
   //find which file to use
   for j:=0 to length(files)-1 do
   begin
@@ -305,8 +329,11 @@ begin
       else
         offset:=wantedoffset;
 
-
-      cachesize:=min(files[j].filesize-offset, systeminfo.dwAllocationGranularity*32);    //normally 2MB
+{$if FPC_FULLVERSION<30200}
+      cachesize:=min(files[j].filesize-offset, systeminfo.dwAllocationGranularity*32);    //normally 2MBZ
+{$else}
+      cachesize:=min(files[j].filesize-offset, qword(systeminfo.dwAllocationGranularity*32));    //normally 2MBZ
+{$endif}
       if cache2<>nil then
         unmapviewoffile(cache2);
 
@@ -516,7 +543,7 @@ end;
 
 
 
-constructor TPointerscanresultReader.create(filename: string; original: TPointerscanresultReader=nil);
+constructor TPointerscanresultReader.create(filename: widestring; original: TPointerscanresultReader=nil);
 var
   configfile: TFileStream;
   modulelistLength: integer;
@@ -530,8 +557,8 @@ var
   error: boolean;
   a: ptruint;
 
-  fn: string;
-  filenames: array of string;
+  fn: widestring;
+  filenames: array of widestring;
 
   fnames: tstringlist;
 
@@ -645,8 +672,11 @@ begin
 
   //get the filenames
   fnames:=tstringlist.create;
-
   findAllResultFilesForThisPtr(filename, fnames);
+
+
+
+
   setlength(filenames, fnames.count);
   for i:=0 to fnames.count-1 do
     filenames[i]:=fnames[i];
@@ -667,7 +697,7 @@ begin
       files[j].filename:=fn;
 
 
-      files[j].f:=CreateFile(pchar(fn), GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 0);
+      files[j].f:=CreateFileW(pwchar(fn), GENERIC_READ, FILE_SHARE_READ or FILE_SHARE_DELETE, nil, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, 0);
 
       if (files[j].f<>0) and (files[j].f<>INVALID_HANDLE_VALUE) then
       begin
@@ -710,11 +740,15 @@ begin
  // getmem(cache2, sizeofEntry*maxcachecount);
   InitializeCache(0);
 
-  freemem(temppchar);
+  freememandnil(temppchar);
   configfile.Free;
 
 
   fCanResume:=fileexists(filename+'.resume.config') and fileexists(filename+'.resume.scandata') and fileexists(filename+'.resume.queue');
+
+  if length(filenames)=0 then
+    MessageDlg('There was an error loading the results. Check that the path is readable', mtError, [mbok],0);
+
 end;
 
 procedure TPointerscanresultReader.ReleaseFiles;
@@ -743,10 +777,10 @@ begin
   ReleaseFiles;
 
   if compressedTempBuffer<>nil then
-    freemem(compressedTempBuffer);
+    freememandnil(compressedTempBuffer);
 
   if compressedPointerScanResult<>nil then
-    freemem(compressedPointerScanResult);
+    freememandnil(compressedPointerScanResult);
 
 end;
 

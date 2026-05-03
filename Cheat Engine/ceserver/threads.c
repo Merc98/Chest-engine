@@ -32,7 +32,7 @@ void AddThreadToProcess(PProcessData p, PThreadData threaddata)
     p->threadlist=realloc(p->threadlist, sizeof(ThreadData)*p->threadlistmax*2);
     if (p->threadlist==NULL)
     {
-      printf("REALLOC FAILED!\n");
+      debug_log("REALLOC FAILED!\n");
       exit(2);
     }
     p->threadlistmax=p->threadlistmax*2;
@@ -46,6 +46,7 @@ void AddThreadToProcess(PProcessData p, PThreadData threaddata)
 int RemoveThreadFromProcess(PProcessData p, int tid)
 {
   int i;
+
   for (i=0; i<p->threadlistpos; i++)
     if (p->threadlist[i].tid==tid)
     {

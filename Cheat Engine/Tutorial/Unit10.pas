@@ -6,8 +6,8 @@ unit Unit10;
 interface
 
 uses
-  LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, Unit8, StdCtrls, Buttons, LResources, ExtCtrls, math;
+  {$ifdef windows}windows,{$endif} LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  Dialogs, Unit8, StdCtrls, Buttons, LResources, ExtCtrls, math, betterControls;
 
 type
   TPlayer=class
@@ -62,9 +62,10 @@ type
     procedure SpeedButton1Click(Sender: TObject);
   private
     { Private declarations }
-
-
     p1, p2, p3,p4: TPlayer;
+    {$ifdef windows}
+    procedure  LaunchGraphicalTut;
+    {$endif}
   public
     { Public declarations }
   end;
@@ -74,7 +75,7 @@ var
 
 implementation
 
-uses Unit4;
+uses Unit4, frmHelpUnit, cetranslator;
 
 resourcestring
   rsThisPlayerIsAlreadyDeadRestartTheGame = 'This player is already dead. Restart the game';
@@ -135,11 +136,52 @@ begin
   unrelatedrandomlychangingthing:=random(5000000);
 end;
 
+
+{$ifdef windows}
+procedure TForm10.LaunchGraphicalTut;
+var nexttut: string;
+    filename: string;
+begin
+  filename:='gtutorial-'+{$ifdef cpu32}'i386'{$else}'x86_64'{$endif}+'.exe';
+  nexttut:=ExtractFilePath(application.ExeName)+filename;
+
+  if fileexists(nexttut) then
+  begin
+    //launch the graphical tutorial
+
+    ShellExecute(0, PChar('open'), PChar(nexttut),PChar(''), PChar(extractfilepath(nexttut)), SW_SHOW);
+    ExitProcess(0);
+  end;
+
+
+  nexttut:=ExtractFileDir(application.ExeName);
+
+  if ExtractFileName(nexttut)='bin' then
+  begin
+    nexttut:=ExtractFilePath(nexttut)+'tutorial\graphical\'+filename;
+
+    if fileexists(nexttut) then
+    begin
+      //launch the graphical tutorial
+      ShellExecute(0, PChar('open'), PChar(nexttut),PChar(''), PChar(extractfilepath(nexttut)), SW_SHOW);
+      ExitProcess(0);
+    end;
+  end;
+end;
+{$endif}
+
 procedure TForm10.Button2Click(Sender: TObject);
 begin
+  {$ifdef windows}
+  LaunchGraphicalTut;
+    {$endif}
   hide;
   form4:=tform4.create(self);
   form4.show;
+
+  frmHelp.free;
+  frmHelp:=nil;
+
 end;
 
 procedure TForm10.Button1Click(Sender: TObject);
@@ -263,15 +305,20 @@ procedure TForm10.FormCreate(Sender: TObject);
 begin
 
       //31337157
-  memo1.lines.text:=rsTutorialStep9;
+  caption:=altnamer(caption);
+  memo1.lines.text:=altnamer(rsTutorialStep9);
   memo1.Lines.Insert(0, Format(rsStep9SharedCodePW, [inttostr(313)+inttostr(37157)]));
 
   button3.Click;
   font.size:=12;
+  frmHelp.attach(self,'9');
 end;
 
 procedure TForm10.SpeedButton1Click(Sender: TObject);
 begin
+  {$ifdef windows}
+  LaunchGraphicalTut;
+  {$endif}
   showmessage(rsU10ThisWasTheLastTutorial);
   Application.Terminate;
 end;

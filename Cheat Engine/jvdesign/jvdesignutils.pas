@@ -4,6 +4,8 @@ unit JvDesignUtils;
 
 {$mode objfpc}{$H+}
 
+{$warn 5033 off}
+
 interface
 uses
   {$IFDEF UNITVERSIONING}
@@ -13,7 +15,8 @@ uses
   windows,
   win32proc,
   {$endif}
-  SysUtils, LCLProc, LCLType, LResources, LCLIntf, LMessages,    Classes, Controls, Graphics, Forms, dialogs;
+  SysUtils, LCLProc, LCLType, LResources, LCLIntf, LMessages,    Classes, Controls,
+  Graphics, Forms, dialogs;
 
 type
   TDesignerDCFlag = (
@@ -310,6 +313,7 @@ procedure DesignPaintGrid(ACanvas: TCanvas; const ARect: TRect;
 var
   b: TBitmap;
   I: Integer;
+  pixelsize: single;
 begin
   b := TBitmap.Create;
   try
@@ -318,9 +322,22 @@ begin
     b.Canvas.Brush.Color := ABackColor;
     b.Canvas.FillRect(Rect(0, 0, b.Width, b.Height));
 
+    pixelsize:=screen.PixelsPerInch / 96;
+
     I := 0;
     repeat
-      b.Canvas.Pixels[0, I] := AGridColor;
+      if pixelsize<=1 then
+        b.Canvas.Pixels[0, I] := AGridColor;
+
+      if pixelsize>1.25 then
+        b.Canvas.Pixels[0, I+1] := AGridColor;
+
+      if pixelsize>=1.5 then
+        b.Canvas.Pixels[1, I] := AGridColor;
+
+      if pixelsize>=1.75 then
+        b.Canvas.Pixels[1, I+1] := AGridColor;
+
       Inc(I, ADivPixels);
     until (I >= b.Height);
 
@@ -409,6 +426,7 @@ end;
 
 { TDesignerDeviceContext }
 
+{$warn 5059 off}
 function TDesignerDeviceContext.GetDCOrigin: TPoint;
 begin
 

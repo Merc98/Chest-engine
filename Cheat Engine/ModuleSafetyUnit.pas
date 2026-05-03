@@ -6,10 +6,14 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, LResources;
+  Dialogs, Menus, StdCtrls, LResources, betterControls;
 
 type
+
+  { TfrmModuleSafety }
+
   TfrmModuleSafety = class(TForm)
+    msImageList: TImageList;
     ListBox1: TListBox;
     Edit1: TEdit;
     Button1: TButton;

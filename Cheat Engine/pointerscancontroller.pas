@@ -5,11 +5,13 @@ unit PointerscanController;
 interface
 
 uses
-  Windows, Classes, SysUtils, StdCtrls, ComCtrls, Sockets, syncobjs,
+  {$ifdef darwin}macport,{$endif}
+  {$ifdef windows}windows,{$endif}
+  LCLIntf, LCLType, Classes, SysUtils, StdCtrls, ComCtrls, Sockets, syncobjs,
   resolve, math, pointervaluelist,PointerscanWorker, PointerscanStructures,
-  pointeraddresslist, PointerscanresultReader, cefuncproc, newkernelhandler,
-  zstream, PointerscanConnector, PointerscanNetworkStructures, WinSock2,
-  CELazySocket, AsyncTimer, MemoryStreamReader, commonTypeDefs, NullStream;
+  pointeraddresslist, PointerscanresultReader, cefuncproc, NewKernelHandler,
+  zstream, PointerscanConnector, PointerscanNetworkStructures, {$ifdef windows}WinSock2,{$endif}
+  CELazySocket, AsyncTimer, MemoryStreamReader, commonTypeDefs, NullStream, SyncObjs2;
 
 
 type
@@ -135,6 +137,11 @@ type
     fTotalPathsEvaluatedByErasedChildren: qword; //when a child entry is deleted, add it's total paths evaluated value to this
 
     wasidle: boolean; //state of isIdle since last call to waitForAndHandleNetworkEvent
+
+    newProgressbarLabel: string;
+
+    fShouldQuit: boolean;
+    procedure UpdateProgressbarLabel; //synced
 
     procedure InitializeCompressedPtrVariables;
     procedure InitializeEmptyPathQueue; //initializes the arrays inside the pathqueue
@@ -271,6 +278,7 @@ type
     startaddress: ptrUint;
     stopaddress: ptrUint;
     progressbar: TProgressbar;
+    progressbarLabel: TLabel;
     sz: integer;
     maxlevel: integer;
     unalligned: boolean;
@@ -287,6 +295,8 @@ type
     useheapdata: boolean;
     useOnlyHeapData: boolean;
 
+    scanPagedMemoryOnly: boolean;
+
     findValueInsteadOfAddress: boolean;
     valuetype: TVariableType;
     valuescandword: dword;
@@ -301,6 +311,7 @@ type
 
 
     mustEndWithSpecificOffset: boolean;
+    mustEndWithSpecificOffsetMaxDeviation: dword;
     mustendwithoffsetlist: array of dword;
     onlyOneStaticInPath: boolean;
     noReadOnly: boolean;
@@ -323,6 +334,7 @@ type
 
     generatePointermapOnly: boolean;
 
+    negativeOffsets: boolean;
     compressedptr: boolean;
     MaxBitCountModuleOffset: dword;
     MaxBitCountModuleIndex: dword;
@@ -343,24 +355,15 @@ type
     pathqueuelength: integer;
     pathqueue: TMainPathQueue;
     pathqueueCS: TCriticalSection; //critical section used to add/remove entries
-    pathqueueSemaphore: THandle; //Event to notify sleeping threads to wake up that there is a new path in the queue
+    {$ifdef windows}
+    pathqueueSemaphore: THandle;
+    {$else}
+    pathqueueSemaphore: TSemaphore;  //Event to notify sleeping threads to wake up that there is a new path in the queue
+    {$endif}
 
     overflowqueuecs: Tcriticalsection;
     overflowqueue: TDynPathQueue; //this queue will hold a number of paths that the server/worker received too many. (e.g a request for paths was made, but by the time the paths are received, the pathqueue is full again) It's accessed by the controller thread only
 
-     {
-    distributedScanning: boolean; //when set to true this will open listening port where other scanners can connect to
-    distributedport: word; //port used to listen on if distributed scanning is enabled
-    distributedScandataDownloadPort: word;
-
-    distributedWorker: boolean; //set if it's a worker connecting to a server
-    distributedServer: string;
-
-    broadcastThisScanner: boolean;
-    potentialWorkerList: array of THostAddr;
-
-    workersPathPerSecondTotal: qword;
-    workersPointersfoundTotal: qword;     }
 
     outofdiskspace: boolean;
 
@@ -414,6 +417,7 @@ type
     procedure TerminateAndSaveState;
     procedure execute_nonInitializer;
     procedure execute; override;
+    procedure Terminate; //terminate is not overridable but this works for simple stuff, like the pointermap generator quit flag
     constructor create(suspended: boolean);
     destructor destroy; override;
 
@@ -498,6 +502,7 @@ resourcestring
   rsInvalidData = 'invalid data:';
   rsNoUpdateFromTheClientForOver120Sec = 'No update from the client for over 120 seconds';
   rsAllPathsReceived = 'All paths received';
+  rsSavingPointermap = 'Saving pointermap';
 
 //------------------------POINTERLISTLOADER-------------
 procedure TPointerlistloader.execute;
@@ -549,7 +554,11 @@ begin
 
   if fcontroller.compressedptr then
   begin
-    EntrySize:=fcontroller.MaxBitCountModuleOffset+fcontroller.MaxBitCountModuleIndex+fcontroller.MaxBitCountLevel+fcontroller.MaxBitCountOffset*(fcontroller.maxlevel-length(fcontroller.mustendwithoffsetlist));
+    if fcontroller.mustEndWithSpecificOffsetMaxDeviation=0 then
+      EntrySize:=fcontroller.MaxBitCountModuleOffset+fcontroller.MaxBitCountModuleIndex+fcontroller.MaxBitCountLevel+fcontroller.MaxBitCountOffset*(fcontroller.maxlevel-length(fcontroller.mustendwithoffsetlist))
+    else
+      EntrySize:=fcontroller.MaxBitCountModuleOffset+fcontroller.MaxBitCountModuleIndex+fcontroller.MaxBitCountLevel+fcontroller.MaxBitCountOffset*(fcontroller.maxlevel);
+
     EntrySize:=(EntrySize+7) div 8;
   end
   else
@@ -799,6 +808,7 @@ begin
       s.WriteQWord(BaseStop);
       s.WriteByte(ifthen(onlyOneStaticInPath,1,0));
       s.writebyte(ifthen(mustEndWithSpecificOffset,1,0));
+      s.writeDword(mustEndWithSpecificOffsetMaxDeviation);
       s.writeWord(length(mustendwithoffsetlist));
       for i:=0 to length(mustendwithoffsetlist)-1 do
         s.WriteDWord(mustendwithoffsetlist[i]);
@@ -843,11 +853,11 @@ begin
 
         self.starttime:=GetTickCount64;
 
-
+        sent:=0;
         UpdateChildProgress(sent, totalsize);
         //update the child progress
 
-        sent:=0;
+
 
         for i:=0 to length(f)-1 do
         begin
@@ -1602,7 +1612,13 @@ begin
           end;
 
           inc(pathqueuelength, pathsToCopy);
+          {$ifdef windows}
           ReleaseSemaphore(pathqueueSemaphore, pathsToCopy, nil);
+          {$else}
+          pathqueueSemaphore.Release(pathsToCopy);
+
+          {$endif}
+
         end;
 
       finally
@@ -1676,76 +1692,90 @@ begin
   listsize:=sizeof(dword)*(maxlevel+1);
   valuelistsize:=sizeof(qword)*(maxlevel+1);
 
+  offsetcountperlist:=maxlevel;
 
+  overflowqueuecs.enter;
   pathqueueCS.enter;
   try
-
-
-    while f.Position<f.Size do
-    begin
-      i:=length(overflowqueue);
-      setlength(overflowqueue, length(overflowqueue)+1);
-      if f.Read(overflowqueue[i].valuetofind, sizeof(overflowqueue[i].valuetofind))>0 then
-      begin
-        f.read(overflowqueue[i].startlevel, sizeof(overflowqueue[i].startlevel));
-
-        if overflowqueue[i].startlevel>offsetcountperlist then
-        begin
-          j:=f.Position;
-          raise exception.create(rsInvalidData+inttostr(f.position));
-        end;
-
-        setlength(overflowqueue[i].tempresults, maxlevel+1);
-        f.read(overflowqueue[i].tempresults[0], listsize);
-
-        //length(pathqueue[i].tempresults)*sizeof(pathqueue[i].tempresults[0]));
-
-        if noloop then
-        begin
-          setlength(overflowqueue[i].valuelist, maxlevel+1);
-          f.read(overflowqueue[i].valuelist[0], valuelistsize);
-        end;
-      end;
-
-    end;
-
-    //sort based on level
-    for i:=0 to length(overflowqueue)-2 do
-    begin
-      for j:=i to length(overflowqueue)-1 do
-      begin
-        if overflowqueue[i].startlevel>overflowqueue[j].startlevel then //swap
-        begin
-          tempentry:=overflowqueue[j];
-          overflowqueue[j]:=overflowqueue[i];
-          overflowqueue[i]:=tempentry;
-        end;
-      end;
-    end;
-
-    addedToQueue:=0;
     try
 
-      for i:=length(overflowqueue)-1 downto 0 do
+      while f.Position<f.Size do
       begin
-        if pathqueuelength<MAXQUEUESIZE then
+        i:=length(overflowqueue);
+        setlength(overflowqueue, length(overflowqueue)+1);
+        if f.Read(overflowqueue[i].valuetofind, sizeof(overflowqueue[i].valuetofind))>0 then
         begin
-          pathqueue[pathqueuelength]:=overflowqueue[i];
-          inc(pathqueuelength);
+          f.read(overflowqueue[i].startlevel, sizeof(overflowqueue[i].startlevel));
 
-          overflowqueue[i].tempresults[0]:=$cece;
-          inc(addedToQueue);
+          if overflowqueue[i].startlevel>offsetcountperlist then
+          begin
+            j:=f.Position;
+            raise exception.create(rsInvalidData+inttostr(f.position));
+          end;
 
-        end else break;
+          setlength(overflowqueue[i].tempresults, maxlevel+1);
+          f.read(overflowqueue[i].tempresults[0], listsize);
+
+          //length(pathqueue[i].tempresults)*sizeof(pathqueue[i].tempresults[0]));
+
+          if noloop then
+          begin
+            setlength(overflowqueue[i].valuelist, maxlevel+1);
+            f.read(overflowqueue[i].valuelist[0], valuelistsize);
+          end;
+        end;
+
       end;
 
+      //sort based on level
+      for i:=0 to length(overflowqueue)-2 do
+      begin
+        for j:=i to length(overflowqueue)-1 do
+        begin
+          if overflowqueue[i].startlevel>overflowqueue[j].startlevel then //swap
+          begin
+            tempentry:=overflowqueue[j];
+            overflowqueue[j]:=overflowqueue[i];
+            overflowqueue[i]:=tempentry;
+          end;
+        end;
+      end;
+
+      addedToQueue:=0;
+      try
+
+        for i:=length(overflowqueue)-1 downto 0 do
+        begin
+          if pathqueuelength<MAXQUEUESIZE then
+          begin
+            pathqueue[pathqueuelength]:=overflowqueue[i];
+            inc(pathqueuelength);
+
+            overflowqueue[i].tempresults[0]:=$cece;
+            inc(addedToQueue);
+
+          end else break;
+        end;
+      except
+        on e: exception do
+        begin
+          OutputDebugString('TPointerscanController.SetupQueueForResume Error:'+e.message);
+          setlength(overflowqueue,0);
+          raise;
+        end;
+      end
     finally
       setlength(overflowqueue, length(overflowqueue)-addedToQueue);
+      {$ifdef windows}
       ReleaseSemaphore(pathqueueSemaphore, addedToQueue, nil);
+      {$else}
+      pathqueueSemaphore.Release(addedToQueue);
+      {$endif}
     end;
 
   finally
     pathqueueCS.leave;
+    overflowqueuecs.leave;
     f.free;
   end;
 
@@ -1801,7 +1831,13 @@ begin
 
       i:=pathqueuelength;
       pathqueuelength:=0;
+      {$ifdef windows}
       ReleaseSemaphore(pathqueueSemaphore, i, nil);
+      {$else}
+      pathqueueSemaphore.Release(i);
+      {$endif}
+
+//
 
     finally
       pathqueueCS.Leave;
@@ -1934,6 +1970,7 @@ begin
           begin
             //if found, find a idle thread and tell it to look for this address starting from level 0 (like normal)
 
+            addedToQueue:=false;
 
             if pathqueuelength<MAXQUEUESIZE-1 then
             begin
@@ -1944,12 +1981,13 @@ begin
                 pathqueue[pathqueuelength].startlevel:=0;
                 pathqueue[pathqueuelength].valuetofind:=currentaddress;
                 inc(pathqueuelength);
+                addedToQueue:=true;
 
+                {$ifdef windows}
                 ReleaseSemaphore(pathqueueSemaphore, 1, nil);
-
-
-
-
+                {$else}
+                pathqueueSemaphore.Release;
+                {$endif}
               end;
 
               pathqueueCS.leave;
@@ -2008,8 +2046,11 @@ begin
             pathqueue[pathqueuelength].valuetofind:=self.automaticaddress;
             inc(pathqueuelength);
             pathqueueCS.Leave;
+            {$ifdef windows}
             ReleaseSemaphore(pathqueueSemaphore, 1, nil);
-
+            {$else}
+            pathqueueSemaphore.Release;
+            {$endif}
           end;
 
 
@@ -2018,21 +2059,14 @@ begin
 
       end;
 
-      //wait till all workers are in isdone state
-      {
-      if distributedScanning then
-      begin
-        if not distributedWorker then
-          launchServer; //everything is configured now and the scanners are active
-
-        alldone:=not doDistributedScanningLoop;
-      end;  }
-
-
 
       while (not alldone) do
       begin
+        {$ifdef windows}
         outofdiskspace:=getDiskFreeFromPath(filename)<64*1024*1024*length(localscanners); //64MB for each thread
+        {$else}
+        outofdiskspace:=false;
+        {$endif}
 
 
         if haserror then
@@ -2297,6 +2331,7 @@ end;
 
 
 procedure TPointerscanController.acceptConnection;
+{$ifdef windows}
 var
   client: TSockAddrIn;
   size: integer;
@@ -2309,8 +2344,10 @@ var
   nonblockingmode: u_long;
 
   ss: TSocketStream;
+  {$endif}
 begin
   //accept the incoming connection and create a Host or Child controller
+  {$ifdef windows}
   ZeroMemory(@client, sizeof(client));
   size:=sizeof(client);
   s:=fpaccept(listensocket, @client, @size);
@@ -2388,7 +2425,7 @@ begin
       closehandle(s);
     end;
   end;
-
+       {$endif}
 end;
 
 
@@ -2402,7 +2439,7 @@ begin
       begin
         childnodes[i].iConnectedTo:=false; //no reconnect
         if force then
-          handleChildException(childid, 'forced disconnect')
+          handleChildException(i, 'forced disconnect')
         else
         begin
           childnodes[i].takePathsAndDisconnect:=true;
@@ -2419,6 +2456,7 @@ end;
 
 
 procedure TPointerscanController.waitForAndHandleNetworkEvent;
+{$ifdef windows}
 var
   count: integer;
   i,j: integer;
@@ -2431,8 +2469,10 @@ var
   checkedallsockets: boolean;
 
   idle: boolean;
+  {$endif}
 begin
   //listen to the listensocket if available and for the children
+  {$ifdef windows}
   EatFromOverflowQueueIfNeeded;
 
   if not initializer then
@@ -2546,8 +2586,10 @@ begin
             end;
           end;
 
-          if (childnodes[i].socket<>nil) and (childnodes[i].scandatauploader=nil) and (GetTickCount64-childnodes[i].LastUpdateReceived>120000) then
+          {$ifndef DEBUGPROTOCOL}
+          if (childnodes[i].socket<>nil) and (childnodes[i].scandatauploader=nil) and (childnodes[i].LastUpdateReceived<>0) and (GetTickCount64-childnodes[i].LastUpdateReceived>120000) then
             handleChildException(i, rsNoUpdateFromTheClientForOver120Sec); //marks the child as disconnected
+          {$endif}
 
           inc(i);
         end;
@@ -2629,7 +2671,9 @@ begin
   finally
     childnodescs.Leave;
   end;
+    {$endif}
 end;
+
 
 procedure TPointerscancontroller.handleParentException(error: string);
 var
@@ -2950,7 +2994,11 @@ begin
       begin
         //give it one good path (the best path)
 
+        {$ifdef windows}
         if WaitForSingleObject(pathqueueSemaphore, 0)=WAIT_OBJECT_0 then //lock the entry
+        {$else}
+        if pathqueueSemaphore.TryAcquire then
+        {$endif}
         begin
           paths[actualcount]:=pathqueue[0];
 
@@ -3008,7 +3056,11 @@ begin
       start:=pathqueuelength-1;
       for i:=start downto 0 do
       begin
+        {$ifdef windows}
         if WaitForSingleObject(pathqueueSemaphore, 0)=WAIT_OBJECT_0 then //lock it
+        {$else}
+        if pathqueueSemaphore.TryAcquire then
+        {$endif}
         begin
           paths[actualcount]:=pathqueue[i];
 
@@ -3461,7 +3513,11 @@ begin
         MaxBitCountModuleOffset:=32;
 
 
-      MaxBitCountLevel:=getMaxBitCount(maxlevel-length(mustendwithoffsetlist) , false); //counted from 1.  (if level=4 then value goes from 1,2,3,4) 0 means no offsets. This can happen in case of a pointerscan with specific end offsets, which do not get saved.
+      if mustEndWithSpecificOffsetMaxDeviation=0 then
+        MaxBitCountLevel:=getMaxBitCount(maxlevel-length(mustendwithoffsetlist) , false) //counted from 1.  (if level=4 then value goes from 1,2,3,4) 0 means no offsets. This can happen in case of a pointerscan with specific end offsets, which do not get saved.
+      else
+        MaxBitCountLevel:=getMaxBitCount(maxlevel, false);
+
       MaxBitCountOffset:=getMaxBitCount(sz, false);
       if unalligned=false then MaxBitCountOffset:=MaxBitCountOffset - 2;
 
@@ -3489,7 +3545,7 @@ begin
       begin
         setlength(pathqueue[i].valuelist, maxlevel+2);
         for j:=0 to maxlevel+1 do
-          pathqueue[i].valuelist[j]:=$cececececececece;
+          pathqueue[i].valuelist[j]:=qword($cececececececece);
       end;
     end;
 
@@ -3555,6 +3611,7 @@ begin
     BaseStop:=ReadQword;
     onlyOneStaticInPath:=readByte=1;
     mustEndWithSpecificOffset:=readbyte=1;
+    mustEndWithSpecificOffsetMaxDeviation:=ReadDWord;
     setlength(mustendwithoffsetlist, ReadWord);
     for i:=0 to length(mustendwithoffsetlist)-1 do
       mustendwithoffsetlist[i]:=ReadDWord;
@@ -4136,6 +4193,7 @@ end;
 
 
 procedure TPointerscanController.setupListenerSocket;
+{$ifdef windows}
 var
   B: BOOL;
   i: integer;
@@ -4143,7 +4201,9 @@ var
 
   s: Tfilestream;
   cs: Tcompressionstream;
+  {$endif}
 begin
+  {$ifdef windows}
   //start listening on the given port. The waitForAndHandleNetworkEvent method will accept the connections
   listensocket:=socket(AF_INET, SOCK_STREAM, 0);
 
@@ -4167,7 +4227,7 @@ begin
     raise exception.create(rsPSCFailureToListen);
 
 
-
+  {$endif}
 end;
 
 function TPointerscanController.hasNetworkResponsibility: boolean;
@@ -4372,6 +4432,12 @@ begin
   devnull.free;
 end;
 
+
+procedure TPointerscanController.UpdateProgressbarLabel;
+begin
+  progressbarLabel.caption:=newProgressbarLabel;
+end;
+
 procedure TPointerscanController.execute;
 var
     i,j: integer;
@@ -4385,9 +4451,11 @@ var
     cs: Tcompressionstream;
     ds: Tdecompressionstream;
 
+    {$ifdef windows}
     pa,sa: DWORD_PTR;
 
     newAffinity: DWORD_PTR;
+    {$endif}
     PreferedProcessorList: array of integer; //a list of cpu numbers available to be used. If hyperthreading is on, this will not contain the uneven cpu numbers
     currentcpu: integer;  //index into PreferedProcessorList. If it's bigger than the size, make the affinity equal to PA (do not care, let windows decide)
 
@@ -4480,20 +4548,19 @@ begin
 
       progressbar.Position:=0;
       try
-
-        pointerlisthandler:=TReversePointerListHandler.Create(startaddress,stopaddress,not unalligned,progressbar, noreadonly, MustBeClassPointers, acceptNonModuleClasses, useStacks, stacksAsStaticOnly, threadstacks, stacksize, mustStartWithBase, BaseStart, BaseStop, includeSystemModules, RegionFilename);
-
-
+        pointerlisthandler:=TReversePointerListHandler.Create(startaddress,stopaddress,not unalligned,progressbar, scanPagedMemoryOnly, noreadonly, MustBeClassPointers, acceptNonModuleClasses, useStacks, stacksAsStaticOnly, threadstacks, stacksize, mustStartWithBase, BaseStart, BaseStop, includeSystemModules, RegionFilename, @fShouldQuit);
         progressbar.position:=100;
-        //sleep(10000);
 
-
-
+        if terminated then
+        begin
+          fOnScanDone(self, false,'');
+          exit;
+        end;
       except
         on e: exception do
         begin
           haserror:=true;
-          errorString:=rsFailureCopyingTargetProcessMemory;
+          errorString:=rsFailureCopyingTargetProcessMemory + '('+e.message+')';
 
           if assigned(fOnScanDone) then
             fOnScanDone(self, haserror, errorstring);
@@ -4527,6 +4594,10 @@ begin
       else
         LoadedPointermapFilename:=filename+'.scandata';
 
+
+      progressbar.Position:=99;
+      newProgressbarLabel:=rsSavingPointermap;
+      synchronize(UpdateProgressbarLabel);
 
       f:=tfilestream.create(LoadedPointermapFilename, fmCreate);
       cs:=Tcompressionstream.create(clfastest, f);
@@ -4570,8 +4641,13 @@ begin
 
     setlength(PreferedProcessorList,0);
 
+
     //build a list of cpu id's
+
+    {$ifdef windows}
     PA:=0;
+
+
     GetProcessAffinityMask(GetCurrentProcess, PA, SA);
     for i:=0 to BitSizeOf(PA)-1 do
     begin
@@ -4584,12 +4660,15 @@ begin
         end;
       end;
     end;
+    {$endif}
 
     for i:=0 to threadcount-1 do
     begin
+      {$ifdef windows}
       if i<length(PreferedProcessorList) then
         addWorkerThread(PreferedProcessorList[i])
       else
+      {$endif}
         addWorkerThread;
     end;
 
@@ -4645,9 +4724,14 @@ begin
           result.writeByte(MaxBitCountLevel);
           result.writeByte(MaxBitCountOffset);
 
-          result.writeByte(length(mustendwithoffsetlist));
-          for i:=0 to length(mustendwithoffsetlist)-1 do
-            result.writeDword(mustendwithoffsetlist[i]);
+          if mustEndWithSpecificOffsetMaxDeviation=0 then
+          begin
+            result.writeByte(length(mustendwithoffsetlist));
+            for i:=0 to length(mustendwithoffsetlist)-1 do
+              result.writeDword(mustendwithoffsetlist[i]);
+          end
+          else
+            result.writeByte(0);
         end;
 
         result.writebyte(ifthen(mustStartWithBase,1,0));
@@ -4766,7 +4850,7 @@ begin
     name[namelength]:=#0;
     msg.publicname:=name;
   finally
-    freemem(name);
+    FreeMemAndNil(name);
   end;
 
   receive(sockethandle, @msg.scannerid, sizeof(msg.scannerid));
@@ -4821,6 +4905,7 @@ procedure TPointerscanController.ConnectorConnect(sender: TObject; sockethandle:
 Handles an connect event. Either from the connector thread, or called by the controller after handing an incomming connect
 Raises TSocketException on error
 }
+{$ifdef windows}
 var i: integer;
     hellomsg: TPSHelloMsg;
     child: PPointerscancontrollerchild;
@@ -4828,7 +4913,11 @@ var i: integer;
 
     ipname: TSockAddrIn;
     len: Longint;
+    {$endif}
+
 begin
+
+{$ifdef windows}
   child:=nil;
 
   //mark the socket as non blocking
@@ -4888,6 +4977,9 @@ begin
       child.connectdata.password:=entry.password;
       child.trusted:=entry.trusted;
     end;
+
+    child.LastUpdateReceived:=GetTickCount64;
+
 
 
     len:=sizeof(ipname);
@@ -4966,7 +5058,7 @@ begin
     if parent.socket=nil then //make a new parent if possible
       UpdateStatus(self);
   end;
-
+  {$endif}
 end;
 
 procedure TPointerscanController.BecomeChildOfNode(ip: string; port: word; password: string);
@@ -5078,7 +5170,9 @@ procedure TPointerscanController.addworkerThread(preferedprocessor: integer=-1);
 var
   scanner: TPointerscanWorker;
   j: integer;
+  {$ifdef windows}
   NewAffinity: DWORD_PTR;
+  {$endif}
   scanfileid: integer;
   downloadtime: qword;
 
@@ -5122,6 +5216,7 @@ begin
   scanner.OutOfDiskSpace:=@outofdiskspace;
 
   scanner.mustEndWithSpecificOffset:=mustEndWithSpecificOffset;
+  scanner.mustEndWithSpecificOffsetMaxDeviation:=mustEndWithSpecificOffsetMaxDeviation;
   scanner.mustendwithoffsetlist:=mustendwithoffsetlist;
   scanner.useHeapData:=useHeapData;
   scanner.useOnlyHeapData:=useHeapData;
@@ -5148,12 +5243,15 @@ begin
 
 
   //pick a usable cpu. Use the process affinity mask to pick from
+  {$ifdef windows}
   if preferedprocessor<>-1 then
   begin
     NewAffinity:=1 shl preferedprocessor;
     NewAffinity:=SetThreadAffinityMask(scanner.Handle, NewAffinity);
   end;
+  {$endif}
 
+  scanner.NegativeOffsets:=negativeOffsets;
   scanner.compressedptr:=compressedptr;
   scanner.MaxBitCountModuleIndex:=MaxBitCountModuleIndex;
   scanner.MaxBitCountModuleOffset:=MaxBitCountModuleOffset;
@@ -5259,6 +5357,7 @@ LimitToMaxOffsetsPerNode: byte //boolean
 onlyOneStaticInPath: byte; //boolean
 instantrescan: byte //boolean (not really needed, but it's a nice padding)
 mustEndWithSpecificOffset: byte; //boolean ( ^ ^ )
+mustEndWithSpecificOffsetMaxDeviation: dword;
 maxoffsetspernode: integer;
 basestart: qword;
 basestop: qword;
@@ -5295,6 +5394,7 @@ begin
   s.writebyte(ifthen(onlyOneStaticInPath,1,0));
   s.writebyte(ifthen(instantrescan,1,0));
   s.writebyte(ifthen(mustEndWithSpecificOffset,1,0));
+  s.WriteDword(mustEndWithSpecificOffsetMaxDeviation);
   s.WriteDWord(maxoffsetspernode);
   s.WriteQWord(basestart);
   s.WriteQWord(basestop);
@@ -5316,6 +5416,12 @@ begin
   terminate;
 end;
 
+procedure TPointerscancontroller.Terminate;
+begin
+  fShouldQuit:=true;
+  tthread(self).Terminate;
+end;
+
 constructor TPointerscanController.create(suspended: boolean);
 begin
   pointersize:=processhandler.pointersize;
@@ -5331,7 +5437,11 @@ begin
   localscannersCS:=TCriticalSection.create;
 
   pathqueueCS:=TCriticalSection.create;
+  {$ifdef windows}
   pathqueueSemaphore:=CreateSemaphore(nil, 0, MAXQUEUESIZE, nil);
+  {$else}
+  pathqueueSemaphore:=TSemaphore.create(MAXQUEUESIZE,true);
+  {$endif}
 
   overflowqueuecs:=TCriticalSection.create;
 
@@ -5411,7 +5521,12 @@ begin
 
 
 
+  {$ifdef windows}
   closehandle(pathqueueSemaphore);
+  {$else}
+  if pathqueueSemaphore<>nil then
+    freeandnil(pathqueueSemaphore);
+  {$endif}
 
 
   //clean up other stuff

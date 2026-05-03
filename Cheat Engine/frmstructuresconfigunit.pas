@@ -9,8 +9,14 @@ Note: The "Selected" part has been removed
 interface
 
 uses
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  ComCtrls, StdCtrls, ExtCtrls, registry, windows, fontSaveLoadRegistry;
+  ComCtrls, StdCtrls, ExtCtrls, registry, fontSaveLoadRegistry, betterControls;
 
 type
 
@@ -23,6 +29,7 @@ type
     cbAutoCreate: TCheckBox;
     cbAutoDestroyLocal: TCheckBox;
     cbAutoFillGaps: TCheckBox;
+    cbPositionAddressesOverColumns: TCheckBox;
     cbDefaultHex: TCheckBox;
     cbDoNotSaveLocal: TCheckBox;
     cbAutoGuessCustomTypes: TCheckBox;
@@ -116,6 +123,8 @@ var
   frmStructuresConfig: TfrmStructuresConfig;
 
 implementation
+
+uses mainunit2;
 
 resourcestring
   rsNormal = 'Normal';
@@ -288,7 +297,7 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\Cheat Engine\DissectData',true) then
+    if Reg.OpenKey('\Software\'+strCheatEngine+'\DissectData',true) then
     begin
 
       reg.WriteInteger('Default Color',defaultText);
@@ -312,10 +321,11 @@ begin
 
       reg.writeBool('Autoguess Custom Types', cbAutoGuessCustomTypes.checked);
       reg.WriteInteger('Max Auto-Expand Level',maxautoexpandlevel);
+      reg.writeBool('Position Addresses Over Columns', self.cbPositionAddressesOverColumns.checked);
 
       if customfont then
       begin
-        if Reg.OpenKey('\Software\Cheat Engine\DissectData\Font',true) then
+        if Reg.OpenKey('\Software\'+strCheatEngine+'\DissectData\Font'+darkmodestring,true) then
           SaveFontToRegistry(groupbox1.Font, reg);
       end;
     end;
@@ -331,7 +341,9 @@ end;
 procedure TfrmStructuresConfig.Button3Click(Sender: TObject);
 var
   i: integer;
+  {$ifdef windows}
   cbi: TComboboxInfo;
+  {$endif}
 begin
   fontdialog1.font.Assign(groupbox1.Font);
   if fontdialog1.Execute then
@@ -344,6 +356,7 @@ begin
     autosize:=false;
     autosize:=true;
 
+    {$ifdef windows}
     cbi.cbSize:=sizeof(cbi);
     if GetComboBoxInfo(comboBackground.Handle, @cbi) then
     begin
@@ -351,6 +364,7 @@ begin
       panel5.autosize:=false;
       panel5.clientheight:=i;
     end;
+    {$endif}
 
     fcustomfont:=true;
   end;
@@ -379,7 +393,7 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\Cheat Engine\DissectData',false) then
+    if Reg.OpenKey('\Software\'+strCheatEngine+'\DissectData',false) then
     begin
       if reg.ValueExists('Default Color') then defaultText:=reg.ReadInteger('Default Color');
       if reg.ValueExists('Match Color') then equalText:=reg.ReadInteger('Match Color');
@@ -401,9 +415,10 @@ begin
       if reg.ValueExists('DefaultHex') then cbDefaultHex.Checked:=reg.ReadBool('DefaultHex');
       if reg.ValueExists('Autoguess Custom Types') then cbAutoGuessCustomTypes.checked:=reg.ReadBool('Autoguess Custom Types');
       if reg.ValueExists('Max Auto-Expand Level') then maxautoexpandlevel:=reg.ReadInteger('Max Auto-Expand Level');
+      if reg.ValueExists('Position Addresses Over Columns') then cbPositionAddressesOverColumns.checked:=reg.ReadBool('Position Addresses Over Columns');
 
 
-      if Reg.OpenKey('\Software\Cheat Engine\DissectData\Font',false) then
+      if Reg.OpenKey('\Software\'+strCheatEngine+'\DissectData\Font'+darkmodestring,false) then
       begin
         LoadFontFromRegistry(groupbox1.Font,reg);
         fcustomfont:=true;

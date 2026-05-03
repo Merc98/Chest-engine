@@ -4,7 +4,7 @@ interface
 
 {$mode DELPHI}
 
-uses controls,StdCtrls,classes,Graphics,ExtCtrls, sysutils;
+uses controls,StdCtrls,classes,Graphics,ExtCtrls, sysutils, betterControls;
 
 type TLabel2 = class (TLabel)
   public
@@ -119,6 +119,7 @@ type TCheatList = class (twincontrol)
     fshowhotkeys: boolean;
     fBeepOnActivate: boolean;
     Function GetItem(i:integer):tcheat;
+    {$warn 3057 off}
     procedure SetAutosize(x:boolean);
     procedure sethotkeyleft(i:integer);
     procedure setDescriptionleft(i: integer);

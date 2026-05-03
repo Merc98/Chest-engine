@@ -4,8 +4,10 @@ unit KernelDebuggerInterface;
 
 interface
 
+{$ifdef windows}
 uses
-  jwawindows, windows, Classes, SysUtils,cefuncproc, newkernelhandler,DebuggerInterface,contnrs;
+  jwawindows, windows, Classes, SysUtils,cefuncproc, newkernelhandler,
+  DebuggerInterface,contnrs, syncobjs,maps;
 
 type
   TEventType=(etCreateProcess, etCreateThread, etDestroyThread);
@@ -40,9 +42,15 @@ type
     currentdebuggerstate: TDebuggerstate;
 
     injectedEvents: Tqueue;
+    injectedEventsCS: TcriticalSection;
     threadpoller: TThreadPoller;
     NeedsToContinue: boolean;
     globalDebug: boolean;
+    fisInjectedEvent: boolean;
+    currentthread: THandle;
+
+    threads: TMap;
+    procedure injectEvent(e: pointer);
   public
     function WaitForDebugEvent(var lpDebugEvent: TDebugEvent; dwMilliseconds: DWORD): BOOL; override;
     function ContinueDebugEvent(dwProcessId: DWORD; dwThreadId: DWORD; dwContinueStatus: DWORD): BOOL; override;
@@ -52,20 +60,27 @@ type
     function GetLastBranchRecords(lbr: pointer): integer; override;
     function canReportExactDebugRegisterTrigger: boolean; override;
 
-    procedure injectEvent(e: pointer);
+
     function DebugActiveProcess(dwProcessId: DWORD): WINBOOL; override;
+    function EventCausedByDBVM: boolean;
+
+    function isInjectedEvent: boolean; override;
 
     destructor destroy; override;
     constructor create(globalDebug, canStepKernelcode: boolean);
   end;
 
+{$endif}
+
 implementation
 
+{$ifdef windows}
 
-uses symbolhandler, ProcessHandlerUnit;
+uses symbolhandler, ProcessHandlerUnit, dialogs;
 
 resourcestring
   rsDBKDebug_StartDebuggingFailed ='DBKDebug_StartDebugging failed';
+  rsKernelModeNeedsDBVM = 'You can''t use kerneldebug in 64-bit without DBVM';
 
 procedure TThreadPoller.CreateThreadEvent(threadid: dword);
 var ie: PInjectedEvent;
@@ -162,7 +177,11 @@ end;
 procedure TKernelDebugInterface.injectEvent(e: pointer);
 begin
   if injectedEvents<>nil then
+  begin
+    injectedEventsCS.Enter;
     injectedEvents.Push(e);
+    injectedEventsCS.Leave;
+  end;
 end;
 
 function TKernelDebugInterface.DebugActiveProcess(dwProcessId: DWORD): WINBOOL;
@@ -181,10 +200,13 @@ begin
 
   if result then
   begin
-    processhandler.processid:=dwProcessID;
-    Open_Process;
-    symhandler.reinitialize;
-    symhandler.waitforsymbolsloaded(true);
+    if processhandler.processid<>dwProcessId then
+    begin
+      processhandler.processid:=dwProcessID;
+      Open_Process;
+      symhandler.reinitialize;
+      symhandler.waitforsymbolsloaded(true);
+    end;
 
     pid:=dwProcessID;
 
@@ -335,6 +357,9 @@ begin
     {$endif}
 
     lpContext.ContextFlags:=0;
+
+    if currentdebuggerstate.causedbydbvm<>0 then
+      log('currentdebuggerstate.causedbydbvm<>0');
   end else
   begin
    // outputdebugstring('Use the default method');
@@ -367,6 +392,12 @@ end;
 function TKernelDebugInterface.ContinueDebugEvent(dwProcessId: DWORD; dwThreadId: DWORD; dwContinueStatus: DWORD): BOOL;
 begin
   outputdebugstring('TKernelDebugInterface.ContinueDebugEvent');
+  if currentthread<>0 then
+  begin
+    ResumeThread(currentthread);
+    currentthread:=0;
+  end;
+
   if NeedsToContinue then
   begin
     outputdebugstring('NeedsToContinue=true');
@@ -379,65 +410,127 @@ begin
     outputdebugstring('NeedsToContinue=false');
     result:=true;
   end;
+
+
+end;
+
+function TKernelDebugInterface.isInjectedEvent: boolean;
+begin
+  result:=fisInjectedEvent;
 end;
 
 function TKernelDebugInterface.WaitForDebugEvent(var lpDebugEvent: TDebugEvent; dwMilliseconds: DWORD): BOOL;
-var injectedEvent: PInjectedEvent;
+var
+  injectedEvent: PInjectedEvent;
+  h: thandle;
 begin
   ZeroMemory(@lpDebugEvent, sizeof(TdebugEvent));
 
-  if injectedEvents.Count>0 then
-  begin
-    result:=true;
-    injectedEvent:=injectedEvents.Pop;
-    if injectedEvent<>nil then //just to be sure
+  fisInjectedEvent:=false;
+
+  injectedEventscs.enter;
+  try
+    if injectedEvents.Count>0 then
     begin
-      lpDebugEvent.dwProcessId:=injectedevent.processid;
-      lpDebugEvent.dwThreadId:=injectedevent.threadid;
 
-      case injectedevent.eventType of
-        etCreateProcess:
-        begin
-          lpDebugEvent.dwDebugEventCode:=CREATE_PROCESS_DEBUG_EVENT;
-          lpDebugEvent.CreateProcessInfo.hProcess:=processhandle;
-          lpDebugEvent.CreateProcessInfo.hThread:=OpenThread(THREAD_ALL_ACCESS,false, injectedevent.threadid);
+
+      result:=true;
+      injectedEvent:=injectedEvents.Pop;
+      if injectedEvent<>nil then //just to be sure
+      begin
+
+        lpDebugEvent.dwProcessId:=injectedevent.processid;
+        lpDebugEvent.dwThreadId:=injectedevent.threadid;
+
+        case injectedevent.eventType of
+          etCreateProcess:
+          begin
+            lpDebugEvent.dwDebugEventCode:=CREATE_PROCESS_DEBUG_EVENT;
+            lpDebugEvent.CreateProcessInfo.hProcess:=processhandle;
+
+            if threads.GetData(lpDebugEvent.dwThreadId,lpDebugEvent.CreateProcessInfo.hThread)=false then
+            begin
+              lpDebugEvent.CreateProcessInfo.hThread:=OpenThread(THREAD_ALL_ACCESS,false, lpDebugEvent.dwThreadId);
+              threads.Add(injectedevent.threadid, lpDebugEvent.CreateProcessInfo.hThread);
+            end;
+
+            if not globalDebug then
+            begin
+              currentthread:=lpDebugEvent.CreateProcessInfo.hThread;
+              SuspendThread(currentthread);
+            end
+            else
+              fisInjectedEvent:=true;
+          end;
+
+          etCreateThread:
+          begin
+            lpDebugEvent.dwDebugEventCode:=CREATE_THREAD_DEBUG_EVENT;
+
+            if threads.GetData(lpDebugEvent.dwthreadid, lpDebugEvent.CreateThread.hThread)=false then
+            begin
+              lpDebugEvent.CreateThread.hThread:=OpenThread(THREAD_ALL_ACCESS,false, lpDebugEvent.dwThreadId);
+              threads.Add(lpDebugEvent.dwThreadId, lpDebugEvent.CreateThread.hThread);
+            end;
+
+            if not globalDebug then
+            begin
+              currentthread:=lpDebugEvent.CreateThread.hThread;
+              SuspendThread(currentthread);
+            end
+            else
+              fisInjectedEvent:=true;
+          end;
+
+          etDestroyThread:
+          begin
+            if threads.GetData(lpDebugEvent.dwthreadid, h) then
+            begin
+              closehandle(h);
+              threads.Delete(lpDebugEvent.dwthreadid);
+            end;
+            lpDebugEvent.dwDebugEventCode:=EXIT_THREAD_DEBUG_EVENT;
+          end;
+
         end;
 
-        etCreateThread:
-        begin
-          lpDebugEvent.dwDebugEventCode:=CREATE_THREAD_DEBUG_EVENT;
-          lpDebugEvent.CreateThread.hThread:=OpenThread(THREAD_ALL_ACCESS,false, injectedevent.threadid);
-        end;
-        etDestroyThread: lpDebugEvent.dwDebugEventCode:=EXIT_THREAD_DEBUG_EVENT;
-
+        NeedsToContinue:=false; //it's not really paused
+        freememandnil(injectedEvent);
       end;
-
-      NeedsToContinue:=false; //it's not really paused
-      freemem(injectedEvent);
-    end;
-  end
-  else
-  begin
-
-    NeedsToContinue:=true;
-    result:=DBKDebug_WaitForDebugEvent(dwMilliseconds);
-    if result then
+    end
+    else
     begin
-      OutputDebugString('Received a debug event that wasn''t injected');
 
-      //get the state and setup lpDebugEvent
-      DBKDebug_GetDebuggerState(@currentdebuggerstate);
+      NeedsToContinue:=true;
+      result:=DBKDebug_WaitForDebugEvent(dwMilliseconds);
+      if result then
+      begin
+        OutputDebugString('Received a debug event that wasn''t injected');
 
-      //this is only a bp hit event
-      lpDebugEvent.dwDebugEventCode:=EXCEPTION_DEBUG_EVENT;
+        //get the state and setup lpDebugEvent
+        DBKDebug_GetDebuggerState(@currentdebuggerstate);
 
-      lpDebugEvent.dwProcessId:=pid;
-      lpDebugEvent.dwThreadId:=currentdebuggerstate.threadid;
-      lpDebugEvent.Exception.dwFirstChance:=1;
-      lpDebugEvent.Exception.ExceptionRecord.ExceptionCode:=EXCEPTION_SINGLE_STEP;
-      lpDebugEvent.Exception.ExceptionRecord.ExceptionAddress:=pointer(ptrUint(currentdebuggerstate.eip));
+        Log(format('currentdebuggerstate.eip=%8x',[currentdebuggerstate.eip]));
+
+        //this is only a bp hit event
+        lpDebugEvent.dwDebugEventCode:=EXCEPTION_DEBUG_EVENT;
+
+        lpDebugEvent.dwProcessId:=pid;
+        lpDebugEvent.dwThreadId:=currentdebuggerstate.threadid;
+        lpDebugEvent.Exception.dwFirstChance:=1;
+        lpDebugEvent.Exception.ExceptionRecord.ExceptionCode:=EXCEPTION_SINGLE_STEP;
+        lpDebugEvent.Exception.ExceptionRecord.ExceptionAddress:=pointer(ptrUint(currentdebuggerstate.eip));
+      end;
     end;
+
+  finally
+    injectedEventscs.leave;
   end;
+end;
+
+function TKernelDebugInterface.EventCausedByDBVM: boolean;
+begin
+  result:=currentdebuggerstate.causedbydbvm<>0;
 end;
 
 function TKernelDebugInterface.canReportExactDebugRegisterTrigger: boolean;
@@ -453,8 +546,14 @@ begin
   if threadpoller<>nil then
     threadpoller.free;
 
+  if injectedEventsCS<>nil then
+    injectedEventsCS.free;
+
   if pid<>0 then
     DBKDebug_StopDebugging;
+
+  if threads<>nil then
+    threads.free;
 
   inherited destroy;
 end;
@@ -462,21 +561,29 @@ end;
 constructor TKernelDebugInterface.create(globalDebug, canStepKernelcode: boolean);
 begin
   inherited create;
+  threads:=tmap.Create(ituPtrSize,sizeof(THandle));
 
   self.globalDebug:=globalDebug;
 
   LoadDBK32;
 
+{$IFDEF CPU64}
+  if loaddbvmifneeded=false then
+    raise exception.create(rsKernelModeNeedsDBVM);
+{$ENDIF}
+
+
   DBKDebug_SetAbilityToStepKernelCode(canStepKernelcode);
   DBKDebug_SetGlobalDebugState(globalDebug);
   injectedEvents:=TQueue.Create;
+  injectedEventsCS:=TcriticalSection.create;
 
-  fDebuggerCapabilities:=[dbcHardwareBreakpoint];
+  fDebuggerCapabilities:=fDebuggerCapabilities+[dbcHardwareBreakpoint, dbcDBVMBreakpoint];
   name:='Kernelmode Debugger';
 
   fmaxSharedBreakpointCount:=4;
 end;
-
+{$endif}
 
 end.
 

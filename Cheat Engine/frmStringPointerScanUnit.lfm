@@ -1,28 +1,29 @@
 object frmStringPointerScan: TfrmStringPointerScan
-  Left = 431
-  Height = 530
-  Top = 242
+  Left = 602
+  Height = 534
+  Top = 171
   Width = 813
   AutoSize = True
   Caption = 'Structure spider'
-  ClientHeight = 510
+  ClientHeight = 514
   ClientWidth = 813
   Menu = MainMenu1
   OnClose = FormClose
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnShow = FormShow
-  PopupMode = pmAuto
   Position = poScreenCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '2.2.2.0'
   object Panel1: TPanel
     Left = 0
-    Height = 490
+    Height = 494
     Top = 0
-    Width = 188
+    Width = 189
     Align = alLeft
     AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 490
-    ClientWidth = 188
+    ClientHeight = 494
+    ClientWidth = 189
     TabOrder = 0
     object edtStructsize: TEdit
       AnchorSideLeft.Control = lblStructsize
@@ -55,7 +56,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 20
       Height = 23
       Top = 349
-      Width = 164
+      Width = 165
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Right = 4
       Enabled = False
@@ -92,7 +93,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 20
       Height = 19
       Top = 292
-      Width = 164
+      Width = 165
       BorderSpacing.Left = 16
       BorderSpacing.Right = 4
       Caption = 'Strings must match reg exp'
@@ -132,7 +133,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 20
       Height = 23
       Top = 406
-      Width = 164
+      Width = 165
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Right = 4
       Enabled = False
@@ -161,7 +162,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 4
       Height = 23
       Top = 67
-      Width = 180
+      Width = 181
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Right = 4
       Enabled = False
@@ -201,7 +202,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 4
       Height = 23
       Top = 105
-      Width = 180
+      Width = 181
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Right = 4
       Enabled = False
@@ -361,7 +362,7 @@ object frmStringPointerScan: TfrmStringPointerScan
         Left = 0
         Height = 15
         Top = 0
-        Width = 52
+        Width = 53
         Caption = 'Max Level'
         ParentColor = False
       end
@@ -375,20 +376,20 @@ object frmStringPointerScan: TfrmStringPointerScan
       AnchorSideBottom.Control = Panel1
       AnchorSideBottom.Side = asrBottom
       Left = 0
-      Height = 22
+      Height = 26
       Top = 468
-      Width = 188
+      Width = 189
       Anchors = [akTop, akLeft, akRight, akBottom]
       AutoSize = True
       BevelOuter = bvNone
-      ClientHeight = 22
-      ClientWidth = 188
+      ClientHeight = 26
+      ClientWidth = 189
       TabOrder = 13
       object lblInfo: TLabel
         Left = 0
         Height = 15
-        Top = 7
-        Width = 188
+        Top = 11
+        Width = 189
         Align = alBottom
         Caption = 'Info'
         ParentColor = False
@@ -403,7 +404,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 0
       Height = 39
       Top = 429
-      Width = 188
+      Width = 189
       Anchors = [akTop, akLeft, akRight]
       AutoSize = True
       BevelOuter = bvNone
@@ -413,7 +414,7 @@ object frmStringPointerScan: TfrmStringPointerScan
       ChildSizing.Layout = cclLeftToRightThenTopToBottom
       ChildSizing.ControlsPerLine = 2
       ClientHeight = 39
-      ClientWidth = 188
+      ClientWidth = 189
       TabOrder = 14
       object btnNewScan: TButton
         AnchorSideLeft.Side = asrCenter
@@ -454,29 +455,30 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 20
       Height = 19
       Top = 273
-      Width = 139
+      Width = 140
       BorderSpacing.Left = 16
       Caption = 'Use existing stringmap'
       Checked = True
+      OnChange = cbReuseStringmapChange
       State = cbChecked
       TabOrder = 15
     end
   end
   object Panel2: TPanel
-    Left = 188
-    Height = 490
+    Left = 189
+    Height = 494
     Top = 0
-    Width = 625
+    Width = 624
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 490
-    ClientWidth = 625
+    ClientHeight = 494
+    ClientWidth = 624
     TabOrder = 1
     object ListView1: TListView
       Left = 0
-      Height = 354
+      Height = 358
       Top = 136
-      Width = 625
+      Width = 624
       Align = alClient
       Columns = <>
       HideSelection = False
@@ -494,12 +496,12 @@ object frmStringPointerScan: TfrmStringPointerScan
       Left = 0
       Height = 136
       Top = 0
-      Width = 625
+      Width = 624
       Align = alTop
       AutoSize = True
       BevelOuter = bvNone
       ClientHeight = 136
-      ClientWidth = 625
+      ClientWidth = 624
       TabOrder = 1
       OnClick = Panel3Click
       object lblExtra: TLabel
@@ -677,13 +679,13 @@ object frmStringPointerScan: TfrmStringPointerScan
         Left = 268
         Height = 136
         Top = 0
-        Width = 357
+        Width = 356
         Anchors = [akTop, akLeft, akRight, akBottom]
         AutoSize = True
         BorderSpacing.Left = 8
         BevelOuter = bvNone
         ClientHeight = 136
-        ClientWidth = 357
+        ClientWidth = 356
         TabOrder = 5
         object lblvds: TLabel
           AnchorSideTop.Control = Panel7
@@ -692,7 +694,7 @@ object frmStringPointerScan: TfrmStringPointerScan
           Left = 249
           Height = 15
           Top = 8
-          Width = 108
+          Width = 107
           Anchors = [akTop, akRight]
           BorderSpacing.Top = 8
           Caption = 'Variable display type'
@@ -703,7 +705,7 @@ object frmStringPointerScan: TfrmStringPointerScan
           AnchorSideTop.Side = asrBottom
           AnchorSideRight.Control = Panel7
           AnchorSideRight.Side = asrBottom
-          Left = 233
+          Left = 232
           Height = 23
           Top = 23
           Width = 124
@@ -731,7 +733,7 @@ object frmStringPointerScan: TfrmStringPointerScan
   object ProgressBar1: TProgressBar
     Left = 0
     Height = 20
-    Top = 490
+    Top = 494
     Width = 813
     Align = alBottom
     Max = 1000
@@ -741,16 +743,18 @@ object frmStringPointerScan: TfrmStringPointerScan
     DefaultExt = '.sptr'
     Filter = 'String pointer (*.sptr)|*.sptr'
     Options = [ofOverwritePrompt, ofEnableSizing, ofViewDetail]
-    left = 480
-    top = 64
+    Left = 480
+    Top = 64
   end
   object MainMenu1: TMainMenu
-    left = 197
-    top = 168
+    Images = spImageList
+    Left = 197
+    Top = 168
     object MenuItem1: TMenuItem
       Caption = 'File'
       object MenuItem7: TMenuItem
         Caption = 'New Window'
+        ImageIndex = 0
         OnClick = MenuItem7Click
       end
       object MenuItem4: TMenuItem
@@ -758,10 +762,12 @@ object frmStringPointerScan: TfrmStringPointerScan
       end
       object miNewScan: TMenuItem
         Caption = 'New scan'
+        ImageIndex = 1
         OnClick = miNewScanClick
       end
       object miOpen: TMenuItem
         Caption = 'Open'
+        ImageIndex = 2
         OnClick = miOpenClick
       end
     end
@@ -777,25 +783,28 @@ object frmStringPointerScan: TfrmStringPointerScan
   object OpenDialog1: TOpenDialog
     DefaultExt = '.sptr'
     Filter = 'String pointer (*.sptr)|*.sptr'
-    left = 552
-    top = 64
+    Left = 552
+    Top = 64
   end
   object statusupdater: TTimer
     Enabled = False
     Interval = 500
     OnTimer = statusupdaterTimer
-    left = 464
-    top = 208
+    Left = 464
+    Top = 208
   end
   object pmPointerfile: TPopupMenu
-    left = 400
-    top = 112
+    Images = spImageList
+    Left = 400
+    Top = 112
     object miClearCache: TMenuItem
       Caption = 'Clear pointer cache'
+      ImageIndex = 4
       OnClick = miClearCacheClick
     end
     object miFind: TMenuItem
       Caption = 'Find...'
+      ImageIndex = 3
       ShortCut = 16454
       OnClick = miFindClick
     end
@@ -807,11 +816,46 @@ object frmStringPointerScan: TfrmStringPointerScan
     end
   end
   object FindDialog1: TFindDialog
-    Width = 480
-    Height = 136
     Options = [frDown, frHideWholeWord, frHideUpDown, frDisableUpDown, frHideEntireScope, frHidePromptOnReplace]
     OnFind = FindDialog1Find
-    left = 268
-    top = 243
+    Left = 268
+    Top = 243
+  end
+  object spImageList: TImageList
+    Left = 430
+    Top = 307
+    Bitmap = {
+      4C7A050000001000000010000000B10300000000000078DADD966B4853611880
+      AD4565A44951FD8894CA6E14FD48BA43A09949D6BF88022DC14C0B21A421A158
+      C3CD9C792B0BC5DB9C4BA7194E837029C3164E33EC62D27096B5E5654E4B3092
+      79DFDBF79EB53AADB39367F387F6C2C377F6BDEFF39DEFBCE7DB9826612B1832
+      76B293421012520949845BD65173CDEA42891F3BD9849B845C829090671D0D22
+      B24E6E0040D30D7634CCA06BA8B808CE06BAACFE40BB1567FDEA702BF3C5EF69
+      06A8BBFA1BA9BF15FA1CD638F2DF3F06B81FF49B827D56E87358F3BFF6CF3E3A
+      6AAC38EBCFE0FC6A4407C05019E314E892709B938C0C7882FC848102AFB9FADF
+      8D5ED4EF0C82D773DDC767C43A1BFD6D3EBF7CBCA6E798FA817DB2D5FF0BAC9D
+      6DDFD5FDCFF7F737DBE7778EA1EBD4AD3F1CEB5767329938F7029D83B7B769F7
+      BF5B0BC16907D42323234B66EA626DA078EF3374917DED6BE0B438A4626A6A6A
+      01E6331F560BB2EB9E5228540D27EDFDA0B301777C533D4D7E9AD5948FE32691
+      A7E9FCA5B038CCEFAF6A8010A385C2FFC5C7E99CCAAA48FB350C06C3D21DF295
+      948F237EB6E5E83E72E4750F041555BE3D5EA26823BC09CE97B704644B5ED0FD
+      888CBB12473E13C17A33D0FD63F9F2B6D9F67D73AAC02BAB9A9115190A582614
+      C2F23411357A5C2F1ADD2894B66D8FE0ABD03FF6E11B2C4EAB81458F7A387136
+      5B9687FE2E592DF0AA3F7372790F3AA1A6F64920FAABD22B39DFDBF38674606C
+      6C8CB73335177805CF39FB61F74A73B07F5EE76239BBBCF20EB277A53FFA1BCE
+      446B492F755CD87E45D842F6BE70B6BEDB52A9345C2010A8FF059FCF7FAA52A9
+      F6D8FB242798E97F96A8A828A34EA75BE7AC6F369B213434F4E5F0F0B03B9B5F
+      5F5F0F62B118D2D3D3A951A954FECAF5F5F58148248A63F2474747213131111A
+      1B1BFF58AFB9B919121212A8FB63FC74FEF2535252A0BFBF9F71EF838383785F
+      877E6F6F2F141616B23EBF4C2603BD5ECFE82B140AE8EAEA62F5BBBBBBA1BCBC
+      9CD12F2B2B03A3D1C8EA0F0D0D41717131A3DFDADA4AF59D2DD46A3534353531
+      FA168B05E2E3E3A9D151607E7A7ADA61FFB55A2D242727C3C4C4C41FDEE4E424
+      F5FE44E4F78BEDFD61607F85A42E3333134A4B4B212B2B0B929292402291808F
+      B73794488A587D5B8C8F8F536701475BD4296B618B873BF02F47DF75E6FC6334
+      D43E06EF456E968AA2C2535CBEBF7462222FE4B4BF7AB979BEFF2FA1F3F50B78
+      4486815CFF09BCED73388739AC71E4637EF75680A387E0137D0DBCC639CC618D
+      239F5E675B83698EED19ECEBB9B84C6B70755DF55DD9BFABFD73F5FDB97A7EE6
+      233F00469623A3
+    }
   end
 end

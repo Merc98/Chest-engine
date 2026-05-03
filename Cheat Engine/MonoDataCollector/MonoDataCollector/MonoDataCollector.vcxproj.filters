@@ -33,6 +33,9 @@
     <ClCompile Include="..\..\Common\Pipe.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="CMemStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Metadata.h">
@@ -53,8 +56,16 @@
     <ClInclude Include="..\..\Common\Pipe.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="CMemStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="exports.def">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -48,12 +48,45 @@
 
 #define CMD_VIRTUALQUERYEXFULL      31
 #define CMD_GETREGIONINFO           32
+#define CMD_GETABI                  33
+//4
+#define CMD_SET_CONNECTION_NAME     34
+
+#define CMD_CREATETOOLHELP32SNAPSHOTEX 35
+
+#define CMD_CHANGEMEMORYPROTECTION  36
+
+#define CMD_GETOPTIONS              37
+#define CMD_GETOPTIONVALUE          38
+#define CMD_SETOPTIONVALUE          39
+
+//when injection won't work but ptrace does:
+#define CMD_PTRACE_MMAP             40
+
+//returns a fake filehandle to be used by CE (handled by the internal handle list)
+#define CMD_OPENNAMEDPIPE           41
+#define CMD_PIPEREAD                42
+#define CMD_PIPEWRITE               43
+
+#define CMD_GETCESERVERPATH         44
+#define CMD_ISANDROID               45
+
+#define CMD_LOADMODULEEX            46
+
+#define CMD_SETCURRENTPATH          47
+#define CMD_GETCURRENTPATH          48
+#define CMD_ENUMFILES               49
+#define CMD_GETFILEPERMISSIONS      50
+#define CMD_SETFILEPERMISSIONS      51
+#define CMD_GETFILE                 52
+#define CMD_PUTFILE                 53
+#define CMD_CREATEDIR               54
+#define CMD_DELETEFILE              55
+
+#define CMD_AOBSCAN					200
 
 //just in case I ever get over 255 commands this value will be reserved for a secondary command list (FF 00 -  FF 01 - ... - FF FE - FF FF 01 - FF FF 02 - .....
 #define CMD_COMMANDLIST2            255
-
-
-
 
 
 //extern char *versionstring;
@@ -78,12 +111,12 @@ typedef struct {
 } CeProcessEntry, *PCeProcessEntry;
 
 typedef struct {
-    int result;
+    int32_t result;
     int64_t modulebase;
-    int modulesize;
-    int modulenamesize;
-    //modulename
-
+    int32_t modulepart;
+    int32_t modulesize;
+    uint32_t modulefileoffset;
+    int32_t modulenamesize;
 } CeModuleEntry, *PCeModuleEntry;
 
 typedef struct {
@@ -184,6 +217,7 @@ typedef struct {
   HANDLE hProcess;
   uint64_t preferedBase;
   uint32_t size;
+  uint32_t windowsprotection;
 } CeAllocInput, *PCeAllocInput;
 
 
@@ -219,6 +253,13 @@ typedef struct {
   //modulepath
 } CeLoadModuleInput, *PCeLoadModuleInput;
 
+typedef struct {
+  HANDLE hProcess;
+  uint64_t dlopenaddress;
+  uint32_t modulepathlength;
+  //modulepath
+} CeLoadModuleInputEx, *PCeLoadModuleInputEx;
+
 
 typedef struct {
   uint32_t result;
@@ -235,13 +276,61 @@ typedef struct {
   uint32_t result;
 } CeSpeedhackSetSpeedOutput, *PCeSpeedhackSetSpeedOutput;
 
+typedef struct {
+  HANDLE hProcess;
+  uint64_t address;
+  uint32_t size;
+  uint32_t windowsprotection;
+} CeChangeMemoryProtection, *PCeChangeMemoryProtection;
+
+typedef struct {
+  HANDLE hPipe;
+  uint32_t size;
+  uint32_t timeout;
+} CeReadPipe, *PCeReadPipe;
+
+typedef struct {
+  HANDLE hPipe;
+  uint32_t size;
+  uint32_t timeout;
+  //data[size]
+} CeWritePipe, *PCeWritePipe;
+
+
+typedef struct {
+	HANDLE hProcess;
+	uint64_t start;
+	uint64_t end;
+	int inc;
+	int protection;
+	int scansize;
+} CeAobScanInput, * PCeAobScanInput;
+
 
 
 #pragma pack()
 
 ssize_t sendall (int s, void *buf, size_t size, int flags);
 ssize_t recvall (int s, void *buf, size_t size, int flags);
+
+ssize_t sendstring16(int s, char *str, int flags);
+char* receivestring16(int s);
+
+int sendinteger(int s, int val, int flags);
+
 int DispatchCommand(int currentsocket, unsigned char command);
 int CheckForAndDispatchCommand(int currentsocket);
+
+int getCEServerPath(char *path, int maxlen);
+
+extern char *CESERVERPATH;
+extern int ALLOC_WITHOUT_EXTENSION;
+extern int PORT;
+extern __thread char* threadname;
+
+
+#if BUILD_OPTION == 1
+  #define SHARED_LIBRARY
+#endif
 
 #endif /* CESERVER_H_ */

@@ -11,9 +11,17 @@ version 0.2: copy on write, you can now write to it without actually messing up 
 
 interface
 
-uses windows, LCLIntf,classes,SysUtils;
+uses {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  LCLIntf,classes,SysUtils;
 
-type TFileMapping=class
+type
+  EFileMapError=class(Exception);
+  TFileMapping=class
   private
     FileHandle: THandle;
     FileMapping: THandle;
@@ -59,23 +67,28 @@ begin
   try
     //open file
     FileHandle := CreateFile(PChar(filename), GENERIC_READ or GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    if FileHandle = INVALID_HANDLE_VALUE then
+    if (FileHandle = 0) or (FileHandle=INVALID_HANDLE_VALUE) then
       FileHandle := CreateFile(PChar(filename), GENERIC_READ, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-    if FileHandle = INVALID_HANDLE_VALUE then
-      raise exception.create(Format(rsDoesNotExist, [filename]));
+    if (FileHandle = 0) or (FileHandle=INVALID_HANDLE_VALUE) then
+      raise EFileMapError.create(Format(rsDoesNotExist, [filename]));
 
 
     FFileSize:=0;
     FFileSize:=GetFileSize(FileHandle,pointer(ptruint(@fileSize)+4));
 
+    if FFileSize=0 then
+      raise EFileMapError.create('Can not map an empty file');
+
+
     //still here, so create filemapping
     FileMapping := CreateFileMapping(FileHandle, nil, PAGE_WRITECOPY	, 0, 0, nil);
-    if FileMapping = 0 then raise exception.create(rsMappingFailed);
+    if (FileMapping = 0) or (FileMapping=INVALID_HANDLE_VALUE) then
+      raise EFileMapError.create(rsMappingFailed);
 
     //map it completely
     FFileContent:= MapViewOfFile(FileMapping, FILE_MAP_COPY , 0, 0, 0);
-    if FFileContent=nil then raise exception.Create(rsFailedCreatingAProperView);
+    if FFileContent=nil then raise EFileMapError.Create(rsFailedCreatingAProperView);
 
     ffilename:=filename;
   except
@@ -87,7 +100,7 @@ begin
       if (FileHandle<>0) and (FileHandle<>INVALID_HANDLE_VALUE) then
         CloseHandle(FileHandle);
 
-      raise exception.create(e.message);
+      raise EFileMapError.create(e.message);
     end;
   end;
 

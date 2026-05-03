@@ -8,7 +8,12 @@ Just some functions to make sockets easier
 interface
 
 uses
-  Classes, SysUtils, Sockets, winsock, ssockets, NewKernelHandler;
+  {$ifdef windows}
+  windows, Classes, SysUtils, Sockets, winsock, ssockets, NewKernelHandler, syncobjs2;
+  {$endif}
+  {$ifdef darwin}
+  Classes, SysUtils, Sockets, ssockets, NewKernelHandler, SyncObjs2, ctypes, baseunix, macport;
+  {$endif}
 
 type
   TSocketException=class(Exception);
@@ -124,7 +129,9 @@ begin
 end;
 
 constructor TSocketStream.create(s: tsocket; becomeownerofsocket: boolean=true);
+{$ifdef windows}
 var bm: u_long;
+  {$endif}
 begin
   inherited create;
   writer:=TMemoryStream.create;
@@ -136,7 +143,7 @@ begin
     bm:=1;
     ioctlsocket(sockethandle, longint(FIONBIO), bm);
   {$else}
-    fcntl(fSocket, F_SETFL, fcntl(socketfd, F_GETFL, 0) | O_NONBLOCK);
+    FpFcntl(sockethandle, F_SETFL, FpFcntl(sockethandle, F_GETFL, 0) or O_NONBLOCK);
   {$endif}
 
 end;
@@ -148,7 +155,13 @@ var
   i: integer;
   t: TTimeVal;
   fdset: TFDSet;
+  {$ifdef THREADNAMESUPPORT}
+  tname: string;
+  {$endif}
 begin
+  {$ifdef THREADNAMESUPPORT}
+  tname:=GetThreadName;
+  {$endif}
   {$ifdef DEBUGPROTOCOL}
   timeout:=0; //just let me test in peace
   {$endif}
@@ -173,31 +186,39 @@ begin
         if i=EsockEWOULDBLOCK then
         begin
           //wait till it's available
-          fdset.fd_count:=0;
+          zeromemory(@fdset,sizeof(fdset));
+//          fdset.fd_count:=0;
+
+{$ifdef windows}
           FD_SET(socket, fdset);
+{$else}
+          fpFD_SET(socket, fdset);
+{$endif}
 
           if timeout>0 then
           begin
             t.tv_sec:=timeout;
             t.tv_usec:=0;
-            i:=select(socket, nil, @fdset, nil, @t);
+
+
+            i:={$ifdef unix}fpselect{$else}select{$endif}(socket, nil, @fdset, nil, @t);
           end
           else
-            i:=select(socket, nil, @fdset, nil, nil);
+            i:={$ifdef unix}fpselect{$else}select{$endif}(socket, nil, @fdset, nil, nil);
 
           if i=0 then
-            raise TSocketException.create(rsTimeoutWhileSendingData);
+            raise TSocketException.create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsTimeoutWhileSendingData);
 
           if i<0 then
-            raise TSocketException.create(rsErrorWhileSendingData+inttostr(socketerror));
+            raise TSocketException.create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsErrorWhileSendingData+inttostr(socketerror));
 
           i:=0;
         end
         else
-          raise TSocketException.Create(rsErrorWhileSendingData+inttostr(i));
+          raise TSocketException.Create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsErrorWhileSendingData+inttostr(i));
       end
       else
-        raise TSocketException.Create(rsDisconnectedWhileSendingData);
+        raise TSocketException.Create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsDisconnectedWhileSendingData);
     end;
 
     inc(result, i);
@@ -209,13 +230,20 @@ var
   i: integer;
   t: TTimeVal;
   fdset: TFDSet;
+  {$ifdef THREADNAMESUPPORT}
+  tname: string;
+  {$endif}
 begin
+  {$ifdef THREADNAMESUPPORT}
+  tname:=GetThreadName;
+  {$endif}
+
   {$ifdef DEBUGPROTOCOL}
   timeout:=0;
   {$endif}
 
   if debug_connectionfailure then
-    raise TSocketException.Create(rsWhoopdeedoo);
+    raise TSocketException.Create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsWhoopdeedoo);
 
   result:=0;
   while (result<size) do
@@ -234,37 +262,40 @@ begin
         if i=EsockEWOULDBLOCK then
         begin
           //wait till it's available
-          fdset.fd_count:=0;
-          FD_SET(socket, fdset);
+          zeromemory(@fdset,sizeof(fdset));
+//          fdset.fd_count:=0;
+          {$ifdef unix}fpFD_SET{$else}FD_SET{$endif}(socket, fdset);
 
           if timeout>0 then
           begin
             t.tv_sec:=timeout;
             t.tv_usec:=0;
 
-            i:=select(socket, @fdset, nil, nil, @t);
+            i:={$ifdef unix}fpselect{$else}select{$endif}(socket, @fdset, nil, nil, @t);
           end
           else
-            i:=select(socket, @fdset, nil, nil, nil);
+            i:={$ifdef unix}fpselect{$else}select{$endif}(socket, @fdset, nil, nil, nil);
 
 
           if i=0 then
           begin
             OutputDebugString('Timeout');
-            raise TSocketException.create(rsTimeoutWhileReceivingData);
+            raise TSocketException.create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsTimeoutWhileReceivingData);
           end;
 
           if i<0 then
-            raise TSocketException.create(rsErrorWhileReceivingData+inttostr(i));
+            raise TSocketException.create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsErrorWhileReceivingData+inttostr(i));
 
           i:=0;
 
         end
         else
-          raise TSocketException.Create(rsErrorWhileReceivingData+inttostr(i));
+        begin
+          raise TSocketException.Create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsErrorWhileReceivingData+inttostr(i));
+        end;
       end
       else
-        raise TSocketException.Create(rsDisconnectedWhileReceivingData);
+        raise TSocketException.Create({$ifdef THREADNAMESUPPORT}'Thread '+tname+':'+{$endif}rsDisconnectedWhileReceivingData);
     end;
 
     inc(result, i);

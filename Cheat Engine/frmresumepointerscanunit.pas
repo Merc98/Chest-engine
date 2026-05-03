@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   ExtCtrls, ComCtrls, Menus, registry, multilineinputqueryunit, CEFuncProc,
-  math, types;
+  math, types, betterControls;
 
 resourcestring
   rsRPSIpList = 'IP List';
@@ -29,6 +29,7 @@ type
     ComboBox1: TComboBox;
     edtDistributedPort: TEdit;
     edtThreadcount: TEdit;
+    rpsImageList: TImageList;
     Label1: TLabel;
     Label9: TLabel;
     lblPort: TLabel;
@@ -64,29 +65,55 @@ implementation
 
 { TfrmResumePointerscan }
 
+uses DPIHelper, mainunit2;
+
 procedure TfrmResumePointerscan.updateFileList;
 var
   oldindex: integer;
   i: integer;
   li: TListItem;
   fn: string;
+  a: string;
+
+  fnwidth: integer;
+  awidth: integer;
 begin
   oldindex:=listview1.ItemIndex;
   listview1.clear;
+  fnwidth:=0;
+  awidth:=0;
   for i:=0 to instantrescanfiles.count-1 do
   begin
     fn:=extractfilename(instantrescanfiles[i]);
     li:=listview1.Items.add;
     li.caption:=ansitoutf8(fn);
-    li.SubItems.add(IntToHex(ptruint(instantrescanfiles.objects[i]), 8));
+    a:=IntToHex(ptruint(instantrescanfiles.objects[i]),8);
+    li.SubItems.add(a);
 
     if FileExists(instantrescanfiles[i]) then
-      li.subitems.add('x')
+      li.subitems.add('x');
+
+    fnwidth:=max(fnwidth, canvas.TextWidth(' '+fn+' '));
+    awidth:=max(awidth, canvas.TextWidth(' '+a+' '));
   end;
 
 
   if (oldindex<>-1) and (oldindex<listview1.Items.count) then
     listview1.itemindex:=oldindex;
+
+  listview1.Column[0].AutoSize:=true;
+  listview1.Column[0].AutoSize:=false;
+  if listview1.Column[0].Width<fnwidth+10 then
+    listview1.Column[0].Width:=fnwidth+10;
+
+  listview1.Column[1].AutoSize:=true;
+  listview1.Column[1].AutoSize:=false;
+  if listview1.Column[1].Width<awidth+10 then
+    listview1.Column[1].Width:=awidth+10;
+
+  listview1.Column[2].AutoSize:=true;
+  listview1.Column[2].AutoSize:=false;
+
 end;
 
 
@@ -146,7 +173,7 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\Cheat Engine',false) then
+    if Reg.OpenKey('\Software\'+strCheatEngine,false) then
     begin
       if reg.ValueExists('Worker IP List') then
         iplist.Text:=reg.ReadString('Worker IP List');
@@ -171,6 +198,8 @@ end;
 procedure TfrmResumePointerscan.FormShow(Sender: TObject);
 begin
   updateFileList;
+
+  AdjustComboboxSize(combobox1,self.canvas);
 end;
 
 procedure TfrmResumePointerscan.cbDistributedScanningChange(Sender: TObject);
@@ -187,7 +216,7 @@ begin
     if MultilineInputQuery(rsRPSIpList,rsRPSEnterTheIpAddressesToNotifyExplicitly, iplist) then  //save the new ip list
     begin
       Reg.RootKey := HKEY_CURRENT_USER;
-      if Reg.OpenKey('\Software\Cheat Engine',true) then
+      if Reg.OpenKey('\Software\'+strCheatEngine,true) then
         reg.WriteString('Worker IP List', iplist.text);
     end;
 

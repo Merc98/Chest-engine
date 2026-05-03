@@ -12,6 +12,8 @@ handles the communication while it itself is going back to listen to new connect
 
 interface
 
+{$ifdef windows}
+
 uses
   jwawindows, windows, Classes, SysUtils, lua, lauxlib, lualib, LuaHandler;
 
@@ -59,7 +61,11 @@ var luaservers: TList;
 
 function luaserverExists(name: string): boolean;
 
+{$endif}
+
 implementation
+
+{$ifdef windows}
 
 resourcestring
   rsALuaserverWithTheName = 'A luaserver with the name ';
@@ -128,20 +134,7 @@ var
   s: string;
 begin
   if l=nil then
-  begin
-    i:=lua_gettop(Luavm);
-    try
-      L:=lua_newthread(LuaVM);
-
-      s:='CELUATHREAD_'+IntToHex(ptruint(L),8);
-      lua_setglobal(LuaVM, pchar(s));
-
-      lua_sethook(L, nil, 0, 0);
-
-    finally
-      lua_settop(Luavm,i);
-    end;
-  end;
+    l:=luavm; //this creates the new lua state
 end;
 
 procedure TLuaServerHandler.ExecuteScriptAsync;
@@ -149,7 +142,6 @@ var
   i,top: integer;
   s: string;
 begin
-
   createLuaStateIfNeeded;
 
   top:=lua_gettop(L);
@@ -169,7 +161,7 @@ begin
 
   end;
 
-  lua_settop(Luavm, top);
+  lua_settop(L, top);
 end;
 
 procedure TLuaServerHandler.ExecuteLuaFunction_Internal;
@@ -259,7 +251,7 @@ begin
 
       lua_getglobal(lvm, pchar(functionname));
 
-      freemem(functionname);
+      FreeMemAndNil(functionname);
     end;
 
     //the function is now pushed on the lua stack
@@ -306,7 +298,7 @@ begin
           tempstring[stringlength]:=#0;
           lua.lua_pushstring(lvm, tempstring);
 
-          freemem(tempstring);
+          FreeMemAndNil(tempstring);
         end;
 
        { 4: //table
@@ -506,7 +498,7 @@ begin
         error;
 
     finally
-      freemem(script);
+      FreeMemAndNil(script);
     end;
   end
   else
@@ -562,7 +554,7 @@ begin
         error;
 
     finally
-      freemem(script);
+      FreeMemAndNil(script);
     end;
   end
   else
@@ -648,8 +640,13 @@ begin
   inherited destroy;
 end;
 
+{$endif}
+
 initialization
+
+  {$ifdef windows}
   luaservers:=TList.create;
+  {$endif}
 
 
 end.

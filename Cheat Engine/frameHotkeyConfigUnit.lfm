@@ -6,16 +6,16 @@ object frameHotkeyConfig: TframeHotkeyConfig
   ClientHeight = 414
   ClientWidth = 488
   TabOrder = 0
-  DesignLeft = 514
-  DesignTop = 194
+  DesignLeft = 436
+  DesignTop = 350
   object Panel1: TPanel
     Left = 0
-    Height = 364
-    Top = 50
+    Height = 324
+    Top = 90
     Width = 305
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 364
+    ClientHeight = 324
     ClientWidth = 305
     TabOrder = 0
     object Label1: TLabel
@@ -29,12 +29,13 @@ object frameHotkeyConfig: TframeHotkeyConfig
     end
     object ListBox1: TListBox
       Left = 0
-      Height = 349
+      Height = 309
       Top = 15
       Width = 305
       Align = alClient
       ExtendedSelect = False
       Items.Strings = (
+        'Attach to current foreground process'
         'Popup/Hide cheat engine'
         'Pause the selected process'
         'Toggle the speedhack'
@@ -67,21 +68,24 @@ object frameHotkeyConfig: TframeHotkeyConfig
         'Cancel the current scan'
         'Debug->Run'
       )
-      ItemHeight = 15
+      ItemHeight = 0
       OnClick = ListBox1Click
+      OnDrawItem = ListBox1DrawItem
       OnSelectionChange = ListBox1SelectionChange
+      Options = []
       PopupMenu = PopupMenu1
+      Style = lbOwnerDrawFixed
       TabOrder = 0
     end
   end
   object Panel2: TPanel
     Left = 305
-    Height = 364
-    Top = 50
+    Height = 324
+    Top = 90
     Width = 183
     Align = alRight
     BevelOuter = bvNone
-    ClientHeight = 364
+    ClientHeight = 324
     ClientWidth = 183
     TabOrder = 1
     object Label2: TLabel
@@ -170,6 +174,7 @@ object frameHotkeyConfig: TframeHotkeyConfig
         Width = 56
         Anchors = [akTop, akLeft, akRight]
         OnChange = edtSHSpeedChange
+        OnExit = edtSHSpeedExit
         TabOrder = 0
         Text = '2'
       end
@@ -231,13 +236,13 @@ object frameHotkeyConfig: TframeHotkeyConfig
   end
   object Panel5: TPanel
     Left = 0
-    Height = 50
+    Height = 90
     Top = 0
     Width = 488
     Align = alTop
     AutoSize = True
     BevelOuter = bvNone
-    ClientHeight = 50
+    ClientHeight = 90
     ClientWidth = 488
     TabOrder = 2
     object Label4: TLabel
@@ -296,13 +301,80 @@ object frameHotkeyConfig: TframeHotkeyConfig
       TabOrder = 1
       Text = '100'
     end
+    object cbCenterOnPopup: TCheckBox
+      AnchorSideLeft.Control = Panel5
+      AnchorSideTop.Control = edtHotkeyDelay
+      AnchorSideTop.Side = asrBottom
+      Left = 2
+      Height = 19
+      Top = 50
+      Width = 251
+      BorderSpacing.Left = 2
+      Caption = 'Center Cheat Engine when bringing to front'
+      Checked = True
+      State = cbChecked
+      TabOrder = 2
+    end
+    object cbHideAllWindows: TCheckBox
+      AnchorSideLeft.Control = Panel5
+      AnchorSideTop.Control = cbCenterOnPopup
+      AnchorSideTop.Side = asrBottom
+      Left = 2
+      Height = 19
+      Top = 71
+      Width = 392
+      BorderSpacing.Left = 2
+      BorderSpacing.Top = 2
+      Caption = 'Hide some/all windows instead of trying to bring cheat engine to front'
+      Checked = True
+      State = cbChecked
+      TabOrder = 3
+    end
+    object btnExcludeProcesses: TButton
+      AnchorSideLeft.Control = cbHideAllWindows
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = cbHideAllWindows
+      AnchorSideBottom.Control = cbHideAllWindows
+      AnchorSideBottom.Side = asrBottom
+      Left = 398
+      Height = 19
+      Top = 71
+      Width = 90
+      Anchors = [akTop, akLeft, akBottom]
+      AutoSize = True
+      BorderSpacing.Left = 4
+      Caption = 'More...'
+      Constraints.MinWidth = 90
+      OnClick = btnExcludeProcessesClick
+      TabOrder = 4
+    end
   end
   object PopupMenu1: TPopupMenu
-    left = 69
-    top = 131
+    Images = fhcImageList
+    Left = 69
+    Top = 131
     object MenuItem1: TMenuItem
       Caption = 'Clear list'
+      ImageIndex = 0
       OnClick = MenuItem1Click
     end
+  end
+  object fhcImageList: TImageList
+    Left = 320
+    Top = 100
+    Bitmap = {
+      4C7A0100000010000000100000006A0100000000000078DAFBFFFF3FC37F247C
+      F6EC67A3F2F2BB335D5C2EDE36363EF31B84416C901848EE3F9A7A18FEF0E10F
+      6751D19D3940F5FF41D8C2E2DCE7C0C02BE74018C4868983D480D4A2EB8D8CBC
+      760424EFE373F9DA962D6F037FFCF8C70A9307B141622039901A905A643360F6
+      6664DCDAF4F933AAD9C878C28427C5C8EE80F917662F2EBD7FFFFE67686B7BD8
+      0C52676575EEADBBFBC5BB20362CAC406C90FBB0E905BA9DB9A4E42ED87D4E4E
+      171E5DBDFA5513A416C4878533287C90FD8B1C2EA9A9373741DD77E5E1C31F32
+      B0F000E981C511288CD1F53E7BF65308184E47A1E175F8F5EB5F02C8F2203DB0
+      F845D77FFFFE7759585803C3743D305C38D0CD87E94777FFA54B5F7480FE7C02
+      D25B59796F06509C094B98C0DD8F1C7E870F7FB00586EF7B10BFBBFB513D28DC
+      B1852972F8C1E20F68D64353D3B3DF81ECBF73E73E4FC3950640710CF31B2C3D
+      23A7DB254B5E46E2D30B4A63C8E987C4F47B1D5BFAA534FF50927F014F7AA1EB
+    }
   end
 end

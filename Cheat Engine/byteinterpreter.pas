@@ -1,17 +1,24 @@
 unit byteinterpreter;
 
 {$MODE Delphi}
-
+{$WARN 4105 off : Implicit string type conversion with potential data loss from "$1" to "$2"}
+{$WARN 4104 off : Implicit string type conversion from "$1" to "$2"}
 interface
 
-{$ifdef windows}
-uses windows, LCLIntf, sysutils, symbolhandler, CEFuncProc, NewKernelHandler, math,
-  CustomTypeHandler, ProcessHandlerUnit, commonTypeDefs, LazUTF8;
-{$endif}
 
-{$ifdef unix}
+
+{$ifdef jni}
 uses unixporthelper, sysutils, symbolhandler, ProcessHandlerUnit, NewKernelHandler, math,
   CustomTypeHandler, commonTypeDefs;
+{$else}
+uses
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}LCLIntf, sysutils, symbolhandler, CEFuncProc, NewKernelHandler, math,
+  CustomTypeHandler, ProcessHandlerUnit, commonTypeDefs, LazUTF8;
 {$endif}
 
 resourcestring
@@ -46,7 +53,7 @@ uses parsers;
 
 {$ifdef unix}
 function isreadable(address: ptruint): boolean;
-var x: dword;
+var x: ptruint;
     t: byte;
 begin
   result:=ReadProcessMemory(processhandle, pointer(address), @t, 1, x);
@@ -63,12 +70,55 @@ var v: qword;
     d: double;
     x: PTRUINT;
 
-    i: integer;
+    i,j: integer;
     ba: PByteArray;
 
     b: tbytes;
     us: Widestring;
+
+    gs: array of string;
+
+    vs: string;
+    offsetstring: string;
+    offset: integer;
 begin
+  if variabletype=vtGrouped then //parse the groupscan result string and pass each entry to this function again
+  begin
+    //value="type[offset]:value type[offset]:value type[offset]:value"
+    gs:=value.Split([' ']); //gs[0]="type[offset]:value" gs[1]="type[offset]:value"
+
+    for i:=0 to length(gs)-1 do
+    begin
+      j:=pos(']',gs[i]);
+      if j<=0 then exit;
+      if j>=length(gs[i]) then exit;
+      if gs[i][j+1]<>':' then exit; //has to have a ]:
+
+      if (length(gs[i])>=6) and (gs[i][2]='[') then
+      begin
+        case gs[i][1] of
+          '1': variabletype:=vtByte;
+          '2': variabletype:=vtWord;
+          '4': variabletype:=vtDword;
+          '8': variabletype:=vtQword;
+          's': variabletype:=vtSingle;
+          'd': variabletype:=vtDouble;
+          else exit;
+        end;
+
+        //get the offset
+        offsetstring:=copy(gs[i],3, j-3);
+        offset:=HexStrToInt64(offsetstring);
+        value:=copy(gs[i],j+2); //everything after the :
+
+        ParseStringAndWriteToAddress(value,address+offset,variabletype);
+      end
+      else exit;
+    end;
+
+    exit;
+  end;
+
   if hexadecimal and (variabletype in [vtsingle, vtDouble]) then
   begin
     if variabletype=vtSingle then
@@ -89,8 +139,8 @@ begin
           WriteProcessMemory(processhandle, pointer(address+i), @b[i], 1, x);
       end;
     finally
-      freemem(ba);
-      ba:=nil;
+      freememandnil(ba);
+
     end;
 
     setlength(b,0);
@@ -111,7 +161,7 @@ begin
 
         v:=StrToQWordEx(value);
 
-        if (variabletype=vtCustom) and customtype.scriptUsesFloat then
+        if (variabletype=vtCustom) and (customtype<>nil) and customtype.scriptUsesFloat then
           s:=StrToFloat(value);
       end;
     end;
@@ -133,20 +183,28 @@ begin
 
       vtCustom:
       begin
-        getmem(ba, customtype.bytesize);
-        try
-          if ReadProcessMemory(processhandle, pointer(address), ba, customtype.bytesize, x) then
-          begin
-            if customtype.scriptUsesFloat then
-              customtype.ConvertFloatToData(s, ba, address)
-            else
-              customtype.ConvertIntegerToData(v, ba, address);
+        if customtype<>nil then
+        begin
 
-            WriteProcessMemory(processhandle, pointer(address), ba, customtype.bytesize, x);
+          getmem(ba, customtype.bytesize);
+          try
+            if ReadProcessMemory(processhandle, pointer(address), ba, customtype.bytesize, x) then
+            begin
+              if customtype.scriptUsesString then
+                customtype.ConvertStringToData(pchar(value), ba, address)
+              else
+              if customtype.scriptUsesFloat then
+                customtype.ConvertFloatToData(s, ba, address)
+              else
+                customtype.ConvertIntegerToData(v, ba, address);
+
+              WriteProcessMemory(processhandle, pointer(address), ba, customtype.bytesize, x);
+            end;
+          finally
+            freememandnil(ba);
+
           end;
-        finally
-          freemem(ba);
-          ba:=nil;
+
         end;
       end;
     end;
@@ -217,6 +275,14 @@ begin
       end;
     end;
 
+    vtPointer:
+    begin
+      if processhandler.is64Bit then
+        result:=symhandler.getNameFromAddress(PQWord(@buf[0])^)
+      else
+        result:=symhandler.getNameFromAddress(PDWord(@buf[0])^);
+    end;
+
     vtSingle:
     begin
       if showashexadecimal then
@@ -239,6 +305,15 @@ begin
       CopyMemory(s, buf, bytesize);
       s[bytesize]:=#0;
 
+      {$ifdef darwin}
+      //sanitize so it's nothing strange. Sorry for asian users, but mac's shrivel up and die when they look at wrongly formatted text
+      for i:=0 to bytesize-1 do
+      begin
+        if not inrange(ord(s[i]),32,127) then
+          s[i]:='.';
+      end;
+      {$endif}
+
       if variableType=vtCodePageString then
         result:=WinCPToUTF8(s)
       else
@@ -250,13 +325,27 @@ begin
       getmem(ws, bytesize+2);
       copymemory(ws, buf, bytesize);
 
+      {$ifdef darwin}
+      //sanitize so it's nothing strange. Sorry for asian users, but mac's shrivel up and die when they look at wrongly formatted text
+      for i:=0 to bytesize-1 do
+      begin
+        if i mod 2=0 then
+        begin
+          if not inrange(pbytearray(ws)[i],32,127) then
+            pbytearray(ws)[i]:=ord('.');
+        end
+        else
+          pbytearray(ws)[i]:=0;
+      end;
+      {$endif}
+
       try
         pbytearray(ws)[bytesize+1]:=0;
         pbytearray(ws)[bytesize]:=0;
         result:=utf16toutf8(ws);
       finally
-        freemem(ws);
-        ws:=nil;
+        freememandnil(ws);
+
       end;
     end;
 
@@ -284,14 +373,21 @@ begin
     begin
       if customtype<>nil then
       begin
-        if showashexadecimal and (customtype.scriptUsesFloat=false) then
-          result:=inttohex(customtype.ConvertDataToInteger(buf, address),8)
+        if customtype.scriptUsesString then
+        begin
+          result:=customtype.ConvertDataToString(buf, address);
+        end
         else
         begin
-          if customtype.scriptUsesFloat then
-            result:=FloatToStr(customtype.ConvertDataToFloat(buf, address))
+          if showashexadecimal and (customtype.scriptUsesFloat=false) then
+            result:=inttohex(customtype.ConvertDataToInteger(buf, address),8)
           else
-            result:=IntToStr(customtype.ConvertDataToInteger(buf, address));
+          begin
+            if customtype.scriptUsesFloat then
+              result:=FloatToStr(customtype.ConvertDataToFloat(buf, address))
+            else
+              result:=IntToStr(customtype.ConvertDataToInteger(buf, address));
+          end;
         end;
       end;
     end;
@@ -330,6 +426,12 @@ begin
         result:=readAndParsePointer(address, @buf[0], variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
     end;
 
+    vtPointer:
+    begin
+      if ReadProcessMemory(processhandle,pointer(address),@buf[0],processhandler.pointersize,x) then
+        result:=readAndParsePointer(address, @buf[0], variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
+    end;
+
     vtSingle:
     begin
       if ReadProcessMemory(processhandle,pointer(address),@buf[0],4,x) then
@@ -349,8 +451,8 @@ begin
         if ReadProcessMemory(processhandle,pointer(address),buf2,bytesize,x) then
           result:=readAndParsePointer(address, buf2, variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
       finally
-        freemem(buf2);
-        buf2:=nil;
+        freememandnil(buf2);
+
       end;
     end;
 
@@ -364,8 +466,8 @@ begin
 
 
       finally
-        freemem(buf2);
-        buf2:=nil;
+        freememandnil(buf2);
+
       end;
     end;
 
@@ -378,8 +480,8 @@ begin
         if ReadProcessMemory(processhandle,pointer(address),buf2,bytesize,x) then
           result:=readAndParsePointer(address, buf2, variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
       finally
-        freemem(buf2);
-        buf2:=nil;
+        freememandnil(buf2);
+
       end;
     end;
 
@@ -393,12 +495,17 @@ begin
             result:=readAndParsePointer(address, buf2, variabletype, customtype, showashexadecimal, showAsSigned, bytesize);
 
         finally
-          freemem(buf2);
-          buf2:=nil;
+          freememandnil(buf2);
+
         end;
       end;
     end;
   end;
+
+  {$ifdef darwin}
+  if result='' then
+    result:=' ';
+  {$endif}
 end;
 
 
@@ -426,8 +533,8 @@ begin
         tempbuf[size]:=0;
         result:=pchar(tempbuf);
       finally
-        freemem(tempbuf);
-        tempbuf:=nil;
+        freememandnil(tempbuf);
+
       end;
     end;
 
@@ -443,8 +550,8 @@ begin
         result:=tr;
 
       finally
-        freemem(tempbuf);
-        tempbuf:=nil;
+        freememandnil(tempbuf);
+
       end;
     end;
 
@@ -457,7 +564,7 @@ begin
 
       if clean then result:='' else result:='(pointer)';
 
-      result:=result+symhandler.getNameFromAddress(a,true,true);
+      result:=result+symhandler.getNameFromAddress(a,true,true, false);
 
 //      result:='(pointer)'+inttohex(pqword(buf)^,16) else result:='(pointer)'+inttohex(pdword(buf)^,8);
     end;
@@ -613,13 +720,13 @@ begin
       if processhandler.is64bit then
       begin
         if (address mod 8) = 0 then
-          val('$'+symhandler.getNameFromAddress(pqword(@buf[0])^,true,true),v,e)
+          val('$'+symhandler.getNameFromAddress(pqword(@buf[0])^,true,true,false, nil,nil,8,false),v,e)
         else
           e:=0;
       end
       else
       begin
-        val('$'+symhandler.getNameFromAddress(pdword(@buf[0])^,true,true),v,e);
+        val('$'+symhandler.getNameFromAddress(pdword(@buf[0])^,true,true,false, nil,nil,8,false),v,e);
       end;
 
       if e>0 then //named
@@ -653,7 +760,7 @@ begin
         if InRange(psingle(@buf[0])^, -100000.0, 100000.0) then
         begin
 
-          if pos(DecimalSeparator,x)>0 then
+          if pos(DefaultFormatSettings.DecimalSeparator,x)>0 then
             floathasseperator:=true;
 
           result:=vtSingle;
@@ -729,6 +836,8 @@ begin
       //not human readable, see if there is a custom type that IS human readable
       for i:=0 to customTypes.count-1 do
       begin
+        if TCustomType(customtypes[i]).scriptUsesString then continue
+        else
         if TCustomType(customtypes[i]).scriptUsesFloat then
         begin
           //float check
@@ -740,7 +849,7 @@ begin
             result:=vtCustom;
             CustomType^:=customtypes[i];
 
-            if (pos(DecimalSeparator,x)=0) then
+            if (pos(DefaultFormatSettings.DecimalSeparator,x)=0) then
               break; //found one that has no decimal seperator
 
           end;

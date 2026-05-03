@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ComCtrls;
+  ComCtrls, betterControls;
 
 type
 
@@ -17,6 +17,7 @@ type
     lblMaxCompression: TLabel;
     lblNone: TLabel;
     tbCompressionLevel: TTrackBar;
+    procedure FormShow(Sender: TObject);
     procedure tbCompressionLevelChange(Sender: TObject);
   private
     { private declarations }
@@ -38,6 +39,12 @@ uses networkConfig;
 procedure TfrmNetworkDataCompression.tbCompressionLevelChange(Sender: TObject);
 begin
   networkcompression:=tbCompressionLevel.Position;
+end;
+
+procedure TfrmNetworkDataCompression.FormShow(Sender: TObject);
+begin
+  width:=(screen.PixelsPerInch div 96)*320;
+  height:=(screen.PixelsPerInch div 96)*200;
 end;
 
 end.

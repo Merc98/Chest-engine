@@ -17,7 +17,7 @@ function lua_setProperty(L: PLua_state): integer; cdecl;
 
 implementation
 
-uses LuaClass, LuaHandler, pluginexports, LuaCaller, symbolhandler;
+uses LuaClass, LuaHandler, pluginexports, LuaCaller, symbolhandler, LCLClasses, globals;
 
 resourcestring
   rsThisIsAnInvalidClassOrMethodProperty = 'This is an invalid class or method property';
@@ -31,16 +31,15 @@ var c: TObject;
   proplist: PPropList;
   m: TMethod;
   ma: array of TMethod;
-
-
 begin
+  result:=0;
+
   i:=ifthen(lua_type(L, lua_upvalueindex(1))=LUA_TUSERDATA, lua_upvalueindex(1), 1);
   c:=lua_toceuserdata(L, i);
   lua_getmetatable(L, i);
   metatable:=lua_gettop(L);
 
   try
-    //check if it has onDestroy, if so, call it
     //now cleanup the callers
 
     if (c is TCustomForm) and assigned(TCustomForm(c).OnDestroy) then
@@ -50,6 +49,7 @@ begin
       except
         //don't care
       end;
+      TCustomForm(c):=nil;
     end;
 
     count:=GetPropList(c, proplist);
@@ -58,6 +58,13 @@ begin
       if proplist[i]^.PropType.Kind=tkMethod then
       begin
         m:=GetMethodProp(c, proplist[i]);
+
+        if (proplist[i]^.Name='OnDestroy') then
+        begin
+          if (m.Code<>nil) and (m.data<>nil) then
+            TNotifyEvent(m)(c);
+        end;
+
         CleanupLuaCall(m);
         m.Code:=nil;
         m.data:=nil;
@@ -73,6 +80,10 @@ begin
   begin
     lua_pushstring(L, '__autodestroy');
     lua_pushboolean(L, false); //make it so it doesn't need to be destroyed (again)
+    lua_settable(L, metatable);
+
+    lua_pushstring(L, '__destroyed'); //it has been destroyed, but the luaside needs to garbage collect it still
+    lua_pushboolean(L, true);
     lua_settable(L, metatable);
   end;
 end;
@@ -131,9 +142,11 @@ begin
   if parameters=1 then
   begin
     c:=lua_toceuserdata(L, -1);
+
     lua_pop(L, lua_gettop(l));
 
     luaclass_newClass(L, ce_getPropertylist(c));
+
     result:=1;
   end else lua_pop(L, lua_gettop(l));
 end;
@@ -142,7 +155,7 @@ function lua_getProperty(L: PLua_state): integer; cdecl;
 var parameters: integer;
   c,c2: tobject;
   t: ptruint;
-  p: string;
+  p,v: string;
 
 
   svalue: string;
@@ -151,6 +164,7 @@ var parameters: integer;
 
   pinfo: PPropInfo;
   m: tmethod;
+  kind: TTypeKind;
 begin
   result:=0;
   parameters:=lua_gettop(L);
@@ -186,15 +200,19 @@ begin
                          tkDynArray,tkInterfaceRaw,tkProcVar,tkUString,tkUChar,
                          tkHelper
       }
-
-      case pinfo.PropType.Kind of
+      kind:=pinfo^.PropType.Kind;
+      case kind of
         tkInteger,tkInt64,tkQWord: lua_pushinteger(L, GetPropValue(c, p,false));
         tkBool: lua_pushboolean(L, GetPropValue(c, p, false));
         tkFloat: lua_pushnumber(L, GetPropValue(c, p, false));
         tkClass, tkObject: luaclass_newClass(L, GetObjectProp(c, p));
         tkMethod: LuaCaller_pushMethodProperty(L, GetMethodProp(c,p), pinfo.PropType.Name);
         tkSet: lua_pushstring(L, GetSetProp(c, pinfo, true));
-        else lua_pushstring(L, GetPropValue(c, p,true));
+        else
+        begin
+          v:=GetPropValue(c, p,true);
+          lua_pushstring(L, v);
+        end;
       end;
     end
     else
@@ -229,6 +247,19 @@ begin
       if p<>'' then
         c:=pointer(StrToInt64(p));
     end;
+
+
+    if threadsafetycheck and (c is TLCLComponent) then
+    begin
+      if GetCurrentThreadId<>MainThreadID then
+      begin
+        p:='';
+        v:='';
+        lua_pushstring(L, 'Error: GUI Control access outside of main thread ('+tcomponent(c).Name+':'+c.ClassName+')');
+        lua_error(L);
+      end;
+    end;
+
 
     p:=Lua_ToString(L, 2);
     v:=Lua_ToString(L, 3);

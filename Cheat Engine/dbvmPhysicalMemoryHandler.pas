@@ -3,21 +3,24 @@ unit dbvmPhysicalMemoryHandler;
 {$MODE Delphi}
 
 {
-implement replaced handlers for ReadProcssMemory and WriteProcessMemory so it
+implement replaced handlers for ReadProcessMemory and WriteProcessMemory so it
 reads/writes to the physical memory instead
 }
 
 interface
 
+{$IFDEF windows}
 uses windows, LCLIntf, vmxfunctions;
 
 function ReadProcessMemoryPhys(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer;  nSize: DWORD; var lpNumberOfBytesRead: DWORD): BOOL; stdcall;
 function WriteProcessMemoryPhys(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer; nSize: DWORD; var lpNumberOfBytesWritten: DWORD): BOOL; stdcall;
 function VirtualQueryExPhys(hProcess: THandle; lpAddress: Pointer; var lpBuffer: TMemoryBasicInformation; dwLength: DWORD): DWORD; stdcall;
+{$ENDIF}
 
 
 implementation
 
+{$IFDEF windows}
 uses NewKernelHandler, DBK32functions;
 
 function ReadProcessMemoryPhys(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer;  nSize: DWORD; var lpNumberOfBytesRead: DWORD): BOOL; stdcall;
@@ -66,6 +69,7 @@ begin
   end;
 
 end;
+{$ENDIF}
 
 
 

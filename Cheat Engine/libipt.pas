@@ -5,7 +5,13 @@ unit libipt;
 interface
 
 uses
-  Windows, Classes, SysUtils;
+  {$ifdef windows}
+  Windows,
+  {$endif}
+  {$ifdef darwin}
+  macport, dynlibs, mactypes,
+  {$endif}
+  Classes, SysUtils;
 
 const
   pt_asid_no_cr3  = QWORD($ffffffffffffffff);
@@ -176,7 +182,7 @@ type
 var
   pt_image_alloc:function(name: pchar): PPT_Image;  cdecl;
   pt_image_free:procedure(img: PPT_Image); cdecl;
-  pt_image_set_callback: function(img: PPT_Image; callback: Tread_memory_callback; context: pointer): integer; cdecl;
+  pt_image_set_callback: function(img: PPT_Image; callback: pointer{Tread_memory_callback}; context: pointer): integer; cdecl;
 
   pt_cpu_read:function (cpu: ppt_cpu): integer; cdecl;
   pt_cpu_errata: function(errata: ppt_errata; cpu: ppt_cpu): integer; cdecl;
@@ -185,12 +191,17 @@ var
   pt_insn_free_decoder:procedure(decoder: ppt_insn_decoder); cdecl;
   pt_insn_set_image:function(decoder: ppt_insn_decoder; image: PPT_Image): integer; cdecl;
   pt_insn_sync_forward:function(decoder: ppt_insn_decoder): integer; cdecl;
+  pt_insn_sync_backward:function(decoder: ppt_insn_decoder): integer; cdecl;
+  pt_insn_sync_set:function(decoder: ppt_insn_decoder; offset: qword): integer; cdecl;
   pt_insn_next: function(decoder: ppt_insn_decoder; insn: Ppt_insn; size: size_t): integer; cdecl;
   pt_insn_get_offset:function(decoder: Ppt_insn_decoder; offset: PQWord): integer; cdecl;
+  pt_insn_get_sync_offset:function(decoder: Ppt_insn_decoder; offset: PQWord): integer; cdecl;
 
   pt_qry_alloc_decoder:function(config: ppt_config): ppt_query_decoder; cdecl;
   pt_qry_free_decoder:procedure(decoder: ppt_query_decoder); cdecl;
   pt_qry_sync_forward: function(decoder: ppt_query_decoder; ip: pqword): integer; cdecl;
+
+
   pt_qry_get_offset: function(decoder: ppt_query_decoder; offset: pqword): integer; cdecl;
   pt_qry_indirect_branch: function(decoder: ppt_query_decoder; ip: pqword): integer; cdecl;
   pt_qry_event:function(decoder: ppt_query_decoder; event: Ppt_event; size: size_t): integer; cdecl;
@@ -223,8 +234,9 @@ function libIptInit: boolean;
 begin
   if hLibIPT=0 then
   begin
+    {$ifdef windows}
     hLibIPT:=LoadLibrary('libipt-64.dll');
-    if hLibIPT=0 then hLibIPT:=LoadLibrary('D:\svn\Cheat Engine\bin\libipt-64.dll'); //during debug
+   // if hLibIPT=0 then hLibIPT:=LoadLibrary('D:\svn\Cheat Engine\bin\libipt-64.dll'); //during debug
 
     if hLibIPT<>0 then
     begin
@@ -241,8 +253,11 @@ begin
       pt_insn_set_image:=GetProcAddress(hLibIPT, 'pt_insn_set_image');
 
       pt_insn_sync_forward:=GetProcAddress(hLibIPT, 'pt_insn_sync_forward');
+      pt_insn_sync_backward:=GetProcAddress(hLibIPT, 'pt_insn_sync_backward');
+      pt_insn_sync_set:=GetProcAddress(hLibIPT, 'pt_insn_sync_set');
       pt_insn_next:=GetProcAddress(hLibIPT, 'pt_insn_next');
       pt_insn_get_offset:=GetProcAddress(hLibIPT, 'pt_insn_get_offset');
+      pt_insn_get_sync_offset:=GetProcAddress(hLibIPT, 'pt_insn_get_sync_offset');
 
       pt_qry_alloc_decoder:=GetProcAddress(hLibIPT, 'pt_qry_alloc_decoder');
       pt_qry_free_decoder:=GetProcAddress(hLibIPT, 'pt_qry_free_decoder');
@@ -250,9 +265,11 @@ begin
       pt_qry_indirect_branch:=GetProcAddress(hLibIPT, 'pt_qry_indirect_branch');
       pt_qry_get_offset:=GetProcAddress(hLibIPT, 'pt_qry_get_offset');
       pt_qry_event:=GetProcAddress(hLibIPT, 'pt_qry_event');
-      pt_qry_cond_branch:=GetProcAddress(hLibIPT, 'pt_qry_event');
+      pt_qry_cond_branch:=GetProcAddress(hLibIPT, 'pt_qry_cond_branch');
     end;
+      {$endif}
   end;
+
 
   result:=hLibIPT<>0;
 end;

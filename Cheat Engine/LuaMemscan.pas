@@ -12,7 +12,7 @@ procedure initializeMemscan;
 
 implementation
 
-uses luaclass, LuaObject;
+uses luaclass, LuaObject, savedscanhandler;
 
 resourcestring
   rsNotAllParametersHaveBeenProvided = 'Not all parameters have been provided';
@@ -83,9 +83,9 @@ begin
     memscan.firstscan(scanoption, vartype, roundingtype, input1,input2, startaddress,stopaddress, isHexadecimalInput, isNotABinaryString, isunicodescan, iscasesensitive, alignmenttype, alignmentparam, nil );
   end
   else
-    raise exception.create(rsNotAllParametersHaveBeenProvided);
-
+    memscan.firstscan;
 end;
+
 
 function memscan_nextScan(L: Plua_State): integer; cdecl;
 var
@@ -123,9 +123,24 @@ begin
     lua_pop(L, lua_gettop(L));
 
     memscan.nextscan(scanoption, roundingtype, input1,input2, isHexadecimalInput, isNotABinaryString, isunicodescan, iscasesensitive, ispercentagescan, savedscanname<>'', savedscanname );
-  end else
-    raise exception.create(rsNotAllParametersHaveBeenProvided);
+  end
+  else
+    memscan.nextscan;
 end;
+
+function memscan_scan(L: Plua_State): integer; cdecl;
+var
+  memscan: Tmemscan;
+begin
+  result:=0;
+  lua_pop(L,lua_gettop(L));
+  memscan:=luaclass_getClassObject(L);
+  if memscan.LastScanType=stNewScan then
+    memscan.firstScan
+  else
+    memscan.nextScan;
+end;
+
 
 function memscan_waitTillDone(L: Plua_State): integer; cdecl;
 var
@@ -152,6 +167,58 @@ begin
   result:=1;
 end;
 
+function memscan_getSavedResultHandler(L: Plua_State): integer; cdecl;
+var
+  memscan: TMemscan;
+  name: string;
+  ssh: TSavedscanHandler;
+begin
+  result:=0;
+  memscan:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
+  begin
+    name:=Lua_ToString(L, -1);
+    try
+      ssh:=TSavedScanHandler.create(memscan.GetScanFolder,name);
+      ssh.AllowNotFound:=true;
+      ssh.AllowRandomAccess:=true;
+      ssh.memscan:=memscan;
+      luaclass_newClass(L,ssh);
+      exit(1);
+    except
+      on e: exception do
+      begin
+        lua_pushnil(L);
+        lua_pushstring(L,e.message);
+        exit(2);
+      end;
+    end;
+  end;
+end;
+
+function memscan_getSavedResultList(L: Plua_State): integer; cdecl;
+var
+  memscan: TMemscan;
+  r: tstringlist;
+  i: integer;
+begin
+  memscan:=luaclass_getClassObject(L);
+  r:=tstringlist.create;
+  memscan.getsavedresults(r);
+  lua_createtable(L,r.count,0);
+
+  for i:=0 to r.count-1 do
+  begin
+    lua_pushinteger(L,i+1);
+    lua_pushstring(L, r[i]);
+    lua_settable(L,-3);
+  end;
+
+  result:=1;
+
+
+  r.free;
+end;
 
 function memscan_saveCurrentResults(L: Plua_State): integer; cdecl;
 var
@@ -229,12 +296,15 @@ end;
 procedure memscan_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
 begin
   object_addMetaData(L, metatable, userdata);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'scan', memscan_scan);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'firstScan', memscan_firstScan);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'nextScan', memscan_nextScan);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'newScan', memscan_newScan);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'waitTillDone', memscan_waitTillDone);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getProgress', memscan_getProgress);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'saveCurrentResults', memscan_saveCurrentResults);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getSavedResultList', memscan_getSavedResultList);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getSavedResultHandler', memscan_getSavedResultHandler);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getAttachedFoundlist', memscan_getAttachedFoundlist);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'setOnlyOneResult', memscan_setreturnOnlyOneResult);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getOnlyResult', memscan_getOnlyResult);

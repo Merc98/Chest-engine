@@ -6,7 +6,7 @@ if getTranslationFolder()~='' then
   loadPOFile(getTranslationFolder()..'VersionCheck.po')
 end
 
-vsettings=getSettings("VersionCheck")
+local vsettings=getSettings("VersionCheck")
 
 local VersionCheckThread
 
@@ -15,16 +15,16 @@ function CheckVersion(automatic)
   if versionCheckThread==nil then
     versionCheckThread=createThread(function(t)
         local i=getInternet('CEVersionCheck')
-        local r=i.getURL('http://cheatengine.org/latestversion.txt')
-        
-        if r then        
+        local r=i.getURL('https://cheatengine.org/latestversion.txt')
+
+        if r then
           local sl=createStringlist()
           local newerVersion=false
           local latestVersionCompleteBuildNumber
           local latestVersionNumber
-          local latestVersionString --seperate for crap like 6.5.1 (can't show 6.51 to the user)
-          sl.Text=r          
-          
+          local latestVersionString --separate for crap like 6.5.1 (can't show 6.51 to the user)
+          sl.Text=r
+
           if sl.Count<3 then
             t.synchronize(function()
               if automatic then
@@ -32,30 +32,32 @@ function CheckVersion(automatic)
               end
               versionCheckThread=nil
             end)
-            sl.destroy()  
-            i.destroy()            
+            sl.destroy()
+            i.destroy()
             return
           end
-          
+
           latestVersionCompleteBuildNumber=tonumber(sl[0])
           latestVersionNumber=tonumber(sl[1])
           latestVersionString=sl[2]
-          sl.destroy()
           
+          sl.destroy()
+          sl=nil
+
           if (latestVersionCompleteBuildNumber==nil) or (latestVersionNumber==nil) then
             t.synchronize(function()
               if automatic then
                 messageDialog(translate('Unable to check version (Invalid content)'), mtError, mbOK)
               end
               versionCheckThread=nil
-            end) 
+            end)
             i.destroy()
             return
-          end             
-          
+          end
+
           local fv=getCheatEngineFileVersion()
-          
-          if fv then          
+
+          if fv then
             if latestVersionCompleteBuildNumber>fv then
               newerVersion=true
             end
@@ -63,14 +65,14 @@ function CheckVersion(automatic)
             --failed getting the file version (filesystem issues...)
             if latestVersionNumber>getCEVersion() then
               newerVersion=true
-            end              
-          end   
-        
-          
+            end
+          end
+
+
           t.synchronize(function()
             if newerVersion then
               if messageDialog(string.format(translate('Cheat Engine %s is available at www.cheatengine.org. Go there now?'),latestVersionString), mtConfirmation, mbYes, mbNo)==mrYes then
-                shellExecute('http://cheatengine.org/')
+                shellExecute('https://cheatengine.org/?versioncheck=1')
               else
                 if automatic then --the user clicked away, so probably not interested
                   local NewInterval=(tonumber(vsettings.Value['CheckInterval']) or 1)*2 --just show a default of two times the current skip time
@@ -89,11 +91,11 @@ function CheckVersion(automatic)
                 showMessage(string.format(translate('You are up to date. The latest version is %s'),latestVersionString))
               end
             end
-            
+
             versionCheckThread=nil
           end)
-          
-          vsettings.Value['LastCheck']=os.time() --last succesful check          
+
+          vsettings.Value['LastCheck']=os.time() --last successful check
         else
           t.synchronize(function()
             if not automatic then
@@ -102,18 +104,18 @@ function CheckVersion(automatic)
             versionCheckThread=nil
           end)
         end
-        
+
         i.destroy()
     end)
   end
-  
-  
+
+
 end
 
 
 if vsettings then
   if vsettings.Value['CheckOnLaunch']=='1' then
-    local LastCheck=tonumber(vsettings.Value['LastCheck']) or 0 --get the time of the last succesful check
+    local LastCheck=tonumber(vsettings.Value['LastCheck']) or 0 --get the time of the last successful check
     local CheckInterval=tonumber(vsettings.Value['CheckInterval']) or 1
     if (LastCheck+CheckInterval*60*60*24)<os.time() then
       CheckVersion(true)
@@ -124,6 +126,7 @@ end
 
 local mi=createMenuItem(MainForm.MainMenu)
 mi.Caption=translate('Check for new version')
+mi.ImageIndex=15
 -- also works: mi.Caption=translateID('VC-CFNV')
 mi.OnClick=function(mi) CheckVersion(false) end
 
@@ -134,23 +137,18 @@ local sf=getSettingsForm()
 --I want it in front of the show undo button
 --that means, take on the top and left anchor of the undo button, and change the anchor of the undo button to my item
 
-local pnlVersionCheckConfig=createPanel(sf)
-pnlVersionCheckConfig.Caption=''
-pnlVersionCheckConfig.BevelOuter=bvNone
-pnlVersionCheckConfig.Parent=sf.cbShowUndo.Parent --put it inside the same control as the undo button (the scrollbox)
-
 local cbCheckForUpdatesOnLaunch=createCheckBox(sf)
 local lblInterval=createLabel(sf)
 local edtInterval=createEdit(sf)
+local parent=sf.cbShowUndo.Parent --put it inside the same control as the "undo button checkbox" (the scrollbox)
 
 cbCheckForUpdatesOnLaunch.Checked=vsettings.Value['CheckOnLaunch']=='1'
 cbCheckForUpdatesOnLaunch.Caption=translate('Check for updates when Cheat Engine starts')..'.'
-cbCheckForUpdatesOnLaunch.Parent=pnlVersionCheckConfig
-cbCheckForUpdatesOnLaunch.AnchorSideTop.Control=edtDays
-cbCheckForUpdatesOnLaunch.AnchorSideTop.Side=asrCenter 
+cbCheckForUpdatesOnLaunch.Parent=parent
+cbCheckForUpdatesOnLaunch.AnchorSideTop.Control=edtInterval
+cbCheckForUpdatesOnLaunch.AnchorSideTop.Side=asrCenter
+cbCheckForUpdatesOnLaunch.AnchorSideLeft=sf.cbShowUndo.AnchorSideLeft
 
-cbCheckForUpdatesOnLaunch.AnchorSideLeft.Control=pnlVersionCheckConfig
-cbCheckForUpdatesOnLaunch.AnchorSideLeft.Side=asrLeft
 cbCheckForUpdatesOnLaunch.OnChange=function()
   lblInterval.Enabled=cbCheckForUpdatesOnLaunch.Checked
   edtInterval.Enabled=cbCheckForUpdatesOnLaunch.Checked
@@ -159,10 +157,9 @@ end
 cbCheckForUpdatesOnLaunch.OnChange(cbCheckForUpdatesOnLaunch)
 
 lblInterval.Caption=translate('Interval(days):')
-lblInterval.Parent=pnlVersionCheckConfig
+lblInterval.Parent=parent
 lblInterval.AnchorSideTop.Control=cbCheckForUpdatesOnLaunch
-lblInterval.AnchorSideTop.Side=asrCenter 
-
+lblInterval.AnchorSideTop.Side=asrCenter
 lblInterval.AnchorSideLeft.Control=cbCheckForUpdatesOnLaunch
 lblInterval.AnchorSideLeft.Side=asrRight
 
@@ -174,23 +171,17 @@ else
 end
 
 edtInterval.ClientWidth=sf.Canvas.getTextWidth(' XX ');
-edtInterval.Parent=pnlVersionCheckConfig
-edtInterval.AnchorSideTop.Control=pnlVersionCheckConfig
-edtInterval.AnchorSideTop.Side=asrTop 
+edtInterval.Parent=parent
+edtInterval.AnchorSideTop = sf.cbShowUndo.AnchorSideTop
 edtInterval.AnchorSideLeft.Control=lblInterval
 edtInterval.AnchorSideLeft.Side=asrRight
 
 
-pnlVersionCheckConfig.AnchorSideTop=sf.cbShowUndo.AnchorSideTop
-pnlVersionCheckConfig.AnchorSideLeft=sf.cbShowUndo.AnchorSideLeft
+sf.cbShowUndo.AnchorSideTop.Control=edtInterval
+sf.cbShowUndo.AnchorSideTop.Side=asrBottom --put the top of the "undo button checkbox" to the bottom of the new edtInterval (so below it)
 
-pnlVersionCheckConfig.AutoSize=true
-
-sf.cbShowUndo.AnchorSideTop.Control=pnlVersionCheckConfig
-sf.cbShowUndo.AnchorSideTop.Side=asrBottom --put the top of the undo button to the bottom of the new checkbox (so below it)
-
-sf.cbShowUndo.AnchorSideLeft.Control=pnlVersionCheckConfig
-sf.cbShowUndo.AnchorSideLeft.Side=asrLeft --put the left of the undo button to the left side of the new checkbox (so same start)
+sf.cbShowUndo.AnchorSideLeft.Control=cbCheckForUpdatesOnLaunch
+sf.cbShowUndo.AnchorSideLeft.Side=asrLeft --put the left of the "undo button checkbox" to the left side of the new checkbox (so same start)
 
 
 
@@ -198,14 +189,16 @@ sf.cbShowUndo.AnchorSideLeft.Side=asrLeft --put the left of the undo button to t
 --now capture when the action is applied. I could hijack the button, but exceptions can sometimes cause issues. (though this button should not give exceptions in 6.7+ anymore)
 local oldSettingsFormClose=sf.OnClose
 
-sf.OnClose=function(f)
+sf.OnClose=function(f, closeAction)
+  local result=closeAction
   if sf.ModalResult==mrOK then --the user clicked OK and all checks passed
     vsettings.Value['CheckOnLaunch']=cbCheckForUpdatesOnLaunch.Checked
+    vsettings.Value['CheckInterval']=edtInterval.Text
   end
-  
+
   --call the original OnClose of the settings form
   if oldSettingsFormClose then
-    return oldSettingsFormClose(f);
+    return oldSettingsFormClose(f, closeAction);
   end
 end
 

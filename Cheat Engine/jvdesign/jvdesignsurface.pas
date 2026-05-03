@@ -352,6 +352,8 @@ function TJvDesignCustomMessenger.IsDesignMessage(ASender: TControl;
   end;
 
 begin
+  result:=false;
+
   if not Assigned(FOnDesignMessage) then
     Result := False
   else
@@ -577,7 +579,9 @@ begin
     else
       Deactivate;
     FActive := AValue;
-    SelectionChange;
+    if FActive then
+      SelectionChange;
+
     if Assigned(Container) then
       Container.Invalidate;
   end;
@@ -618,6 +622,7 @@ function TJvDesignSurface.GetSelected: TJvDesignObjectArray;
 var
   I: Integer;
 begin
+  result:=[];
   SetLength(Result, Count);
   for I := 0 to Count - 1 do
     Result[I] := Selector.Selection[I];
@@ -920,13 +925,13 @@ end;
 
 procedure TJvDesignSurface.PasteComponents;
 var
-  CO: TControl;
-  C: TComponent;
-  P: TWinControl;
-  s: tstringstream;
-  ms: TMemoryStream;
+  CO: TControl=nil;
+  C: TComponent=nil;
+//  P: TWinControl=nil;
+  s: tstringstream=nil;
+  ms: TMemoryStream=nil;
 
-  procedure KeepInParent;
+ { procedure KeepInParent;
   begin
     with P do
     begin
@@ -951,33 +956,48 @@ var
     end;
 
   end;
+         }
 
-
-  var l: TObjectList;
+var l: TObjectList;
     i: integer;
+    newparent: TComponent;
+
+    cmp: tpoint;
+    fix: integer;
+
 
 begin
+  fix:=0;
   s:=TStringStream.Create(clipboard.AsText);
   ms:=TMemoryStream.Create;
+
+  newparent:=SelectedContainer;
 
   try
     LRSObjectTextToBinary(s,ms);
     ms.position:=0;
-
+    
     l:=tobjectlist.create;
     ClearSelection;
     while ms.position<ms.size do
     begin
       C:=nil;
       try
-        ReadComponentFromBinaryStream(ms, C, @fcce, container, SelectedContainer, container);
+        SelectedContainer.DisableAutoSizing;
+        ReadComponentFromBinaryStream(ms, C, @fcce, container, newparent, container);
+        fix := fix+1;
         l.add(c);
+        SelectedContainer.EnableAutoSizing;
       except
         break;
       end;
     end;
 
   finally
+    if fix > 1 then
+    begin
+      SelectedContainer.EnableAutoSizing;
+    end;
     ms.free;
     s.free;
   end;
@@ -987,9 +1007,13 @@ begin
   active:=false;
   active:=true;
 
+  self.Change;
+
+
   for i:=0 to l.count-1 do
     selector.AddToSelection(TControl(l[i]));
   SelectionChange;
+
 
 end;
 

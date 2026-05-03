@@ -7,19 +7,34 @@ unit LuaPipe;
 interface
 
 uses
-  windows, Classes, SysUtils, lua, LuaClass, syncobjs;
+  {$ifdef darwin}
+  macport,  macpipe, mactypes,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  Classes, SysUtils, lua, LuaClass, syncobjs, guisafecriticalsection, newkernelhandler;
 
 type
   TPipeConnection=class
   private
     fOnTimeout: TNotifyEvent;
+    fOnError: TNotifyEvent;
+    procedure CloseConnection(n: TNotifyEvent);
+
+    {$ifdef windows}
+    function ProcessOverlappedOperation(o: POVERLAPPED): boolean;
+    {$endif}
   protected
     pipe: THandle;
     fconnected: boolean;
-    cs: TCriticalsection;
+    cs: TGuiSafeCriticalSection;
     foverlapped: boolean;
     ftimeout: integer;
-    overlappedevent: thandle;
+    fWarnOnMainThreadLockObtaining: boolean; //to debug mainthread locks
+    fErrorOnMainThreadLockObtaining: boolean;
+
+    procedure setTimeout(newtimeout: integer);
   public
     procedure lock;
     procedure unlock;
@@ -50,15 +65,23 @@ type
     destructor destroy; override;
   published
     property connected: boolean read fConnected;
+    property Timeout: Integer read ftimeout write setTimeout;
     property OnTimeout: TNotifyEvent read fOnTimeout write fOnTimeout;
-
+    property OnError: TNotifyEvent read fOnError write fOnError;
+    property Handle: THandle read pipe write pipe;
+    property WarnOnMainThreadLockObtaining: boolean read fWarnOnMainThreadLockObtaining write fWarnOnMainThreadLockObtaining;
+    property ErrorOnMainThreadLockObtaining: boolean read fErrorOnMainThreadLockObtaining write fErrorOnMainThreadLockObtaining;
   end;
 
 procedure pipecontrol_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
 
+
 implementation
 
-uses LuaObject, LuaByteTable;
+
+uses LuaObject, LuaByteTable, networkInterface, networkInterfaceApi, LuaHandler;
+
+threadvar WaitEvent: THandle;
 
 destructor TPipeConnection.destroy;
 begin
@@ -74,17 +97,38 @@ end;
 constructor TPipeConnection.create;
 begin
   ftimeout :=5000;
-  overlappedevent:=CreateEvent(nil,false,false,nil);
-  cs:=TCriticalSection.Create;
+  cs:=TGuiSafeCriticalSection.Create;
 end;
 
 procedure TPipeConnection.lock;
 begin
-  cs.Enter;
+  if fErrorOnMainThreadLockObtaining or fWarnOnMainThreadLockObtaining and (MainThreadID=GetCurrentThreadId) then
+  begin
+    if fErrorOnMainThreadLockObtaining then
+    begin
+      raise exception.create('No mainthread access to this pipe allowed');
+    end;
+
+    lua_getglobal(LuaVM,'print');
+    lua_pushstring(LuaVM,'Warning: pipe access from main thread');
+    lua_pcall(LuaVM,1,0,0);
+  end;
+
+  if ftimeout<>0 then
+    cs.Enter(ftimeout)
+  else
+    cs.enter;
 end;
 
 procedure TPipeconnection.unlock;
 begin
+  cs.leave;
+end;
+
+procedure TPipeConnection.setTimeout(newtimeout: integer);
+begin
+  cs.enter;
+  ftimeout:=newtimeout;
   cs.leave;
 end;
 
@@ -174,7 +218,7 @@ begin
 
   result:=x;
 
-  freemem(x);
+  FreeMemAndNil(x);
 end;
 
 function TPipeConnection.readWideString(size: integer): widestring;
@@ -187,66 +231,175 @@ begin
   x[size+1]:=#0;
 
   result:=x;
-  freemem(x);
+  FreeMemAndNil(x);
+end;
+
+{$ifdef windows}
+
+function TPipeConnection.ProcessOverlappedOperation(o: POVERLAPPED): boolean;
+var
+  starttime: qword;
+  i: integer;
+  bt, lastbt: dword;
+  r: dword;
+begin
+  starttime:=GetTickCount64;
+  bt:=0;
+  lastbt:=0;
+
+  while fconnected and ((ftimeout=0) or (gettickcount64<starttime+ftimeout)) do
+  begin
+    if MainThreadID=GetCurrentThreadId then
+    begin
+      CheckSynchronize;
+
+      r:=WaitForSingleObject(o^.hEvent, 25);
+      case r of
+        WAIT_OBJECT_0, WAIT_TIMEOUT: fconnected:=true;
+        else
+          fconnected:=false;
+      end;
+      if not fconnected then
+      begin
+        closeConnection(fOnError);
+        exit(false);
+      end;
+    end
+    else
+    begin
+     // sleep(10);
+      r:=WaitForSingleObject(o^.hEvent, ifthen<DWORD>(ftimeout=0, 1000, ftimeout));
+      case r of
+        WAIT_OBJECT_0, WAIT_TIMEOUT: fconnected:=true;
+        else
+          fconnected:=false;
+      end;
+      if not fconnected then
+      begin
+        closeConnection(fOnError);
+        exit(false);
+      end;
+    end;
+
+
+    if fconnected and (GetOverlappedResult(pipe, o^, bt,false)=false) then   //todo: check for GetOverlappedResultEx and use that
+    begin
+      if bt<>lastbt then
+        starttime:=GetTickCount64;
+
+      lastbt:=bt;
+
+      i:=getlasterror;
+      if ((i=ERROR_IO_PENDING) or (i=ERROR_IO_INCOMPLETE)) then
+        continue
+      else
+      begin
+        closeConnection(fOnError);
+        exit(false);
+      end;
+    end
+    else
+    begin
+      o^.Internal:=bt;
+      exit(fconnected);
+    end;
+  end;
+
+  closeConnection(fOnTimeout);
+  exit(false);
+end;
+{$endif}
+
+procedure TPipeConnection.CloseConnection(n: TNotifyEvent);
+begin
+  fconnected:=false;
+  {$ifdef windows}
+  CancelIo(pipe);
+  closehandle(pipe);
+  {$endif}
+  {$ifdef darwin}
+  closepipe(pipe);
+  {$endif}
+  pipe:=0;
+  if assigned(n) then
+    n(self);
 end;
 
 function TPipeConnection.WriteBytes(bytes: pointer; size: integer): boolean;
+
 var
+  c: TCEConnection;
+  {$ifdef windows}
   bw: dword;
   o: OVERLAPPED;
   starttime: qword;
   i: integer;
+  overlappedevent: thandle;
+  totalwritten: dword;
+  {$endif}
 begin
   if not fconnected then exit(false);
 
   if (bytes<>nil) and (size>0) then
   begin
-    if foverlapped then
+    c:=getConnection;
+    if (c<>nil) and c.isNetworkHandle(handle) then
     begin
-      zeromemory(@o, sizeof(o));
-      o.hEvent:=overlappedevent;
-      if writefile(pipe, bytes^, size, bw,@o)=false then
-      begin
-        if GetLastError=ERROR_IO_PENDING then
-        begin
-          fconnected:=fconnected or (WaitForSingleObject(o.hEvent, ftimeout)=WAIT_OBJECT_0);
-
-          starttime:=GetTickCount64;
-
-          while GetOverlappedResult(pipe, o, bw,false)=false do   //todo: check for GetOverlappedResultEx and use that
-          begin
-            i:=getlasterror;
-            if ((i=ERROR_IO_PENDING) or (i=ERROR_IO_INCOMPLETE)) and (gettickcount64<starttime+ftimeout) then
-              sleep(0)
-            else
-            begin
-              fconnected:=false;
-              CancelIo(pipe);
-              closehandle(pipe);
-              pipe:=0;
-              if assigned(fOnTimeout) then
-                fOnTimeout(self);
-              exit(false);
-
-
-            end;
-          end;
-
-          exit(true);
-        end
-        else
-        begin
-          fconnected:=false;
-          CancelIo(pipe);
-          closehandle(pipe);
-          pipe:=0;
-          exit(false);
-        end;
-      end;
-
+      fconnected:=c.writePipe(handle, bytes, size, ftimeout);
+      if fconnected=false then
+        closeConnection(fOnTimeout);
     end
     else
-      fconnected:=fconnected and writefile(pipe, bytes^, size, bw, nil);
+    begin
+      {$ifdef windows}
+      if foverlapped then
+      begin
+        totalwritten:=0;
+        while fconnected and (totalwritten<size) do
+        begin
+          zeromemory(@o, sizeof(o));
+
+          if waitevent=0 then
+            waitevent:=CreateEvent(nil,false,false,nil);
+
+
+          o.hEvent:=waitevent;
+          resetevent(o.hEvent);
+
+          if writefile(pipe, bytes^, size, bw,@o)=false then
+          begin
+            if GetLastError=ERROR_IO_PENDING then
+            begin
+              if ProcessOverlappedOperation(@o) then
+              begin
+                inc(totalwritten, o.Internal);
+                inc(bytes,o.Internal);
+              end
+              else
+                exit(false);
+            end
+            else
+            begin
+              closeConnection(fOnError);
+              exit(false);
+            end;
+          end
+          else
+          begin
+            inc(totalwritten,bw);
+            inc(bytes,bw);
+          end;
+        end;
+      end
+      else
+        fconnected:=fconnected and writefile(pipe, bytes^, size, bw, nil);
+      {$endif}
+      {$ifdef darwin}
+      fconnected:=writepipe(pipe, bytes, size, ftimeout);
+      if fconnected=false then
+        closeConnection(fOnTimeout);
+      {$endif}
+    end;
   end;
 
   result:=fconnected;
@@ -254,64 +407,95 @@ end;
 
 function TPipeConnection.ReadBytes(bytes: pointer; size: integer): boolean;
 var
+  c: TCEConnection;
+{$ifdef windows}
   br: dword;
   o: OVERLAPPED;
   i: integer;
   starttime: qword;
+
+  totalread: dword;
+{$endif}
 begin
   if not fconnected then exit(false);
 
   if (bytes<>nil) and (size>0) then
   begin
-    if foverlapped then
+    c:=getConnection;
+    if (c<>nil) and c.isNetworkHandle(pipe) then
     begin
-      zeromemory(@o, sizeof(o));
-      o.hEvent:=overlappedevent;
-      ResetEvent(o.hEvent);
-      if Readfile(pipe, bytes^, size, br,@o)=false then
-      begin
-        if GetLastError=ERROR_IO_PENDING then
-        begin
-          fconnected:=fconnected or (WaitForSingleObject(o.hEvent, ftimeout)=WAIT_OBJECT_0);
-
-          starttime:=GetTickCount64;
-
-          while GetOverlappedResult(pipe, o, br,false)=false do   //todo: check for GetOverlappedResultEx and use that
-          begin
-            i:=getlasterror;
-            if ((i=ERROR_IO_PENDING) or (i=ERROR_IO_INCOMPLETE)) and (gettickcount64<starttime+ftimeout) then
-              sleep(0)
-            else
-            begin
-              fconnected:=false;
-              CancelIo(pipe);
-              closehandle(pipe);
-              pipe:=0;
-              if assigned(fOnTimeout) then
-                fOnTimeout(self);
-
-              exit(false);
-            end;
-          end;
-
-          exit(true);
-        end
-        else
-        begin
-          fconnected:=false;
-          CancelIo(pipe);
-          closehandle(pipe);
-          pipe:=0;
-          exit(false);
-        end;
-      end;
+      fconnected:=c.readPipe(pipe, bytes, size, ftimeout);
+      if fconnected=false then
+        closeConnection(fOnError);
     end
     else
-      fconnected:=fconnected and Readfile(pipe, bytes^, size, br, nil);
+    begin
+      {$ifdef windows}
+      starttime:=GetTickCount64;
+      totalread:=0;
+
+      if foverlapped then
+      begin
+        while fconnected and (totalread<size) do
+        begin
+          zeromemory(@o, sizeof(o));
+          if waitevent=0 then
+            waitevent:=CreateEvent(nil,false,false,nil);
+
+          o.hEvent:=waitevent;
+          resetevent(o.hEvent);
+          if Readfile(pipe, bytes^, size, br,@o)=false then
+          begin
+            if GetLastError=ERROR_IO_PENDING then
+            begin
+              if ProcessOverlappedOperation(@o) then
+              begin
+                inc(totalread, o.Internal);
+                inc(bytes, o.Internal);
+              end
+              else
+                exit(false);
+            end
+            else
+            begin
+              closeConnection(fOnError);
+              exit(false);
+            end;
+          end
+          else
+          begin
+            inc(totalread, br);
+            inc(bytes, br);
+          end;
+
+        end;
+      end
+      else
+      begin
+        while fconnected and (totalread<size) do
+        begin
+          fconnected:=fconnected and Readfile(pipe, bytes^, size, br, nil);
+          inc(totalread,br);
+          inc(bytes, br);
+        end;
+      end;
+      {$endif}
+      {$ifdef darwin}
+      fconnected:=readpipe(pipe,bytes,size,ftimeout);
+      if fconnected=false then
+        closeConnection(fOnTimeout);
+      {$endif}
+
+    end;
   end;
 
 
   result:=fconnected;
+
+  if result=false then
+  asm
+  nop
+  end;
 end;
 
 function pipecontrol_writeBytes(L: PLua_State): integer; cdecl;
@@ -346,7 +530,7 @@ begin
       result:=1;
     end;
 
-    freemem(ba);
+    FreeMemAndNil(ba);
   end;
 
 
@@ -377,7 +561,7 @@ begin
       result:=1;
     end;
 
-    freemem(ba);
+    FreeMemAndNil(ba);
   end;
 
 
@@ -428,6 +612,37 @@ begin
   end;
 end;
 
+function pipecontrol_readQwords(L: PLua_State): integer; cdecl;
+var
+  p: TPipeconnection;
+  v: QWord;
+  count: integer;
+  results: array of qword;
+  i: integer;
+begin
+  result:=0;
+  p:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
+  begin
+    count:=lua_tointeger(L,1);
+    setlength(results, count);
+
+    p.ReadBytes(@results[0],count*8);
+    if p.connected then
+    begin
+      lua_createtable(L,count,0);
+      for i:=0 to count-1 do
+      begin
+        lua_pushinteger(L,i+1);
+        lua_pushinteger(L,results[i]);
+        lua_settable(L,-3);
+      end;
+
+      result:=1;
+    end;
+  end;
+end;
+
 function pipecontrol_readDword(L: PLua_State): integer; cdecl;
 var
   p: TPipeconnection;
@@ -443,6 +658,37 @@ begin
   end;
 end;
 
+function pipecontrol_readDwords(L: PLua_State): integer; cdecl;
+var
+  p: TPipeconnection;
+  v: QWord;
+  count: integer;
+  results: array of dword;
+  i: integer;
+begin
+  result:=0;
+  p:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
+  begin
+    count:=lua_tointeger(L,1);
+    setlength(results, count);
+
+    p.ReadBytes(@results[0],count*4);
+    if p.connected then
+    begin
+      lua_createtable(L,count,0);
+      for i:=0 to count-1 do
+      begin
+        lua_pushinteger(L,i+1);
+        lua_pushinteger(L,results[i]);
+        lua_settable(L,-3);
+      end;
+
+      result:=1;
+    end;
+  end;
+end;
+
 function pipecontrol_readWord(L: PLua_State): integer; cdecl;
 var
   p: TPipeconnection;
@@ -455,6 +701,37 @@ begin
   begin
     lua_pushinteger(L, v);
     result:=1;
+  end;
+end;
+
+function pipecontrol_readWords(L: PLua_State): integer; cdecl;
+var
+  p: TPipeconnection;
+  v: QWord;
+  count: integer;
+  results: array of word;
+  i: integer;
+begin
+  result:=0;
+  p:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
+  begin
+    count:=lua_tointeger(L,1);
+    setlength(results, count);
+
+    p.ReadBytes(@results[0],count*2);
+    if p.connected then
+    begin
+      lua_createtable(L,count,0);
+      for i:=0 to count-1 do
+      begin
+        lua_pushinteger(L,i+1);
+        lua_pushinteger(L,results[i]);
+        lua_settable(L,-3);
+      end;
+
+      result:=1;
+    end;
   end;
 end;
 
@@ -503,7 +780,7 @@ begin
         result:=1;
       end;
     finally
-      freemem(s);
+      FreeMemAndNil(s);
     end;
 
   end;
@@ -644,7 +921,7 @@ var
   p: TPipeconnection;
   paramcount: integer;
   s: pchar;
-  slength: integer;
+  slength: size_t;
   include0terminator: boolean;
 begin
   result:=0;
@@ -711,6 +988,68 @@ begin
   end;
 end;
 
+function pipecontrol_readIntoStream(L: PLua_State): integer; cdecl;
+var
+  p: TPipeconnection;
+  stream: tstream;
+  size: integer;
+  buf: pointer;
+begin
+  result:=0;
+  p:=luaclass_getClassObject(L);
+
+  if lua_gettop(L)>=2 then
+  begin
+    stream:=lua_ToCEUserData(L,1);
+    size:=lua_tointeger(L,2);
+
+    buf:=getmem(size);
+    try
+      if p.ReadBytes(buf,size) then
+      begin
+        lua_pushinteger(L, stream.Write(buf^,size));
+        result:=1;
+      end;
+    finally
+      freemem(buf);
+    end;
+  end
+end;
+
+function pipecontrol_writeFromStream(L: PLua_State): integer; cdecl;
+var
+  p: TPipeconnection;
+  stream: tstream;
+  size: integer;
+  buf: pointer;
+begin
+  result:=0;
+  p:=luaclass_getClassObject(L);
+
+  if lua_gettop(L)>=1 then
+  begin
+    stream:=lua_ToCEUserData(L,1);
+
+    if lua_gettop(L)>=2 then
+      size:=lua_tointeger(L,2)
+    else
+      size:=stream.Size-stream.Position;
+
+    buf:=getmem(size);
+    try
+      stream.read(buf^,size);
+
+      if p.WriteBytes(buf,size) then
+      begin
+        lua_pushinteger(L, stream.Write(buf^,size));
+        result:=1;
+      end;
+    finally
+      freemem(buf);
+    end;
+  end
+end;
+
 function pipecontrol_lock(L: PLua_State): integer; cdecl;
 var
   p: TPipeconnection;
@@ -729,12 +1068,14 @@ begin
   p.unlock;
 end;
 
+
 procedure pipecontrol_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
 begin
   object_addMetaData(L, metatable, userdata);
 
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'lock', pipecontrol_lock);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'unlock', pipecontrol_unlock);
+
 
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeBytes', pipecontrol_writeBytes);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readBytes', pipecontrol_readBytes);
@@ -743,11 +1084,18 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readDouble', pipecontrol_readDouble);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readFloat', pipecontrol_readFloat);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readQword', pipecontrol_readQword);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'readQwords', pipecontrol_readQwords);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readDword', pipecontrol_readDword);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'readDwords', pipecontrol_readDwords);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readWord', pipecontrol_readWord);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'readWords', pipecontrol_readWords);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readByte', pipecontrol_readByte);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readString', pipecontrol_readString);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'readWideString', pipecontrol_readWideString);
+
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'readIntoStream', pipecontrol_readIntoStream);
+
+
 
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeDouble', pipecontrol_writeDouble);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeFloat', pipecontrol_writeFloat);
@@ -757,10 +1105,14 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeByte', pipecontrol_writeByte);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeString', pipecontrol_writeString);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeWideString', pipecontrol_writeWideString);
+
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'writeFromStream', pipecontrol_writeFromStream);
+
 end;
 
 initialization
   luaclass_register(TPipeConnection, pipecontrol_addMetaData );
+
 
 
 end.

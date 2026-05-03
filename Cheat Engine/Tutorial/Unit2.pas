@@ -6,18 +6,19 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, Buttons, LResources;
+  Dialogs, StdCtrls, ExtCtrls, Buttons, LResources, betterControls;
 
 type
 
   { TForm2 }
 
   TForm2 = class(TForm)
-    Memo1: TMemo;
-    Button1: TButton;
     Label1: TLabel;
     Label2: TLabel;
+    Memo1: TMemo;
+    Button1: TButton;
     Button2: TButton;
+    Panel1: TPanel;
     Timer1: TTimer;
     SpeedButton1: TSpeedButton;
     procedure Button3Click(Sender: TObject);
@@ -40,7 +41,7 @@ var
 
 implementation
 
-uses Unit3;
+uses cetranslator, Unit3, frmHelpUnit;
 
 resourcestring
   rsAwYouReDeathLetMeReviveYou = 'Aw, you''re dead! Let me revive you';
@@ -65,8 +66,8 @@ resourcestring
     ''+#13#10+
     'When the value type is set correctly, make sure the scantype is set to ''Exact Value'''+#13#10+
     'Then fill in the number your health is in the value box. And click ''First Scan'''+#13#10+
-    'After a while (if you have a extremely slow pc) the scan is done and the results are shown in the list on the'+
-    ' left'+#13#10+
+    'After a while (if you have an extremely slow pc) the scan is done and the results are shown in the list on the'+
+    ' left.'+#13#10+
     ''+#13#10+
     'If you find more than 1 address and you don''t know for sure which address it is, click ''Hit me'', fill in the new'+
     ' health value into the value box, and click ''Next Scan'''+#13#10+
@@ -76,12 +77,12 @@ resourcestring
     ' showing you the current value.'+#13#10+
     'Double click the value, (or select it and press enter), and change the value to 1000.'+#13#10+
     ''+#13#10+
-    'If everything went ok the next button should become enabled, and you''re ready for the next step.'+#13#10+
+    'If everything went ok the Next button should become enabled, and you''re ready for the next step.'+#13#10+
     ''+#13#10+
     ''+#13#10+
     'Note:'+#13#10+
     'If you did anything wrong while scanning, click "New Scan" and repeat the scanning again.'+#13#10+
-    'Also, try playing around with the value and click ''hit me''';
+    'Also, try playing around with the value and click ''Hit me''.';
 
 
 
@@ -129,12 +130,14 @@ end;
 
 procedure TForm2.FormCreate(Sender: TObject);
 begin
-  memo1.lines.text:=rsTutorialStep2;
+  caption:=altnamer(caption);
+  memo1.lines.text:=altnamer(rsTutorialStep2);
   memo1.Lines.Insert(0, rsStep2ExactValueScanningPW+inttostr(0)+inttostr(90453)+')');
   memo1.SelStart:=0;
   health:=100;
 
   font.size:=12;
+  frmHelp.attach(self,'2');
 end;
 
 procedure TForm2.Timer1Timer(Sender: TObject);

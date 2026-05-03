@@ -32,6 +32,8 @@ hello
 
 interface
 
+{$ifdef windows}
+
 uses
   windows, Classes, SysUtils, ole2, variants, ActiveX, comobj;
 
@@ -334,8 +336,10 @@ type
     function DisplayUI(hwndParent: HWND; pszTitle: LPCWSTR; pszTypeOfUI: LPCWSTR; pvExtraData: pointer; cbExtraData: ULONG): HRESULT; stdcall;
   end;
 
-implementation
+{$endif}
 
+implementation
+{$ifdef windows}
 var
   voice: ISpVoice;
   novoice: boolean=false;
@@ -351,7 +355,7 @@ begin
   if not assigned(voice) then
   begin
     try
-      voice:=ISpVoice(CreateComObject(CLSID_SpVoice));
+      voice:=CreateComObject(CLSID_SpVoice) as ISpVoice;
     except
       exit(-1);
     end;
@@ -371,6 +375,8 @@ begin
 
   result:=speak(s, flags);
 end;
+
+{$endif}
 
 end.
 

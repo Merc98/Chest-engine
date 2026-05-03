@@ -51,8 +51,36 @@ typedef struct
   UINT64    tr;
   UINT64    ldt;
 
+  UINT64    cs_AccessRights;
+  UINT64    ss_AccessRights;
+  UINT64    ds_AccessRights;
+  UINT64    es_AccessRights;
+  UINT64    fs_AccessRights;
+  UINT64    gs_AccessRights;
+
+  UINT64    cs_Limit;
+  UINT64    ss_Limit;
+  UINT64    ds_Limit;
+  UINT64    es_Limit;
+  UINT64    fs_Limit;
+  UINT64    gs_Limit;
+
   UINT64    fsbase;
   UINT64    gsbase;
+  UINT64    APEntryPage; //page below 1MB (for AP cpu bootcode)
+  UINT64    FrameBufferBase; //in case of uefi boot the framebuffer address for output
+  UINT64    FrameBufferSize;
+  UINT64    HorizontalResolution;
+  UINT64    VerticalResolution;
+  UINT64    PixelsPerScanLine;
+  UINT64    PixelFormat;
 } __attribute__((__packed__)) OriginalState, *POriginalState;
+
+
+typedef struct
+{
+  UINT64 startAddress;
+  UINT64 byteSize;
+} __attribute__((__packed__)) UncachedRegion, *PUncachedRegion;
 
 #endif /* OFFLOADOS_H_ */

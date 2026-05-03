@@ -1,7 +1,8 @@
 #ifndef VMCALL_H_
 #define VMCALL_H_
 
-#include "main.h"
+#include "vmmhelper.h"
+#include "vmcallstructs.h"
 
 #define VMCALL_GETVERSION 0
 #define VMCALL_CHANGEPASSWORD 1
@@ -33,7 +34,6 @@
 
 
 //dbvm v7
-//not yet implemented (lost since last hd crash)
 #define VMCALL_SWITCH_TO_KERNELMODE 30
 #define VMCALL_DISABLE_DATAPAGEFAULTS 31
 #define VMCALL_ENABLE_DATAPAGEFAULTS 32
@@ -46,13 +46,91 @@
 
 #define VMCALL_PSODTEST 37
 
+//dbvm11
+#define VMCALL_GETMEM 38
+#define VMCALL_JTAGBREAK 39
+#define VMCALL_GETNMICOUNT 40
+
+#define VMCALL_WATCH_WRITES 41
+#define VMCALL_WATCH_READS 42
+#define VMCALL_WATCH_RETRIEVELOG 43
+#define VMCALL_WATCH_DELETE 44
+
+#define VMCALL_CLOAK_ACTIVATE 45
+#define VMCALL_CLOAK_DEACTIVATE 46
+#define VMCALL_CLOAK_READORIGINAL 47
+#define VMCALL_CLOAK_WRITEORIGINAL 48
+
+#define VMCALL_CLOAK_CHANGEREGONBP 49
+#define VMCALL_CLOAK_REMOVECHANGEREGONBP 50
+
+#define VMCALL_EPT_RESET 51
+
+#define VMCALL_LOG_CR3VALUES_START 52
+#define VMCALL_LOG_CR3VALUES_STOP 53
+
+#define VMCALL_REGISTERPLUGIN 54
+#define VMCALL_RAISEPMI 55
+#define VMCALL_ULTIMAP2_HIDERANGEUSAGE 56
+
+#define VMCALL_ADD_MEMORY 57
+//#define VMCALL_DISABLE_EPT 58 dus nut wurk
+
+
+#ifdef STATISTICS
+#define VMCALL_GET_STATISTICS 59
+#endif
+
+#define VMCALL_WATCH_EXECUTES 60
+#define VMCALL_SETTSCADJUST   61
+#define VMCALL_SETSPEEDHACK   62
+#define VMCALL_CAUSEDDEBUGBREAK 63
+
+#define VMCALL_DISABLE_TSCADJUST 64
+
+#define VMCALL_CLOAKEX_ACTIVATE 65
+
+#define VMCALL_DISABLETSCHOOK 66
+#define VMCALL_ENABLETSCHOOK 67
+
+#define VMCALL_WATCH_GETSTATUS 68
+
+#define VMCALL_CLOAK_TRACEONBP 69
+#define VMCALL_CLOAK_TRACEONBP_REMOVE 70
+#define VMCALL_CLOAK_TRACEONBP_READLOG 71
+#define VMCALL_CLOAK_TRACEONBP_GETSTATUS 72
+#define VMCALL_CLOAK_TRACEONBP_STOPTRACE 73
+
+#define VMCALL_GETBROKENTHREADLISTSIZE 74
+#define VMCALL_GETBROKENTHREADENTRYSHORT 75
+#define VMCALL_GETBROKENTHREADENTRYFULL 76
+#define VMCALL_SETBROKENTHREADENTRYFULL 77
+#define VMCALL_RESUMEBROKENTHREAD 78
+
+
+#define VMCALL_HIDEDBVMPHYSICALADDRESSES 79
+#define VMCALL_HIDEDBVMPHYSICALADDRESSESALL 80
+
+#define VMCALL_KERNELMODE 100
+#define VMCALL_USERMODE 101
+
+#define VMCALL_DEBUG_SETSPINLOCKTIMEOUT 254
+
+
+extern int hasEPTsupport;
+extern int hasNPsupport;
+
 
 
 int handleVMCall(pcpuinfo currentcpuinfo, VMRegisters *vmregisters);
 
 void returnFromCR3Callback(pcpuinfo currentcpuinfo, VMRegisters *vmregisters, unsigned long long newcr3);
-QWORD readMSRSafe(pcpuinfo currentcpuinfo, DWORD msr);
+QWORD readMSRSafe(DWORD msr);
+void writeMSRSafe(DWORD msr, QWORD value);
 
 int raiseInvalidOpcodeException(pcpuinfo currentcpuinfo); //
+int raisePagefault(pcpuinfo currentcpuinfo, UINT64 address);
+
+void psod(void); //freezes DBVM
 
 #endif /*VMCALL_H_*/

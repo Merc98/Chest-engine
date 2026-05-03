@@ -97,6 +97,37 @@ const
   ELEMENT_TYPE_SENTINEL       = $41;
   ELEMENT_TYPE_PINNED         = $45;
 
+
+//CorFieldAttr:
+  fdFieldAccessMask           =   $0007;
+  fdPrivateScope              =   $0000;     // Member not referenceable.
+  fdPrivate                   =   $0001;     // Accessible only by the parent type.
+  fdFamANDAssem               =   $0002;     // Accessible by sub-types only in this Assembly.
+  fdAssembly                  =   $0003;     // Accessibly by anyone in the Assembly.
+  fdFamily                    =   $0004;     // Accessible only by type and sub-types.
+  fdFamORAssem                =   $0005;     // Accessibly by sub-types anywhere  plus anyone in assembly.
+  fdPublic                    =   $0006;     // Accessibly by anyone who has visibility to this scope.
+  // end member access mask
+
+  // field contract attributes.
+  fdStatic                    =   $0010;     // Defined on type  else per instance.
+  fdInitOnly                  =   $0020;     // Field may only be initialized  not written to after init.
+  fdLiteral                   =   $0040;     // Value is compile time constant.
+  fdNotSerialized             =   $0080;     // Field does not have to be serialized when type is remoted.
+
+  fdSpecialName               =   $0200;     // field is special.  Name describes how.
+
+  // interop attributes
+  fdPinvokeImpl               =   $2000;     // Implementation is forwarded through pinvoke.
+
+  // Reserved flags for runtime use only.
+  fdReservedMask              =   $9500;
+  fdRTSpecialName             =   $0400;     // Runtime(metadata internal APIs) should check name encoding.
+  fdHasFieldMarshal           =   $1000;     // Field has marshalling information.
+  fdHasDefault                =   $8000;     // Field has default.
+  fdHasFieldRVA               =   $0100;     // Field has RVA.
+
+
 function DotNetTypeToString(dntype: dword):string;
 
 implementation
@@ -105,6 +136,7 @@ implementation
 
 function DotNetTypeToString(dntype: dword):string;
 begin
+  result:=rsDNTPointer;
   case dntype of
     ELEMENT_TYPE_END            : result:=rsDNTEnd;
     ELEMENT_TYPE_VOID           : result:=rsDNTVoid;

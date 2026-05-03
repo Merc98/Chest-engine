@@ -5,17 +5,23 @@ unit feces;
 
 interface
 
+{$ifdef windows}
 uses
-  Classes, SysUtils, bcrypt, DOM, xmlutils, XmlRead, XMLWrite, dialogs, windows, graphics;
+  Classes, SysUtils, System.uitypes, bcrypt, DOM, xmlutils, XmlRead, XMLWrite, dialogs, windows,
+  graphics, math;
 
 function canSignTables: boolean;
 procedure signTable(cheattable: TDOMElement);
 procedure signTableFile(f: string);
 function isProperlySigned(cheattable: TDOMElement; out specialstring: string; out imagepos: integer; out image: tpicture): boolean;
 
+{$endif}
+
 implementation
 
-uses cefuncproc, CustomBase85, registry;
+{$ifdef windows}
+
+uses cefuncproc, CustomBase85, registry, formsettingsunit, mainunit2;
 
 resourcestring
   rsFailedToGetSignatureSize = 'Failed to get the signature size';
@@ -27,11 +33,12 @@ resourcestring
   rsFailedCreatingHasAlgorithmProvider = 'Failed creating has algorithm '
     +'provider';
   rsFailedToLoadPrivateKey = 'Failed to load private key';
-  rsCouldNotOpenTheAlgorithmProvider = 'Could not open the algorithm provider';
+  rsIsPasswordCorrect='Is the password correct?';
+  rsCouldNotOpenTheAlgorithmProvider = 'Could not open the algorithm provider.  Load the table as if it''s signature is valid?';
   rsBcryptCouldNotBeUsed = 'bcrypt could not be used';
-  rsSelectYourCheatEngineSignatureFile = 'Select your cheat engine signature '
+  rsSelectYourCheatEngineSignatureFile = 'Select your '+strCheatEngine+' signature '
     +'file';
-  rsCheatEngineSignatureFiles = 'Cheat engine signature files';
+  rsCheatEngineSignatureFiles = strCheatEngine+' signature files';
   rsThisTableHasBeenModified = 'This table has been modified. To load this '
     +'table, remove the signature part with an editor (And check the file for '
     +'suspicious things while you''re at it)';
@@ -40,11 +47,11 @@ resourcestring
   rsFailedHashingTable2 = 'Failed hashing table 2';
   rsFailedCreatingHash2 = 'Failed creating hash 2';
   rsInvalidPublicKey = 'The provided public key is invalid(Not signed by the '
-    +'Cheat Engine guy). Remove the signature section to load this table';
+    +strCheatEngine+' guy). Remove the signature section to load this table';
   rsFailedCreatingHasAlgorithmProvider2 = 'Failed creating has algorithm '
     +'provider';
   rsFailedToLoadTheTablePublicKey = 'Failed to load the table public key';
-  rsFailedToLoadCheatEnginePublicKey = 'Failed to load cheat engine public key';
+  rsFailedToLoadCheatEnginePublicKey = 'Failed to load '+strCheatEngine+' public key';
   rsNoSignedHash = 'This table''s signature does not contain a SignedHash '
     +'element';
   rsNoPublicKey =
@@ -65,6 +72,9 @@ var
    $7E, $0E, $72, $76, $5B, $B4, $D8, $18, $E5, $A6, $A2, $E3, $47);
 
 threadvar pathtosigfile: pchar;
+threadvar passwordhash: pbyte;
+
+var passwordhashlength: integer;
 
 //useless protection but hey, why not
 
@@ -87,7 +97,7 @@ end;
 
 function DecodePointerNI(p: pointer):pointer; stdcall;
 begin
-  if rv=0 then exit;
+  if rv=0 then exit(p);
 
   result:=pointer(ptruint(p) xor rv);
 end;
@@ -159,7 +169,10 @@ var
 
   imagebuf: pointer;
   imagestream: TMemorystream;
+  validAlg: boolean;
 begin
+  image:=nil;
+
   if not initialize_bCrypt then
     exit(false);
 
@@ -205,20 +218,35 @@ begin
 
 
     s:=BCryptOpenAlgorithmProvider(hAlgoritm, 'ECDSA_P521', nil, 0);
-    if not succeeded(s) then raise exception.create(
-      rsCouldNotOpenTheAlgorithmProvider);
-
-    if cheatenginepublictablekey=0 then
+    if not succeeded(s) then
     begin
-      s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPUBLIC_BLOB, cheatenginepublictablekey, @publictablekey[0], 140, 0);
-      if not succeeded(s) then raise exception.create(
-        rsFailedToLoadCheatEnginePublicKey);
-    end;
+      validAlg:=false;
+      if mainthreadid=GetCurrentThreadId then
+      begin
+        if MessageDlg(rsCouldNotOpenTheAlgorithmProvider,mtWarning,mbYesNo,0)<>mryes then exit(false);
+      end
+      else
+        exit(false);
+    end
+    else
+      validAlg:=true;
 
-    //load the public key of this table while we're at it
-    s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPUBLIC_BLOB, tablepublickey, pointer(ptruint(publicdata.Memory)+publicdata.position), keysize, 0);
-    if not succeeded(s) then raise exception.create(
-      rsFailedToLoadTheTablePublicKey);
+    if validalg then
+    begin
+
+
+      if cheatenginepublictablekey=0 then
+      begin
+        s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPUBLIC_BLOB, cheatenginepublictablekey, @publictablekey[0], 140, 0);
+        if not succeeded(s) then raise exception.create(
+          rsFailedToLoadCheatEnginePublicKey);
+      end;
+
+      //load the public key of this table while we're at it
+      s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPUBLIC_BLOB, tablepublickey, pointer(ptruint(publicdata.Memory)+publicdata.position), keysize, 0);
+      if not succeeded(s) then raise exception.create(
+        rsFailedToLoadTheTablePublicKey);
+    end;
 
 
     publicdata.Position:=publicdata.Position+keysize;
@@ -245,94 +273,89 @@ begin
 
         finally
           imagestream.free;
-          freemem(imagebuf);
+          FreeMemAndNil(imagebuf);
         end;
       end;
     end;
 
+    if validalg then
+    begin
+
+      publickeysize:=publicdata.position; //reuse this
 
 
-    publickeysize:=publicdata.position; //reuse this
+      signaturesize:=publicdata.ReadDWord;
+      sig:=pointer(ptruint(publicdata.memory)+publicdata.position);
+
+      //check the signature of the public key with publictablekey
+      //create a hash of the data in publicdata.memory to publicdata.memory+publickeysize
+      s:=BCryptOpenAlgorithmProvider(hashAlgoritm, 'SHA512', nil, 0);
+      if not succeeded(s) then raise exception.create(rsFailedCreatingHasAlgorithmProvider2);
+
+      objectlength:=0;
+      s:=BCryptGetProperty(hashAlgoritm, BCRYPT_OBJECT_LENGTH, @objectlength, sizeof(DWORD), size, 0);
+      if not succeeded(s) then raise exception.create(rsFailedGettingTheObjectLength);
+
+      getmem(bHashObject, objectlength);
+      zeromemory(bHashObject, objectlength);
+
+      hHash:=0;
+      s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
+      if not Succeeded(s) then raise exception.create(rsFailedCreatingHash);
+
+      s:=BCryptHashData(hHash, publicdata.Memory, publickeysize, 0);
+      if not Succeeded(s) then raise exception.create(rsFailedHashingTable);
+
+      s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashlength, sizeof(DWORD), size, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToGetHashlength);
+
+      getmem(hashbuffer, hashlength);
+      s:=BCryptFinishHash(hHash, hashbuffer, hashlength, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToFinishTheHash);
 
 
-    signaturesize:=publicdata.ReadDWord;
-    sig:=pointer(ptruint(publicdata.memory)+publicdata.position);
+      //now verify this hash with the signature and the ce public key
 
-    //check the signature of the public key with publictablekey
-    //create a hash of the data in publicdata.memory to publicdata.memory+publickeysize
-    s:=BCryptOpenAlgorithmProvider(hashAlgoritm, 'SHA512', nil, 0);
-    if not succeeded(s) then raise exception.create(rsFailedCreatingHasAlgorithmProvider2);
+      s:=BCryptVerifySignature(cheatenginepublictablekey,nil,hashbuffer,hashlength,sig, signaturesize,0);
+      if not succeeded(s) then raise exception.create(rsInvalidPublicKey);
 
-    objectlength:=0;
-    s:=BCryptGetProperty(hashAlgoritm, BCRYPT_OBJECT_LENGTH, @objectlength, sizeof(DWORD), size, 0);
-    if not succeeded(s) then raise exception.create(rsFailedGettingTheObjectLength);
+      //still here so the public key is valid
 
-    getmem(bHashObject, objectlength);
-    zeromemory(bHashObject, objectlength);
+      BCryptDestroyHash(hHash);
+      hHash:=0;
+      FreeMemAndNil(hashbuffer);
+      hashbuffer:=nil;
 
-    hHash:=0;
-    s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
-    if not Succeeded(s) then raise exception.create(rsFailedCreatingHash);
+      //now hash the table(without signature section) and verify that with the 'SignedHash'
 
-    s:=BCryptHashData(hHash, publicdata.Memory, publickeysize, 0);
-    if not Succeeded(s) then raise exception.create(rsFailedHashingTable);
+      cheattablecontents:=TMemoryStream.create;
+      getXmlfileWithoutSignature(cheattable, cheattablecontents);
 
-    s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashlength, sizeof(DWORD), size, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToGetHashlength);
+      s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
+      if not Succeeded(s) then raise exception.create(rsFailedCreatingHash2);
 
-    getmem(hashbuffer, hashlength);
-    s:=BCryptFinishHash(hHash, hashbuffer, hashlength, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToFinishTheHash);
+      s:=BCryptHashData(hHash, cheattablecontents.Memory, cheattablecontents.size, 0);
+      if not Succeeded(s) then raise exception.create(rsFailedHashingTable2);
 
+      s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashlength, sizeof(DWORD), size, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToGetHashlength2);
 
-    //now verify this hash with the signature and the ce public key
-
-    s:=BCryptVerifySignature(cheatenginepublictablekey,nil,hashbuffer,hashlength,sig, signaturesize,0);
-    if not succeeded(s) then raise exception.create(rsInvalidPublicKey);
-
-    //still here so the public key is valid
-
-    BCryptDestroyHash(hHash);
-    hHash:=0;
-    freemem(hashbuffer);
-    hashbuffer:=nil;
-
-    //now hash the table(without signature section) and verify that with the 'SignedHash'
-
-    cheattablecontents:=TMemoryStream.create;
-    getXmlfileWithoutSignature(cheattable, cheattablecontents);
-
-    s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
-    if not Succeeded(s) then raise exception.create(rsFailedCreatingHash2);
-
-    s:=BCryptHashData(hHash, cheattablecontents.Memory, cheattablecontents.size, 0);
-    if not Succeeded(s) then raise exception.create(rsFailedHashingTable2);
-
-    s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashlength, sizeof(DWORD), size, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToGetHashlength2);
-
-    getmem(hashbuffer, hashlength);
-    s:=BCryptFinishHash(hHash, hashbuffer, hashlength, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToFinishTheHash2);
+      getmem(hashbuffer, hashlength);
+      s:=BCryptFinishHash(hHash, hashbuffer, hashlength, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToFinishTheHash2);
 
 
-    s:=BCryptVerifySignature(tablepublickey,nil,hashbuffer,hashlength,tablesignature, tablesignaturesize,0);
-    if not succeeded(s) then raise exception.create(rsThisTableHasBeenModified);
-
+      s:=BCryptVerifySignature(tablepublickey,nil,hashbuffer,hashlength,tablesignature, tablesignaturesize,0);
+      if not succeeded(s) then raise exception.create(rsThisTableHasBeenModified);
+    end;
 
     result:=true;
-
-
-
-
-
-
   finally
     if tablesignature<>nil then
-      freemem(tablesignature);
+      FreeMemAndNil(tablesignature);
 
     if publickeyblock<>nil then
-      freemem(publickeyblock);
+      FreeMemAndNil(publickeyblock);
 
     if publicdata<>nil then
       freeandnil(publicdata);
@@ -350,7 +373,7 @@ begin
       freeandnil(cheattablecontents);
 
     if hashbuffer<>nil then
-      freemem(hashbuffer);
+      FreeMemAndNil(hashbuffer);
 
 
     if tablepublickey<>0 then
@@ -368,8 +391,7 @@ var reg: tregistry;
 begin
   if _cansignstate=csUnknown then
   begin
-    result:=FileExists(GetCEdir+'cansign.txt');
-
+    result:=FileExists(GetCEdir+'cansign.txt') or FileExists(GetCEDir+'mysignature.cesig');
 
     if result then
       _cansignstate:=csYes
@@ -391,6 +413,122 @@ begin
   signtable(e);
   WriteXMLFile(d,f);
 end;
+
+procedure generateHash(password: pointer; passwordsize: integer; var hash: pointer; var hashsize: integer);
+var
+  s: ntstatus;
+  hashAlgoritm: BCRYPT_ALG_HANDLE;
+  hhash: BCRYPT_HASH_HANDLE;
+  objectlength: dword;
+  bHashObject: pointer;
+
+  size: ulong;
+  i,j: integer;
+  secondaryvalue: byte;
+begin
+  hash:=nil;
+  hashsize:=0;
+  if passwordsize=0 then exit;
+
+  s:=BCryptOpenAlgorithmProvider(hashAlgoritm, 'SHA512', nil, 0);
+  if succeeded(s) then
+  begin
+    objectlength:=0;
+    s:=BCryptGetProperty(hashAlgoritm, BCRYPT_OBJECT_LENGTH, @objectlength, sizeof(DWORD), size, 0);
+    if succeeded(s) then
+    begin
+      getmem(bHashObject, objectlength);
+      zeromemory(bHashObject, objectlength);
+      hHash:=0;
+      s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
+      if succeeded(s) then
+      begin
+        s:=BCryptHashData(hHash, password, passwordsize, 0);
+        if succeeded(s) then
+        begin
+          s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashsize, sizeof(DWORD), size, 0);
+          if succeeded(s) then
+          begin
+            getmem(hash, hashsize);
+            s:=BCryptFinishHash(hHash, hash, hashsize, 0);
+
+          end;
+        end;
+        BCryptDestroyHash(hashAlgoritm);
+      end;
+      FreeMemAndNil(bHashObject);
+      BCryptCloseAlgorithmProvider(hashAlgoritm,0);
+    end;
+  end;
+end;
+
+procedure getPasswordHash(password: string; out pwhash: pointer; out pwhashlength: integer; wantedsize: integer);
+var
+  hash: array of byte;
+
+  initialHash: pbyte;
+  initialhashsize: integer;
+
+  partialhash: pbyte;
+  partialhashsize: integer;
+
+  hashpos: integer;
+  copysize: integer;
+  i,j: integer;
+begin
+  pwhash:=nil;
+  if password='' then exit;
+
+  setlength(hash,wantedsize);
+
+
+  //generate hashes until it's the size of the buffer
+  hashpos:=0;
+
+  generateHash(@password[1],length(password),initialhash,initialhashsize);
+
+  j:=1;
+  for i:=0 to initialhashsize-1 do
+  begin
+    initialhash[i]:=initialhash[i] xor ord(password[j]);
+    inc(j);
+    if j>length(password) then j:=1;
+  end;
+
+  generateHash(initialhash,initialhashsize,partialhash,partialhashsize);
+  FreeMemAndNil(initialhash);
+
+  copysize:=ifthen(partialhashsize>wantedsize, wantedsize, partialhashsize);
+  copymemory(@hash[0],partialhash, copysize);
+  FreeMemAndNil(partialhash);
+
+  inc(hashpos, copysize);
+
+  while hashpos<wantedsize do
+  begin
+    generateHash(@hash[hashpos-copysize],copysize,partialhash, partialhashsize);
+
+    copysize:=ifthen(partialhashsize+hashpos>wantedsize, wantedsize-hashpos, partialhashsize);
+    copymemory(@hash[hashpos],partialhash, copysize);
+    FreeMemAndNil(partialhash);
+    inc(hashpos,copysize);
+  end;
+
+  getmem(pwhash, wantedsize);
+  copymemory(pwhash, @hash[0],wantedsize);
+
+  setlength(hash,0);
+end;
+
+
+procedure passwordDecode(buffer: pbyte; buffersize: integer; pwhash: pbyte);
+var
+  i: integer;
+begin
+  for i:=0 to buffersize-1 do
+    buffer[i]:=buffer[i] xor pwhash[i];
+end;
+
 
 procedure signTable(cheattable: TDOMElement);
 var
@@ -427,6 +565,10 @@ var
 
   tempstr: pchar=nil;
   sigversion: word;
+  password: string;
+
+  pwhash: pbyte;
+  pwhashlength: integer;
 begin
   if not initialize_bCrypt then
     raise exception.create(rsBcryptCouldNotBeUsed);
@@ -434,7 +576,10 @@ begin
   doc:=cheattable.OwnerDocument;
 
   //get the private key from the signature file
-  if pathtosigfile=nil then
+  if FileExists(GetCEDir+'mysignature.cesig') then
+    pathtosigfile:=encodepointer(strnew(pchar(GetCEDir+'mysignature.cesig')));
+
+  if (pathtosigfile=nil) or (not FileExists(pchar(decodepointer(pathtosigfile)))) then
   begin
     od:=TOpenDialog.Create(nil);
     try
@@ -442,7 +587,9 @@ begin
       od.Filter:=rsCheatEngineSignatureFiles+'|*.CESIG';
       od.Options:=od.Options+[ofFileMustExist, ofDontAddToRecent];
       if od.execute then
-        pathtosigfile:=encodepointer(strnew(pchar(od.FileName)));
+        pathtosigfile:=encodepointer(strnew(pchar(od.FileName)))
+      else
+        exit;
     finally
       od.free;
     end;
@@ -459,100 +606,145 @@ begin
     m.position:=m.position+x; //string
     x:=m.ReadWord; //public key size (140)
     sigversion:=m.ReadWord; //version
-    m.position:=m.position+x; //public key
-    if sigversion>=1 then
+
+    password:='';
+    pwhash:=nil;
+    if sigversion>=2 then
     begin
-      x:=m.ReadByte;
-      if x<>0 then
+      if (passwordhash=nil) or formsettings.cbAlwaysAskForPassword.checked then
       begin
-        x:=m.readdword; //image size
-        m.position:=m.position+x //skip the image
+        if passwordhash<>nil then
+        begin
+          FreeMem(decodepointer(passwordhash));
+          passwordhash:=nil;
+        end;
+
+        if InputQuery('CE Signature', 'Enter your password', true, password)=false then exit;
+          getPasswordHash(password, pwhash, pwhashlength, m.size-m.position);
+      end
+      else
+      begin
+        pwhash:=decodepointer(passwordhash);
+        pwhashlength:=passwordhashlength;
       end;
+      passwordhash:=nil; //in case it's wrong/changed
+
+      if pwhash<>nil then
+        passwordDecode(pointer(ptruint(m.memory)+m.position), m.size-m.position, pwhash);
     end;
-    x:=m.ReadDWord; //signature size
-    m.position:=m.position+x; //signature describing the custom string+image and public key
 
-    publicsectionsize:=m.position;
+    try
+      m.position:=m.position+x; //public key
+      if sigversion>=1 then
+      begin
+        x:=m.ReadByte;
+        if x<>0 then
+        begin
+          x:=m.readdword; //image size
+          m.position:=m.position+x //skip the image
+        end;
+      end;
+      x:=m.ReadDWord; //signature size
+      m.position:=m.position+x; //signature describing the custom string+image and public key
 
-    x:=m.readdword; //private key size
+      publicsectionsize:=m.position;
 
-    s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPRIVATE_BLOB, hKey, pointer(ptruint(m.memory)+m.position), x, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToLoadPrivateKey);
+      x:=m.readdword; //private key size
 
-    publicdata:=tmemorystream.create;
-    m.position:=0;
-    publicdata.CopyFrom(m,publicsectionsize);
+      s:=BCryptImportKeyPair(hAlgoritm, 0, BCRYPT_ECCPRIVATE_BLOB, hKey, pointer(ptruint(m.memory)+m.position), x, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToLoadPrivateKey);
 
-    FillMemory(m.memory,m.size,$ce);
-    freeandnil(m);
+      publicdata:=tmemorystream.create;
+      m.position:=0;
+      publicdata.CopyFrom(m,publicsectionsize);
 
-    //get the hashless version of this table
-    cheattablecontents:=TMemoryStream.create;
-    getXmlfileWithoutSignature(cheattable, cheattablecontents);
+      FillMemory(m.memory,m.size,$ce);
+      freeandnil(m);
 
-    //showmessage(pchar(cheattablecontents.Memory));
+      //get the hashless version of this table
+      cheattablecontents:=TMemoryStream.create;
+      getXmlfileWithoutSignature(cheattable, cheattablecontents);
 
-    //generate a hash based on it
-    s:=BCryptOpenAlgorithmProvider(hashAlgoritm, 'SHA512', nil, 0);
-    if not succeeded(s) then raise exception.create(rsFailedCreatingHasAlgorithmProvider);
+      //showmessage(pchar(cheattablecontents.Memory));
 
-    objectlength:=0;
-    s:=BCryptGetProperty(hashAlgoritm, BCRYPT_OBJECT_LENGTH, @objectlength, sizeof(DWORD), size, 0);
-    if not succeeded(s) then raise exception.create(rsFailedGettingTheObjectLength);
+      //generate a hash based on it
+      s:=BCryptOpenAlgorithmProvider(hashAlgoritm, 'SHA512', nil, 0);
+      if not succeeded(s) then raise exception.create(rsFailedCreatingHasAlgorithmProvider);
 
-    getmem(bHashObject, objectlength);
-    zeromemory(bHashObject, objectlength);
+      objectlength:=0;
+      s:=BCryptGetProperty(hashAlgoritm, BCRYPT_OBJECT_LENGTH, @objectlength, sizeof(DWORD), size, 0);
+      if not succeeded(s) then raise exception.create(rsFailedGettingTheObjectLength);
 
-    hHash:=0;
-    s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
-    if not Succeeded(s) then raise exception.create(rsFailedCreatingHash);
+      getmem(bHashObject, objectlength);
+      zeromemory(bHashObject, objectlength);
 
-    s:=BCryptHashData(hHash, cheattablecontents.Memory, cheattablecontents.size, 0);
-    if not Succeeded(s) then raise exception.create(rsFailedHashingTable);
+      hHash:=0;
+      s:=BCryptCreateHash(hashAlgoritm, hHash, bHashObject, objectlength, nil, 0, 0);
+      if not Succeeded(s) then raise exception.create(rsFailedCreatingHash);
 
-    freeandnil(cheattablecontents);
+      s:=BCryptHashData(hHash, cheattablecontents.Memory, cheattablecontents.size, 0);
+      if not Succeeded(s) then raise exception.create(rsFailedHashingTable);
 
-    s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashlength, sizeof(DWORD), size, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToGetHashlength);
+      freeandnil(cheattablecontents);
 
-    getmem(hashbuffer, hashlength);
-    s:=BCryptFinishHash(hHash, hashbuffer, hashlength, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToFinishTheHash);
+      s:=BCryptGetProperty(hashAlgoritm, BCRYPT_HASH_LENGTH, @hashlength, sizeof(DWORD), size, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToGetHashlength);
 
-    //sign that hash with hKey and add it to the table
-    signsize:=0;
-    s:=BCryptSignHash(hKey, nil, hashbuffer, hashlength, nil, 0, @signsize, 0);
-    if not succeeded(s) then raise exception.create(rsFailedToGetSignatureSize);
+      getmem(hashbuffer, hashlength);
+      s:=BCryptFinishHash(hHash, hashbuffer, hashlength, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToFinishTheHash);
 
-    getmem(signedbuffer, signsize);
-    signsize2:=0;
-    ZeroMemory(signedbuffer, signsize);
-    s:=BCryptSignHash(hKey, nil, hashbuffer, hashlength, signedbuffer, signsize, @signsize2, 0);
-    if not succeeded(s) then raise exception.create('Failed to sign the hash');
+      //sign that hash with hKey and add it to the table
+      signsize:=0;
+      s:=BCryptSignHash(hKey, nil, hashbuffer, hashlength, nil, 0, @signsize, 0);
+      if not succeeded(s) then raise exception.create(rsFailedToGetSignatureSize);
+
+      getmem(signedbuffer, signsize);
+      signsize2:=0;
+      ZeroMemory(signedbuffer, signsize);
+      s:=BCryptSignHash(hKey, nil, hashbuffer, hashlength, signedbuffer, signsize, @signsize2, 0);
+      if not succeeded(s) then raise exception.create('Failed to sign the hash');
 
 
 
-    signature:=CheatTable.AppendChild(doc.CreateElement('Signature'));
-    signedhash:=Signature.AppendChild(doc.CreateElement('SignedHash'));
+      signature:=CheatTable.AppendChild(doc.CreateElement('Signature'));
+      signedhash:=Signature.AppendChild(doc.CreateElement('SignedHash'));
 
-    getmem(tempstr, (signsize2 div 4) * 5 + 5 );
-    BinToBase85(signedbuffer, tempstr,signsize2);
+      getmem(tempstr, (signsize2 div 4) * 5 + 5 );
+      BinToBase85(signedbuffer, tempstr,signsize2);
 
-    signedhash.TextContent:=tempstr;
-    TDOMElement(signedhash).SetAttribute('HashSize',IntToStr(signsize2));
-    freemem(tempstr);
-    tempstr:=nil;
+      signedhash.TextContent:=tempstr;
+      TDOMElement(signedhash).SetAttribute('HashSize',IntToStr(signsize2));
+      FreeMemAndNil(tempstr);
 
-    //and add the public key to the table as well
-    publickey:=Signature.AppendChild(doc.CreateElement('PublicKey'));
-    getmem(tempstr, (publicdata.Size div 4) * 5 + 5 );
-    BinToBase85(publicdata.Memory, tempstr,publicdata.Size);
-    publickey.TextContent:=tempstr;
-    TDOMElement(publickey).SetAttribute('Size',IntToStr(publicdata.Size));
 
-    freemem(tempstr);
-    tempstr:=nil;
+      //and add the public key to the table as well
+      publickey:=Signature.AppendChild(doc.CreateElement('PublicKey'));
+      getmem(tempstr, (publicdata.Size div 4) * 5 + 5 );
+      BinToBase85(publicdata.Memory, tempstr,publicdata.Size);
+      publickey.TextContent:=tempstr;
+      TDOMElement(publickey).SetAttribute('Size',IntToStr(publicdata.Size));
 
+      FreeMemAndNil(tempstr);
+
+
+      if pwhash<>nil then
+      begin
+        if not formsettings.cbAlwaysAskForPassword.checked then
+        begin
+          passwordhash:=encodepointer(pwhash); //so it's not needed to ask again
+          passwordhashlength:=pwhashlength;
+        end
+        else
+          FreeMemAndNil(pwhash);
+      end;
+    except
+      on e:exception do
+        if pwhash<>nil then
+          raise exception.create(e.Message+#13#10+'('+rsIsPasswordCorrect+')')
+        else
+          raise;
+    end;
   finally
     if m<>nil then
     begin
@@ -570,13 +762,13 @@ begin
       freeandnil(cheattablecontents);
 
     if bhashobject<>nil then
-      freemem(bHashObject);
+      FreeMemAndNil(bHashObject);
 
     if hashbuffer<>nil then
-      freemem(hashbuffer);
+      FreeMemAndNil(hashbuffer);
 
     if signedbuffer<>nil then
-      freemem(signedbuffer);
+      FreeMemAndNil(signedbuffer);
 
     if tempstr<>nil then
       freeandnil(tempstr);
@@ -596,6 +788,8 @@ initialization
 
   if not assigned(decodepointer) then
     (decodepointer):=@DecodePointerNI;
+
+{$endif}
 
 end.
 

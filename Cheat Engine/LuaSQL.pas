@@ -61,7 +61,7 @@ if hassomething then
     q.StatementType='stUpdate'
     q.SQL.Text=string.format([[update something set rating=rating+1 where id=%d]], id)
     q.ExecSQL()
-
+                                   09
   else
     print("Not yet in the list")
     c.ExecuteDirect(string.format([[insert into something(processname,rating) values('%s',1)]],pn))
@@ -164,6 +164,7 @@ end;
 
 function sqlite3connection_createDB(L: Plua_State): integer; cdecl;
 begin
+  result:=0;
   try
     TSQLite3Connection(luaclass_getClassObject(L)).CreateDB;
   except
@@ -177,6 +178,7 @@ end;
 
 function sqlite3connection_dropDB(L: Plua_State): integer; cdecl;
 begin
+  result:=0;
   try
     TSQLite3Connection(luaclass_getClassObject(L)).DropDB;
   except

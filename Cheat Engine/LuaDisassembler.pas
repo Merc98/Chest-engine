@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, disassembler, lua, lauxlib, lualib, symbolhandler, LastDisassembleData;
 
-procedure initializeLuaDisassembler;
+procedure initializeLuaDisassembler(L: PLua_state);
 
 procedure LastDisassemblerDataToTable(L: PLua_State; t: integer; const ldd: TLastDisassembleData);
 procedure LastDisassemblerDataFromTable(L: PLua_State; t: integer; var ldd: TLastDisassembleData);
@@ -68,6 +68,11 @@ begin
   lua_pushstring(L,'description');
   lua_gettable(L, t);
   ldd.description:=Lua_ToString(L, -1);
+  lua_pop(L, 1);
+
+  lua_pushstring(L,'commentsoverride');
+  lua_gettable(L, t);
+  ldd.commentsoverride:=Lua_ToString(L, -1);
   lua_pop(L, 1);
 
   lua_pushstring(L,'bytes');
@@ -150,6 +155,10 @@ begin
   lua_pushstring(L, ldd.description);
   lua_settable(L, t);
 
+  lua_pushstring(L,'commentsoverride');
+  lua_pushstring(L, ldd.commentsoverride);
+  lua_settable(L, t);
+
   lua_pushstring(L, 'bytes');
   lua_newtable(L);
   temptable:=lua_gettop(L);
@@ -189,6 +198,10 @@ begin
   lua_pushboolean(L, ldd.isret);
   lua_settable(L, t);
 
+  lua_pushstring(L,'isRep');
+  lua_pushboolean(L, ldd.isrep);
+  lua_settable(L, t);
+
   lua_pushstring(L,'isConditionalJump');
   lua_pushboolean(L, ldd.isConditionalJump);
   lua_settable(L, t);
@@ -215,6 +228,15 @@ begin
   result:=1;
 end;
 
+function createCR3Disassembler(L: PLua_State): integer; cdecl;
+begin
+  result:=0;
+  {$ifdef windows}
+  luaclass_newClass(L, TCR3Disassembler.Create);
+  result:=1;
+  {$endif}
+end;
+
 
 function getDefaultDisassembler(L: PLua_State): integer; cdecl;
 begin
@@ -239,11 +261,13 @@ begin
 end;
 
 
-procedure initializeLuaDisassembler;
+procedure initializeLuaDisassembler(L: PLua_state);
 begin
-  lua_register(LuaVM, 'createDisassembler', createDisassembler);
-  lua_register(LuaVM, 'getDefaultDisassembler', getDefaultDisassembler);
-  lua_register(LuaVM, 'getVisibleDisassembler', getVisibleDisassembler);
+  lua_register(L, 'createDisassembler', createDisassembler);
+  lua_register(L, 'createCR3Disassembler', createCR3Disassembler);
+
+  lua_register(L, 'getDefaultDisassembler', getDefaultDisassembler);
+  lua_register(L, 'getVisibleDisassembler', getVisibleDisassembler);
 end;
 
 initialization

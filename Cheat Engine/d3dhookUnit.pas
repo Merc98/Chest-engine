@@ -7,7 +7,11 @@ A shared object will be used for communicating states and data
 
 {$mode delphi}
 
+{$warn 5044 off}
+
 interface
+
+{$ifdef windows}
 
 uses
   windows, Classes, SysUtils, sharedMemory, forms, graphics, cefuncproc,
@@ -462,8 +466,11 @@ var D3DHook: TD3DHook;
 function safed3dhook(size: integer=16*1024*1024; hookwindow: boolean=true): TD3DHook;
 procedure FixAlpha(aPNG: TPortableNetworkGraphic);
 
+{$endif}
+
 implementation
 
+{$ifdef windows}
 uses frmautoinjectunit, autoassembler, MainUnit, frmSaveSnapshotsUnit,
   frmsnapshothandlerUnit, symbolhandler, ProcessHandlerUnit, Globals;
 
@@ -1095,12 +1102,15 @@ var
 
   R,G,B: Integer;
 begin
+
   R := aPng.TransparentColor and $ff;
   G := (aPng.TransparentColor shr 8) and $ff;
   B := (aPng.TransparentColor shr 16) and $ff;
 
+  aPNG.BeginUpdate;
   for y := 0 to aPNG.Height - 1 do
   begin
+    {$warn 5044 off}
     Line := aPNG.ScanLine[y];
     for x := 0 to aPNG.Width - 1 do
     begin
@@ -1109,7 +1119,9 @@ begin
       else
         Line^[x].A := 255;
     end;
+    {$warn 5044 on}
   end;
+  aPNG.EndUpdate;
 end;
 
 
@@ -1807,6 +1819,8 @@ begin
   result:=d3dhook;
 
 end;
+
+{$endif}
 
 end.
 

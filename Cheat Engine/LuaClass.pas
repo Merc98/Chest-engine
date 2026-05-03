@@ -32,11 +32,13 @@ type
     property Count: integer read getCount;
   end;
 
-function luaclass_createMetaTable(L: Plua_State): integer;
+function luaclass_createMetaTable(L: Plua_State;garbagecollectable: boolean=false): integer;
 
 procedure luaclass_addClassFunctionToTable(L: PLua_State; metatable: integer; userdata: integer; functionname: string; f: lua_CFunction);
 procedure luaclass_addPropertyToTable(L: PLua_State; metatable: integer; userdata: integer; propertyname: string; getfunction: lua_CFunction; setfunction: lua_CFunction);
 procedure luaclass_setDefaultArrayProperty(L: PLua_State; metatable: integer; userdata: integer; getf,setf: lua_CFunction);
+procedure luaclass_setDefaultStringArrayProperty(L: PLua_State; metatable: integer; userdata: integer; getf,setf: lua_CFunction);
+
 
 procedure luaclass_addArrayPropertyToTable(L: PLua_State; metatable: integer; userdata: integer; propertyname: string; getf: lua_CFunction; setf: lua_CFunction=nil);
 procedure luaclass_addRecordPropertyToTable(L: PLua_State; metatable: integer; userdata: integer; propertyname: string; RecordEntries: TRecordEntries);
@@ -46,26 +48,29 @@ procedure luaclass_setAutoDestroy(L: PLua_State; metatable: integer; state: bool
 
 function luaclass_getClassObject(L: PLua_state; paramstart: pinteger=nil; paramcount: pinteger=nil): pointer; //inline;
 
-procedure luaclass_newClass(L: PLua_State; o: TObject); overload;
-procedure luaclass_newClass(L: PLua_State; o: TObject; InitialAddMetaDataFunction: TAddMetaDataFunction); overload;
-procedure luaclass_newClassFunction(L: PLua_State; InitialAddMetaDataFunction: TAddMetaDataFunction);
+procedure luaclass_newClass(L: PLua_State; o: TObject; garbagecollectable: boolean=false); overload;
+procedure luaclass_newClass(L: PLua_State; o: pointer; InitialAddMetaDataFunction: TAddMetaDataFunction; garbagecollectable: boolean=false); overload;
+procedure luaclass_newClass(L: PLua_State; o: TObject; InitialAddMetaDataFunction: TAddMetaDataFunction; garbagecollectable: boolean=false); overload;
+procedure luaclass_newClassFunction(L: PLua_State; InitialAddMetaDataFunction: TAddMetaDataFunction; garbagecollectable: boolean=false);
+
+
 
 procedure luaclass_register(c: TClass; InitialAddMetaDataFunction: TAddMetaDataFunction);
+
+procedure luaclass_pushClass(L: PLua_State; o: TObject); stdcall; //for plugins
 
 implementation
 
 uses LuaClassArray, LuaObject, LuaComponent, luahandler;
 
-var classlist: Tlist;
-    lookuphelp: TPointerToPointerTree;
-    lookuphelpmrew: TMultiReadExclusiveWriteSynchronizer;
-
+var lookuphelp: TPointerToPointerTree; //does not update after initialization (static)
+    lookuphelp2: TPointerToPointerTree; //for classes that inherit from the main classes (can update after initialization, dynamic)
+    lookuphelp2MREW: TMultiReadExclusiveWriteSynchronizer;
     objectcomparefunctionref: integer=0;
 
 type
   TClasslistentry=record
     c: TClass;
-    depth: integer;
     f: TAddMetaDataFunction;
   end;
   PClassListEntry=^TClassListEntry;
@@ -77,7 +82,13 @@ resourcestring
 function TRecordEntries.getEntry(index: integer): TRecordEntry;
 begin
   if index<length(list) then
-    result:=list[index];
+    result:=list[index]
+  else
+  begin
+    result.name:='';
+    result.getf:=nil;
+    result.setf:=nil;
+  end;
 end;
 
 procedure TRecordEntries.setEntry(index: integer; e: TRecordEntry);
@@ -107,70 +118,58 @@ procedure luaclass_register(c: TClass; InitialAddMetaDataFunction: TAddMetaDataF
 var cle: PClasslistentry;
     t: TClass;
 begin
-  if classlist=nil then
+  if lookuphelp=nil then
   begin
-    classlist:=tlist.create;
-    lookuphelpmrew:=TMultiReadExclusiveWriteSynchronizer.Create;
     lookuphelp:=TPointerToPointerTree.Create;
+    lookuphelp2:=TPointerToPointerTree.create;
+    lookuphelp2MREW:=TMultiReadExclusiveWriteSynchronizer.Create;
   end;
 
   getmem(cle, sizeof(TClasslistentry));
 
   cle.c:=c;
-  cle.depth:=0;
-  cle.f:=InitialAddMetaDataFunction;       //todo: change to a map
-  t:=c;
+  cle.f:=InitialAddMetaDataFunction;
 
-  while t<>nil do
-  begin
-    inc(cle.depth);
-    t:=t.ClassParent;
-  end;
-
-  classlist.Add(cle);
+  lookuphelp.Values[c]:=cle;
 end;
 
 function findBestClassForObject(O: TObject): TAddMetaDataFunction;
 var
-    i: integer;
-    cle: PClassListEntry;
-
-    best: PClassListEntry; //TClasslistentry;
-
-    oclass: Tclass;
+  best: PClassListEntry;
+  oclass: Tclass;
 begin
   result:=nil;
   if o=nil then exit;
 
   oclass:=o.ClassType;
 
-  lookuphelpmrew.Beginread;
   best:=lookuphelp.Values[oclass];
-  lookuphelpmrew.Endread;
+  if best<>nil then exit(best^.f);
 
-  if best<>nil then
-    exit(best^.f);
+  //not a main type, check the child types
+  lookuphelp2MREW.beginread;
+  best:=lookuphelp2.values[oclass];
+  lookuphelp2MREW.endread;
+  if best<>nil then exit(best^.f);
 
-  if classlist<>nil then
+  //find it in the static typestore
+  oclass:=oclass.ClassParent;
+  while oclass<>nil do
   begin
-    for i:=0 to classlist.Count-1 do
+    best:=lookuphelp.Values[oclass];
+    if best<>nil then
     begin
-      cle:=classlist[i];
-      if o.InheritsFrom(cle.c) and ((best=nil) or (cle.depth>best^.depth)) then
-        best:=cle;
+      //add to the secondary list
+      lookuphelp2MREW.Beginwrite;
+      lookuphelp2.values[o.classtype]:=best;
+      lookuphelp2MREW.endwrite;
+      exit(best^.f);
     end;
-
-    result:=best^.f;
-
-    lookuphelpmrew.Beginwrite;
-    lookuphelp.Values[oclass]:=best;
-    lookuphelpmrew.Endwrite;
+    oclass:=oclass.ClassParent;
   end;
-
-
 end;
 
-procedure luaclass_newClassFunction(L: PLua_State; InitialAddMetaDataFunction: TAddMetaDataFunction);
+procedure luaclass_newClassFunction(L: PLua_State; InitialAddMetaDataFunction: TAddMetaDataFunction; garbagecollectable: boolean=false);
 //converts the item at the top of the stack to a class object
 var userdata, metatable: integer;
 begin
@@ -179,13 +178,15 @@ begin
   begin
     userdata:=lua_gettop(L);
 
-    metatable:=luaclass_createMetaTable(L);
+    metatable:=luaclass_createMetaTable(L, garbagecollectable);
     InitialAddMetaDataFunction(L, metatable, userdata);
+
     lua_setmetatable(L, userdata);
   end;
 end;
 
-procedure luaclass_newClass(L: PLua_State; o: TObject; InitialAddMetaDataFunction: TAddMetaDataFunction);
+
+procedure luaclass_newClass(L: PLua_State; o: pointer; InitialAddMetaDataFunction: TAddMetaDataFunction; garbagecollectable: boolean=false);
 begin
   if (o<>nil) and (Assigned(InitialAddMetaDataFunction)) then
   begin
@@ -196,19 +197,30 @@ begin
     lua_pushnil(L);
 end;
 
+procedure luaclass_newClass(L: PLua_State; o: TObject; InitialAddMetaDataFunction: TAddMetaDataFunction; garbagecollectable: boolean=false);
+begin
+  luaclass_newClass(L, pointer(o), InitialAddMetaDataFunction, garbagecollectable);
+end;
 
-procedure luaclass_newClass(L: PLua_State; o: TObject); overload;
+
+
+
+procedure luaclass_newClass(L: PLua_State; o: TObject; garbagecollectable: boolean=false); overload;
 var InitialAddMetaDataFunction: TAddMetaDataFunction;
 begin
   if o<>nil then
   begin
     InitialAddMetaDataFunction:=findBestClassForObject(o);
-    luaclass_newClass(L, o, InitialAddMetaDataFunction);
+    luaclass_newClass(L, o, InitialAddMetaDataFunction, garbagecollectable);
   end
   else
     lua_pushnil(L);
 end;
 
+procedure luaclass_pushClass(L: PLua_State; o: TObject); stdcall; //for plugins
+begin
+  luaclass_newClass(L,o);
+end;
 
 function luaclass_getClassObject(L: PLua_state; paramstart: pinteger=nil; paramcount: pinteger=nil): pointer;// inline;
 //called as first thing by class functions. This is in case a 6.2 code executed the function manually
@@ -253,6 +265,33 @@ begin
     lua_error(L);
   end;
   }
+end;
+
+procedure luaclass_setDefaultStringArrayProperty(L: PLua_State; metatable: integer; userdata: integer; getf, setf: lua_CFunction);
+//this makes it so x[0], x[1], x[2],...,x.0 , x.1 , x.2,... will call these specific get/set handlers
+begin
+  lua_pushstring(L, '__defaultstringgetindexhandler');
+  if assigned(getf) then
+  begin
+    lua_pushvalue(L, userdata);
+    lua_pushcclosure(L, getf, 1);
+  end
+  else
+    lua_pushnil(L);
+
+  lua_settable(L, metatable);
+
+  lua_pushstring(L, '__defaultstringsetindexhandler');
+  if assigned(setf) then
+  begin
+    lua_pushvalue(L, userdata);
+    lua_pushcclosure(L, setf, 1);
+  end
+  else
+    lua_pushnil(L);
+
+  lua_settable(L, metatable);
+
 end;
 
 procedure luaclass_setDefaultArrayProperty(L: PLua_State; metatable: integer; userdata: integer; getf, setf: lua_CFunction);
@@ -404,40 +443,60 @@ begin
     begin
       lua_pushvalue(L, 3); //push newvalue    (so stack now holds, function, newvalue)
       lua_call(L, 1, 0);
+      exit;
     end;
-  end
-  else
-  begin
-    if lua_isnil(L, -1) then
-    begin
-      //not in the list
-      lua_pop(L,1);
-
-      //check if key is a number
-      if lua_isnumber(L, 2) then
-      begin
-        //check if there is a __defaultintegergetindexhandler defined in the metatable
-        lua_pushstring(L, '__defaultintegersetindexhandler');
-        lua_gettable(L, metatable);
-        if lua_isfunction(L,-1) then
-        begin
-          //yes
-          lua_pushvalue(L, 2); //key
-          lua_pushvalue(L, 3); //value
-          lua_call(L, 2,0); //call __defaultintegersetindexhandler(key, value);
-        end;
-      end;
-    end;
-
-    //this entry was not in the list
-    //Let's see if this is a published property or custom value
-    lua_pushcfunction(L, lua_setProperty);
-    lua_pushvalue(L, 1); //userdata
-    lua_pushvalue(L, 2); //keyname
-    lua_pushvalue(L, 3); //value
-    lua_call(L,3,0);
-
   end;
+
+
+
+  if lua_isnil(L, -1) then
+  begin
+    //not in the list
+    lua_pop(L,1);
+
+    //check if key is a number
+    if lua_isnumber(L, 2) then
+    begin
+      //check if there is a __defaultintegergetindexhandler defined in the metatable
+      lua_pushstring(L, '__defaultintegersetindexhandler');
+      lua_gettable(L, metatable);
+      if lua_isfunction(L,-1) then
+      begin
+        //yes
+        lua_pushvalue(L, 2); //key
+        lua_pushvalue(L, 3); //value
+        lua_call(L, 2,0); //call __defaultintegersetindexhandler(key, value);
+        exit;
+      end
+      else
+        lua_pop(L,1);
+    end;
+
+    if lua_type(L, 2)=LUA_TSTRING then
+    begin
+      //check if there is a __defaultstringsetindexhandler defined in the metatable
+      lua_pushstring(L, '__defaultstringsetindexhandler');
+      lua_gettable(L, metatable);
+      if lua_isfunction(L,-1) then
+      begin
+        lua_pushvalue(L, 2); //key
+        lua_pushvalue(L, 3); //value
+        lua_call(L, 2, 0); //call __defaultstringsetindexhandler(key, value)
+        exit;
+      end
+      else
+        lua_pop(L,1);
+    end;
+  end;
+
+  //this entry was not in the list
+  //Let's see if this is a published property or custom value
+  lua_pushcfunction(L, lua_setProperty);
+  lua_pushvalue(L, 1); //userdata
+  lua_pushvalue(L, 2); //keyname
+  lua_pushvalue(L, 3); //value
+  lua_call(L,3,0);
+
 end;
 
 function luaclass_index(L: PLua_State): integer; cdecl; //get
@@ -515,8 +574,6 @@ begin
           exit;
         end;
 
-
-
         //Let's see if this is a published property
         lua_pushcfunction(L, lua_getProperty);
         lua_pushvalue(L, 1); //userdata
@@ -527,16 +584,42 @@ begin
         if lua_isnil(L, -1) then
         begin
           //not a property
+          lua_pop(L,1);
+
           o:=tobject(lua_touserdata(L,1)^);
           if o is TComponent then
           begin
             lua_pushcfunction(L, component_findComponentByName);
-            lua_pushvalue(L, 1);
-            lua_pushvalue(L, 2);
-            lua_call(L, 2, 1);
-            result:=1;
+            lua_pushvalue(L, 1); //userdata
+            lua_pushvalue(L, 2); //keyname
+            lua_call(L, 2, 1); //component_findComponentByName
+
+            if not lua_isnil(L,-1) then exit(1);
+
+            //still here so not a component of the component
+
+            lua_pop(L,1);
           end;
+
+          if lua_type(L, 2)=LUA_TSTRING then
+          begin
+            //check if there is a __defaultstringgetindexhandler defined in the metatable
+            lua_pushstring(L, '__defaultstringgetindexhandler');
+            lua_gettable(L, metatable);
+            if lua_isfunction(L,-1) then
+            begin
+              lua_pushvalue(L, 2); //key
+              lua_call(L, 1, 1); //call __defaultstringgetindexhandler(key)
+              exit(1);
+            end
+            else
+              lua_pop(L,1);
+          end;
+
         end;
+
+
+
       end;
     end;
     result:=1;
@@ -577,14 +660,14 @@ begin
   lua_settable(L, metatable);
 end;
 
-function luaclass_createMetaTable(L: Plua_State): integer;
+function luaclass_createMetaTable(L: Plua_State; garbagecollectable: boolean=false): integer;
 //creates a table to be used as a metatable
 //returns the stack index of the table
 begin
   lua_newtable(L);
   result:=lua_gettop(L);
 
-  luaclass_setAutoDestroy(L, result, false); //default do not destroy when garbage collected. Let the user do it
+  luaclass_setAutoDestroy(L, result, garbagecollectable); //default do not destroy when garbage collected. Let the user do it
 
   //set the index method
   lua_pushstring(L, '__index');

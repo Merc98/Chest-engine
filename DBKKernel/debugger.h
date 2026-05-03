@@ -7,6 +7,7 @@
 #pragma pack(4)
 typedef struct {
 	UINT64 threadid;  //
+	UINT64 causedbydbvm;
 	UINT64 rflags;
 	UINT64 rax;//
 	UINT64 rbx;
@@ -50,6 +51,7 @@ typedef enum {bt_OnInstruction=0,bt_OnWrites=1, bt_OnIOAccess=2, bt_OnReadsAndWr
 typedef enum {bl_1byte=0, bl_2byte=1, bl_8byte=2/*Only when in 64-bit*/, bl_4byte=3} BreakLength;
 
 void debugger_initialize(void);
+void debugger_shutdown(void);
 int debugger_initHookForCurrentCPU(void);
 int debugger_setGlobalDebugState(BOOL state);
 void debugger_setStoreLBR(BOOL state);

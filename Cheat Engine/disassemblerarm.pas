@@ -14,11 +14,19 @@ uses
   LastDisassembleData, DisassemblerThumb;
 {$endif}
 
+{$ifdef darwin}
+uses  macport, classes,SysUtils, newkernelhandler, cefuncproc,LastDisassembleData, DisassemblerThumb;
+{$endif}
+
+
+
 const ArmConditions: array [0..15] of string=('EQ','NE','CS', 'CC', 'MI', 'PL', 'VS', 'VC', 'HI', 'LS', 'GE', 'LT', 'GT', 'LE', '','NV');
 const DataProcessingOpcodes: array [0..15] of string=('AND','EOR','SUB', 'RSB', 'ADD', 'ADC', 'SBC', 'RSC', 'TST', 'TEQ', 'CMP', 'CMN', 'ORR', 'MOV', 'BIC','MVN');
-const ArmRegisters : array [0..15] of string=('R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','FP','IP','SP','LR','PC');
+const ArmRegisters : array [0..15] of string=      ('R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','FP', 'IP', 'SP', 'LR', 'PC');
 const ArmRegistersNoName : array [0..15] of string=('R0','R1','R2','R3','R4','R5','R6','R7','R8','R9','R10','R11','R12','R13','R14','R15');
+//const Arm64Registers : array [0..15] of string=('X0','X1','X2','X3','X4','X5','X6','X7','X8','X9','X10','X11','X12','X13','X14','X15','X16');
 function SignExtend(value: int32; mostSignificantBit: integer): int32;
+
 
 type
   TArmDisassembler=object
@@ -40,6 +48,8 @@ type
     procedure CDP;
 
 
+
+
   public
     LastDisassembleData: TLastDisassembleData;
     function disassemble(var address: ptrUint): string;
@@ -51,7 +61,7 @@ type
 implementation
 
  {$ifndef ARMDEV}
-uses processhandlerunit;
+uses processhandlerunit, disassemblerarm32, disassemblerarm64;
 {$endif}
 
 
@@ -133,7 +143,7 @@ var
   shiftammount: integer;
   shiftRegister: integer;
 
-  shiftname: string;
+  shiftname: string='';
   _shift: string;
 
 
@@ -248,6 +258,7 @@ begin
 
   end;
 end;
+
 
 procedure TArmDisassembler.MRS;
 var
@@ -400,7 +411,7 @@ var
   shift: integer;
   shifttype: integer;
 
-  _shiftname: string;
+  _shiftname: string='';
   _shiftAmount: string;
   shiftamount: integer;
 
@@ -561,11 +572,20 @@ begin
 
   _rlist:=_rlist+'}';
 
-
-  if L=0 then
-    _opcode:='STM'
+  IF (rn=%1101) and (rcount>=2) then
+  begin
+    _opcode:='PUSH';
+    LastDisassembleData.opcode:=_opcode+_cond;
+    LastDisassembleData.parameters:=_rlist;
+    exit;
+  end
   else
-    _opcode:='LDM';
+  begin
+    if L=0 then
+      _opcode:='STM'
+    else
+      _opcode:='LDM';
+  end;
 
   _rn:=ArmRegisters[Rn];
 
@@ -843,7 +863,7 @@ var
   Vn, Vd, op, N, Q, M, Vm: byte;
   _datatype: string;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   if LastDisassembleData.Disassembler=dcThumb then
     u:=(opcode shr 28) and 1
@@ -992,11 +1012,11 @@ var opcode: dword;
 
   abcdefgh: byte;
   constant: qword;
-  _dt: string;
+  _dt: string='';
 
   a32: dword;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   if LastDisassembleData.Disassembler=dcThumb then
     a:=(opcode shr 28) and 1
@@ -1151,9 +1171,10 @@ var opcode: dword;
 
   op: byte;
 
-  _dt1,_dt2: string;
+  _dt1: string='';
+  _dt2: string='';
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
   imm:=0;
 
   if LastDisassembleData.Disassembler=dcThumb then
@@ -1327,7 +1348,7 @@ var opcode: dword;
   d, size, Vn, Vd, op, N,M, Vm: byte;
   _datatype: string;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   if LastDisassembleData.Disassembler=dcThumb then
     u:=(opcode shr 28) and 1
@@ -1396,9 +1417,9 @@ procedure ASIMD_2Reg_Scalar(var LastDisassembleData: TLastDisassembleData);
 var opcode: dword;
   q,u,b,a: byte;
   d, size, Vn, Vd, op, F,N,M, Vm: byte;
-  _datatype: string;
+  _datatype: string='';
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   if LastDisassembleData.Disassembler=dcThumb then
     u:=(opcode shr 28) and 1
@@ -1535,7 +1556,7 @@ var
   opcode: dword;
   D, Vn, Vd, imm4, N, Q, M, Vm: byte;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
   D:=(opcode shr 22) and 1;
   Vn:=(opcode shr 16) and $f;
   Vd:=(opcode shr 12) and $f;
@@ -1564,11 +1585,12 @@ var opcode: dword;
   u,b,a: byte;
   q,d, size, Vn, Vd, op, F,N,M, Vm: byte;
   sz: byte;
-  _dt, _dt2: string;
+  _dt: string='';
+  _dt2: string='';
 
   _sU, _sf: string;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   if LastDisassembleData.Disassembler=dcThumb then
     u:=(opcode shr 28) and 1
@@ -1801,7 +1823,8 @@ var
   _list: string;
   i: integer;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  _list:='';
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   D:=(opcode shr 22) and 1;
   Vn:=(opcode shr 16) and $f;
@@ -1841,7 +1864,7 @@ var
 
   size, index: byte;
 begin
-  opcode:=pdword(LastDisassembleData.Bytes[0])^;
+  opcode:=pdword(@LastDisassembleData.Bytes[0])^;
 
   D:=(opcode shr 22) and 1;
   imm4:=(opcode shr 16) and $f;
@@ -1963,21 +1986,48 @@ begin
 
 end;
 
+
+
+
+
 function TArmDisassembler.Disassemble(var address: ptrUint): string;
 var
   i: integer;
   x: ptruint;
   thumbdisassembler: TThumbDisassembler;
+  arm32disassembler: TArm32Instructionset;
+  arm64disassembler: TArm64Instructionset;
 begin
   result:='';
 
-  if (address and 1) = 1 then //thumb
+  if processhandler.is64Bit then
   begin
-    result:=thumbdisassembler.Disassemble(address);
-    LastDisassembleData:=thumbdisassembler.LastDisassembleData;
+    result:=arm64disassembler.Disassemble(address);
+    lastdisassembledata:=arm64disassembler.LastDisassembleData;
     exit;
+  end
+  else
+  begin
+    if (address and 1) = 1 then //thumb
+    begin
+      result:=thumbdisassembler.Disassemble(address);
+      LastDisassembleData:=thumbdisassembler.LastDisassembleData;
+      exit;
+    end;
+
+    if (address and 3) = 0 then
+    begin
+      result:=arm32disassembler.Disassemble(address);
+      lastdisassembledata:=arm32disassembler.LastDisassembleData;
+      exit;
+    end;
   end;
 
+
+
+
+
+  //obsolete:
   {$ifdef ARMDEV}
   opcode:=pdword(address)^;
   setlength(LastDisassembleData.Bytes,4);
@@ -2011,6 +2061,8 @@ begin
 
   if (x=sizeof(opcode)) then
   begin
+
+
     if ((opcode shr 4) and $ffffff)=$12FFF1 then
       BX
     else
@@ -2026,7 +2078,7 @@ begin
     if (((opcode shr 23) and $3)=2) and (((opcode shr 26) and $3)=2)  and (((opcode shr 12) and $3ff)=$28f) then
       MSR_flg
     else
-    if ((opcode shr 25) and 7)=5 then
+    if ((opcode shr 25) and %110)=%101 then
       Branch
     else
     if (((opcode shr 26) and 3)=0) and (((opcode shr 4) and $f)<>9) then
@@ -2035,7 +2087,7 @@ begin
     if (opcode shr 26) and 3=1 then
       SingleDataTransfer
     else
-    if (opcode shr 25) and 7=4 then
+    if (opcode shr 25) and %110=%100 then
       LDM_STM
     else
     if ((opcode shr 23) and $1f=2) and ((opcode shr 20) and $3=0) and ((opcode shr 4) and $ff=9) then
@@ -2078,6 +2130,9 @@ begin
   inc(address,4);
 
 end;
+
+initialization
+  outputdebugstring('arm disassembler'); //runs
 
 end.
 

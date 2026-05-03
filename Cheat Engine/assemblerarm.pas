@@ -1,15 +1,14 @@
 unit assemblerArm;
 
 {$mode objfpc}{$H+}
+{$warn 2005 off}
 
 interface
 
 
 {$ifdef jni}
 uses classes, SysUtils, StrUtils, assemblerunit, symbolhandler;
-{$endif}
-
-{$ifdef windows}
+{$else}
 uses
   Classes, SysUtils, strutils{$ifndef ARMDEV}, assemblerunit{$endif}, dialogs,
   symbolhandler;
@@ -45,11 +44,12 @@ end;
   function getRegNumber(regstring: string): integer;
 
 
-  function ArmAssemble(address: int32; instruction: string; var bytes: TAssemblerBytes): boolean;
+
+  function ArmAssemble(address: ptruint; instruction: string; var bytes: TAssemblerBytes): boolean;
 
 implementation
 
-uses DisassemblerArm;
+uses DisassemblerArm, ProcessHandlerUnit, DisassemblerARM32, DisAssemblerARM64, disassemblerArm32Thumb;
 
 resourcestring
   rsTheValue = 'The value ';
@@ -80,6 +80,9 @@ type
   TOpcodeData=record
     opcode: string;
     parser: TParser;
+    //scanner
+    //bitmask
+    //bits
   end;
 
 
@@ -102,7 +105,6 @@ const OpcodeList : array [0..OpcodeCount-1] of TOpcodeData= (
   (opcode: 'DD'; parser:@DefineDwordParser),
 
   (opcode: 'EOR'; parser:@DataProcessingParser),
-
   (opcode: 'LDR'; parser:@SingleDataParser),
   (opcode: 'LDM'; parser:@MultiDataParser),
   (opcode: 'MOV'; parser:@DataProcessingParser),
@@ -112,6 +114,9 @@ const OpcodeList : array [0..OpcodeCount-1] of TOpcodeData= (
   (opcode: 'MLA'; parser:@MULParser),
   (opcode: 'MUL'; parser:@MULParser),
   (opcode: 'ORR'; parser:@DataProcessingParser),
+ // (opcode: 'PUSH'; parser:@PushParser),
+ // (opcode: 'POP'; parser:@PushParser),
+
   (opcode: 'RSB'; parser:@DataProcessingParser),
   (opcode: 'RSC'; parser:@DataProcessingParser),
   (opcode: 'SUB'; parser:@DataProcessingParser),
@@ -1175,7 +1180,7 @@ begin
 end;
 
 
-function ArmAssemble(address: int32; instruction: string; var bytes: TAssemblerBytes): boolean;
+function ArmAssemble(address: ptruint; instruction: string; var bytes: TAssemblerBytes): boolean;
 var
   opcode: string;
   i,j: integer;
@@ -1185,8 +1190,58 @@ var
   b: Tassemblerbytes;
 
   oldlength: integer;
+  d32: TArm32Instructionset;
+  d64: TArm64Instructionset;
+  dThumb: TThumbInstructionset;
+  len: integer;
 begin
   result:=false;
+
+  if processhandler.is64Bit then
+  begin
+    try
+      r:=d64.assemble(address, instruction);
+      setlength(bytes,4);
+      pdword(@bytes[0])^:=r;
+      exit(true);
+    except
+      exit(false);
+    end;
+
+  end
+  else
+  begin
+    if (address and 1) = 1 then
+    begin
+      try
+        dThumb.assemble(address, instruction);
+
+        bytes:=dthumb.LastDisassembleData.Bytes;
+        {setlength(bytes,len);
+        if len=2 then
+          pword(@bytes[0])^:=r
+        else
+          pdword(@bytes[0])^:=r;   }
+
+        exit(true);
+
+      except
+      end;
+    end
+    else
+    begin
+      try
+        r:=d32.assemble(address, instruction);
+        setlength(bytes,4);
+        pdword(@bytes[0])^:=r;
+        exit(true);
+      except
+      end;
+    end;
+  end;
+
+  if (address and 1) = 1 then exit(FalsE);  //no thumb supported yet
+
   r:=$ffffffff;
   setlength(bytes,0);
 

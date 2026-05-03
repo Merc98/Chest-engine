@@ -1,3 +1,5 @@
+// Copyright Cheat Engine. All Rights Reserved.
+
 unit Parsers;
 {General parsers}
 
@@ -26,13 +28,21 @@ function HexStrToInt(const S: string): Integer;
 function HexStrToInt64(const S: string): Int64;
 
 function IntToHexSigned(v: INT64; digits: integer): string;
+function IntToHexSignedWithPlus(v: INT64; digits: integer): string;
 
 procedure getRegisterListFromParams(params: string; registerlist: Tstrings);
 
 
 implementation
 
-uses symbolhandler, assemblerunit;
+uses
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  symbolhandler, assemblerunit;
 
 resourcestring
    rsInvalidInteger = 'Invalid integer';
@@ -43,8 +53,7 @@ procedure getRegisterListFromParams(params: string; registerlist: Tstrings);
 }
 var
   tokens: TTokens;
-  tokens2: TTokens;
-  i,j: integer;
+  i: integer;
   isrnumber: boolean;
   seplist: TSysCharSet;
 begin
@@ -243,7 +252,7 @@ This routine will use StrToQword unless it is a negative value, in which case it
 begin
   s:=trim(s);
   if length(s)=0 then
-    raise exception.create(rsInvalidInteger)
+    raise EParserError.create(rsInvalidInteger)
   else
   begin
     try
@@ -386,6 +395,8 @@ var ishex: string;
     f: single;
     d: double;
     err: boolean;
+
+    su: string;
 begin
   if s='' then exit('');
 
@@ -446,9 +457,10 @@ begin
 
       '(' :
       begin
-        if copy(s,1,5)='(INT)' then
+        su:=uppercase(s);
+        if copy(su,1,5)='(INT)' then
         begin
-          t:=copy(s,6,length(s));
+          t:=copy(su,6);
           try
             q:=StrToQWordEx(t);
             result:='$'+inttohex(q,8);
@@ -457,36 +469,60 @@ begin
           end;
         end;
 
-        if copy(s,1,8)='(DOUBLE)' then
+        if copy(su,1,8)='(DOUBLE)' then
         begin
-          t:=copy(s,9,length(s));
+          t:=copy(su,9);
           val(t, d,j);
           if j=0 then
           begin
             result:='$'+inttohex(PINT64(@d)^,8);
 
-            if s[1]='-' then
+            if su[1]='-' then
               result:='-'+result;
 
-            if s[1]='+' then
+            if su[1]='+' then
               result:='+'+result;
 
             exit;
           end;
         end;
 
-        if copy(s,1,7)='(FLOAT)' then
+        if copy(su,1,11)='(DOUBLE32L)' then
         begin
-          t:=copy(s,8,length(s));
+          t:=copy(su,12);
+          val(t, d,j);
+          if j=0 then
+          begin
+            q:=PINT64(@d)^ and $ffffffff;
+            result:='$'+inttohex(q,8);
+            exit;
+          end;
+        end;
+
+        if copy(su,1,11)='(DOUBLE32H)' then
+        begin
+          t:=copy(su,12);
+          val(t, d,j);
+          if j=0 then
+          begin
+            q:=PINT64(@d)^ shr 32;
+            result:='$'+inttohex(q,8);
+            exit;
+          end;
+        end;
+
+        if copy(su,1,7)='(FLOAT)' then
+        begin
+          t:=copy(su,8);
           val(t, f,j);
           if j=0 then
           begin
             result:='$'+inttohex(pdword(@f)^,8);
 
-            if s[1]='-' then
+            if su[1]='-' then
               result:='-'+result;
 
-            if s[1]='+' then
+            if su[1]='+' then
               result:='+'+result;
 
             exit;
@@ -505,16 +541,16 @@ begin
 
   if s[1]='-' then
   begin
-    result:='-'+ishex+copy(s,start+1,length(s))
+    result:='-'+ishex+copy(s,start+1)
   end
   else
   if s[1]='+' then
   begin
-    result:='+'+ishex+copy(s,start+1,length(s));
+    result:='+'+ishex+copy(s,start+1);
   end
   else
   begin
-    result:=ishex+copy(s,start,length(s));
+    result:=ishex+copy(s,start);
   end;
 end;
 
@@ -522,6 +558,14 @@ function IntToHexSigned(v: INT64; digits: integer): string;
 begin
   if v>=0 then
     result:=inttohex(v, digits)
+  else
+    result:='-'+inttohex(-v, digits);
+end;
+
+function IntToHexSignedWithPlus(v: INT64; digits: integer): string;
+begin
+  if v>=0 then
+    result:='+'+inttohex(v, digits)
   else
     result:='-'+inttohex(-v, digits);
 end;

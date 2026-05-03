@@ -5,8 +5,8 @@ unit Unit4;
 interface
 
 uses
-  windows, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, LResources;
+  {$ifdef windows}windows,{$endif} LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, LResources, betterControls;
 
 type
 
@@ -34,6 +34,8 @@ var
 
 implementation
 
+uses cetranslator;
+
 
 procedure TForm4.Button1Click(Sender: TObject);
 begin
@@ -48,6 +50,11 @@ end;
 procedure TForm4.FormCreate(Sender: TObject);
 begin
   font.size:=12;
+
+  label1.caption:=altnamer(label1.caption);
+  label3.caption:=altnamer(label3.caption);
+  label4.caption:=altnamer(label4.caption);
+
 end;
 
 procedure TForm4.FormShow(Sender: TObject);
@@ -59,7 +66,11 @@ end;
 
 procedure TForm4.Label4Click(Sender: TObject);
 begin
+  {$ifdef windows}
   ShellExecute(0, PChar('open'), PChar('http://forum.cheatengine.org/'),PChar(''), PChar(''), SW_MAXIMIZE);
+  {$else}
+  OpenURL('http://forum.cheatengine.org/');
+  {$endif}
 end;
 
 initialization

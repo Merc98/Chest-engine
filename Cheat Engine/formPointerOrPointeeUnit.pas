@@ -6,15 +6,15 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, LResources, ExtCtrls;
+  Dialogs, StdCtrls, LResources, ExtCtrls, betterControls;
 
 type
 
   { TformPointerOrPointee }
 
   TformPointerOrPointee = class(TForm)
-    Button1: TButton;
-    Button2: TButton;
+    btnFindWhatWritesPointer: TButton;
+    btnFindWhatWritesPointee: TButton;
     Label1: TLabel;
     Panel1: TPanel;
   private

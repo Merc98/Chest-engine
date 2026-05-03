@@ -5,15 +5,22 @@ unit frmstacktraceunit;
 interface
 
 uses
-  windows, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs,NewKernelHandler, CEFuncProc, ComCtrls,imagehlp,CEDebugger, KernelDebugger,
-  Menus, LResources, debughelper, symbolhandler;
+  {$ifdef darwin}
+  macport, macportdefines,
+  {$endif}
+  {$ifdef windows}
+  windows, imagehlp,
+  {$endif}
+  LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  Dialogs,NewKernelHandler, CEFuncProc, ComCtrls,CEDebugger, KernelDebugger,
+  Menus, LResources, debughelper, symbolhandler, betterControls;
 
 type
 
   { TfrmStacktrace }
 
   TfrmStacktrace = class(TForm)
+    stImageList: TImageList;
     ListView1: TListView;
     miManualStackwalk: TMenuItem;
     PopupMenu1: TPopupMenu;
@@ -28,8 +35,8 @@ type
     procedure refreshtrace;
   public
     { Public declarations }
-    procedure shadowstacktrace(context: _context; stackcopy: pointer; stackcopysize: integer);
-    procedure stacktrace(threadhandle:thandle;context:_context);
+    procedure shadowstacktrace(context: pointer; stackcopy: pointer; stackcopysize: integer);
+    procedure stacktrace(threadhandle:thandle;context:pointer);
   end;
 
 var
@@ -37,7 +44,8 @@ var
 
 implementation
 
-uses MemoryBrowserFormUnit, frmManualStacktraceConfigUnit, ProcessHandlerUnit, DBK32functions;
+uses MemoryBrowserFormUnit, frmManualStacktraceConfigUnit, ProcessHandlerUnit,
+  DBK32functions, symbolhandlerstructs, PEInfoFunctions, contexthandler;
 
 var
   useShadow: boolean;
@@ -45,12 +53,13 @@ var
   shadowNew: ptruint;
   shadowSize: integer;
 
-
+  {$ifdef windows}
 
 function rpm64(hProcess:THANDLE; qwBaseAddress:dword64; lpBuffer:pointer; nSize:dword; lpNumberOfBytesRead:lpdword):bool;stdcall; //should be lpptruint but the header file isn't correct
 var
     br: ptruint;
 begin
+
   result:=false;
   {$ifndef cpu64}
   if qwBaseAddress>$FFFFFFFF then exit;
@@ -69,14 +78,78 @@ end;
 
 
 
-
-procedure TfrmStacktrace.stacktrace(threadhandle:thandle;context:_context);
-{
-}
+function get_module_base_routine64(hProcess:THANDLE; Address:dword64):dword64;stdcall;
+var mi: TModuleInfo;
+begin
+  if symhandler.getmodulebyaddress(address,mi) then
+    result:=mi.baseaddress
+  else
+    result:=0;
+end;
 
 var
-    stackframe: TSTACKFRAME_EX;
+  exceptionlists: array of TExceptionList;
+  exceptionlistPID: dword;
+
+procedure cleanupExceptionList;
+var i: integer;
+begin
+  if (length(exceptionlists)>0) then
+  begin
+    for i:=0 to length(exceptionlists)-1 do
+      exceptionlists[i].free;
+
+    setlength(exceptionlists,0);
+  end;
+end;
+
+function function_table_access_routine64(hProcess:THANDLE; AddrBase:dword64):pointer;stdcall;
+var
+  mb: qword;
+  mi: TModuleInfo;
+  i: integer;
+  rte: TRunTimeEntry;
+  el: TExceptionList;
+begin
+  result:=nil;
+  el:=nil;
+
+  if symhandler.getmodulebyaddress(AddrBase,mi) then
+  begin
+    //find the module
+    for i:=0 to length(exceptionlists)-1 do
+    begin
+      if exceptionlists[i].ModuleBase=mi.baseaddress then
+      begin
+        el:=exceptionlists[i];
+        break;
+      end;
+    end;
+
+    if el=nil then //not cached yet
+    begin
+      el:=peinfo_getExceptionList(mi.baseaddress);
+      if el<>nil then
+      begin
+        setlength(exceptionlists,length(exceptionlists)+1);
+        exceptionlists[length(exceptionlists)-1]:=el;
+      end;
+
+    end;
+
+    if el<>nil then
+      result:=el.getRunTimeEntry(addrbase);
+  end;
+end;
+
+{$endif}
+
+procedure TfrmStacktrace.stacktrace(threadhandle:thandle;context:pointer);
+{$ifdef windows}
+var
     cxt:_context;
+    stackframe: TSTACKFRAME_EX;
+
     wow64ctx: CONTEXT32;
     a,b,c,d: dword;
     sa,sb,sc,sd:string;
@@ -85,88 +158,102 @@ var
     cp: pointer;
 
     found: boolean;
+    i: integer;
+
+    li: TListitem;
+        contexthandler: TContextInfo;
+
+    {$endif}
+
+
 begin
+{$ifdef windows}
+  contexthandler:=getBestContextHandler;
 
-  cxt:=context;
-  cp:=@cxt;
+  if processhandler.SystemArchitecture=archX86 then
+  begin
 
- // getmem(stackframe,sizeof(TSTACKFRAME_EX));
-  zeromemory(@stackframe,sizeof(TSTACKFRAME_EX));
+    if (exceptionlistPID<>processid) and (length(exceptionlists)>0) then
+      cleanupExceptionList;
 
-  stackframe.StackFrameSize:=sizeof(TSTACKFRAME_EX);
+    exceptionlistPID:=processid;
 
-  try
-    stackframe.AddrPC.Offset:=context.{$ifdef cpu64}rip{$else}eip{$endif};
-    stackframe.AddrPC.mode:=AddrModeFlat;
+    cp:=contexthandler.getCopy(context);
+    try
+      zeromemory(@stackframe,sizeof(TSTACKFRAME_EX));
+      stackframe.StackFrameSize:=sizeof(TSTACKFRAME_EX);
 
-    stackframe.AddrStack.Offset:=context.{$ifdef cpu64}rsp{$else}esp{$endif};
-    stackframe.AddrStack.Mode:=addrmodeflat;
+      stackframe.AddrPC.Offset:=contexthandler.InstructionPointerRegister^.getValue(context);
+      stackframe.AddrPC.mode:=AddrModeFlat;
 
-    stackframe.AddrFrame.Offset:=context.{$ifdef cpu64}rbp{$else}ebp{$endif};
-    stackframe.AddrFrame.Mode:=addrmodeflat;
+      stackframe.AddrStack.Offset:=contexthandler.StackPointerRegister^.getValue(context);
+      stackframe.AddrStack.Mode:=addrmodeflat;
 
-    listview1.items.clear;
+      stackframe.AddrFrame.Offset:=contexthandler.FramePointerRegister^.getValue(context);
+      stackframe.AddrFrame.Mode:=addrmodeflat;
+
+      listview1.items.clear;
 
 
-  //function StackWalk64(MachineType:dword; hProcess:THANDLE; hThread:THANDLE; StackFrame:LPSTACKFRAME64; ContextRecord:pointer;  ReadMemoryRoutine:TREAD_PROCESS_MEMORY_ROUTINE64; FunctionTableAccessRoutine:TFUNCTION_TABLE_ACCESS_ROUTINE64; GetModuleBaseRoutine:TGET_MODULE_BASE_ROUTINE64; TranslateAddress:TTRANSLATE_ADDRESS_ROUTINE64):bool;stdcall;external External_library name 'StackWalk64';
-  {$ifdef cpu32}
-    machinetype:=IMAGE_FILE_MACHINE_I386;
-  {$else}
-
-    if processhandler.is64Bit then
-      machinetype:=IMAGE_FILE_MACHINE_AMD64
-    else
-    begin
-      //   if (debuggerthread<>nil) and (debuggerthread.CurrentThread<>nil) then
-
-      ZeroMemory(@wow64ctx, sizeof (wow64ctx));
-      wow64ctx.Eip:=cxt.Rip;       //shouldn't be needed though
-      wow64ctx.Ebp:=cxt.Rbp;
-      wow64ctx.Esp:=cxt.Rsp;
+    //function StackWalk64(MachineType:dword; hProcess:THANDLE; hThread:THANDLE; StackFrame:LPSTACKFRAME64; ContextRecord:pointer;  ReadMemoryRoutine:TREAD_PROCESS_MEMORY_ROUTINE64; FunctionTableAccessRoutine:TFUNCTION_TABLE_ACCESS_ROUTINE64; GetModuleBaseRoutine:TGET_MODULE_BASE_ROUTINE64; TranslateAddress:TTRANSLATE_ADDRESS_ROUTINE64):bool;stdcall;external External_library name 'StackWalk64';
+    {$ifdef cpu32}
       machinetype:=IMAGE_FILE_MACHINE_I386;
+    {$else}
 
+      if processhandler.is64Bit then
+        machinetype:=IMAGE_FILE_MACHINE_AMD64
+      else
+      begin
+        //   if (debuggerthread<>nil) and (debuggerthread.CurrentThread<>nil) then
 
-      cp:=@wow64ctx;
+        ZeroMemory(@wow64ctx, sizeof (wow64ctx));
+        wow64ctx.Eip:=contexthandler.InstructionPointerRegister^.getValue(context);   //shouldn't be needed though
+        wow64ctx.Ebp:=contexthandler.FramePointerRegister^.getValue(context);
+        wow64ctx.Esp:=contexthandler.StackPointerRegister^.getValue(context);
+        machinetype:=IMAGE_FILE_MACHINE_I386;
 
+        copymemory(cp,@wow64ctx,sizeof(wow64ctx));
+      end;
+    {$endif}
+
+      //because I provide a readprocessmemory the threadhandle just needs to be the unique for each thread. e.g threadid instead of threadhandle
+      while stackwalk64(machinetype,processhandle,threadhandle,@stackframe,cp, rpm64 ,function_table_access_routine64, get_module_base_routine64,nil) do
+      begin
+
+        li:=listview1.Items.Add;
+        li.data:=pointer(stackframe.AddrReturn.Offset);
+        li.caption:=symhandler.getNameFromAddress(stackframe.AddrPC.Offset, true, true, false);
+        li.SubItems.add(inttohex(stackframe.AddrStack.Offset,8));
+        li.SubItems.add(inttohex(stackframe.AddrFrame.Offset,8));
+        li.SubItems.add(symhandler.getNameFromAddress(stackframe.AddrReturn.Offset,true,true, false));
+
+        a:=stackframe.Params[0];
+        b:=stackframe.Params[1];
+        c:=stackframe.Params[2];
+        d:=stackframe.Params[3];
+
+        sa:=symhandler.getNameFromAddress(a, found);
+        sb:=symhandler.getNameFromAddress(b, found);
+        sc:=symhandler.getNameFromAddress(c, found);
+        sd:=symhandler.getNameFromAddress(d, found);
+
+        listview1.items[listview1.Items.Count-1].SubItems.add(sa+','+sb+','+sc+','+sd+',...');
+      end;
+    finally
+      freememandnil(cp);
     end;
-  {$endif}
-
-    //because I provide a readprocessmemory the threadhandle just needs to be the unique for each thread. e.g threadid instead of threadhandle
-    while stackwalkex(machinetype,processhandle,threadhandle,@stackframe,cp, rpm64 ,SymFunctionTableAccess64,SymGetModuleBase64,nil,1) do
-    begin
-
-
-      listview1.Items.Add.Caption:=symhandler.getNameFromAddress(stackframe.AddrPC.Offset, true, true);
-      listview1.items[listview1.Items.Count-1].SubItems.add(inttohex(stackframe.AddrStack.Offset,8));
-      listview1.items[listview1.Items.Count-1].SubItems.add(inttohex(stackframe.AddrFrame.Offset,8));
-      listview1.items[listview1.Items.Count-1].SubItems.add(inttohex(stackframe.AddrReturn.Offset,8));
-
-      a:=stackframe.Params[0];
-      b:=stackframe.Params[1];
-      c:=stackframe.Params[2];
-      d:=stackframe.Params[3];
-
-      sa:=symhandler.getNameFromAddress(a, found);
-      sb:=symhandler.getNameFromAddress(b, found);
-      sc:=symhandler.getNameFromAddress(c, found);
-      sd:=symhandler.getNameFromAddress(d, found);
-
-      listview1.items[listview1.Items.Count-1].SubItems.add(sa+','+sb+','+sc+','+sd+',...');
-    end;
-  finally
-   // freemem(stackframe);
   end;
+  {$endif}
 end;
 
 procedure TfrmstackTrace.refreshtrace;
 {
 Called when the debugger is paused on a breakpoint
 }
-var c: _CONTEXT;
 begin
 
-  if (debuggerthread<>nil) and (debuggerthread.CurrentThread<>nil) then
-    stacktrace(debuggerthread.CurrentThread.handle,MemoryBrowser.lastdebugcontext);
+  if (debuggerthread<>nil) and (debuggerthread.CurrentThread<>nil) and (MemoryBrowser.context<>nil) then
+    stacktrace(debuggerthread.CurrentThread.handle,MemoryBrowser.context);
 end;
 
 
@@ -187,31 +274,47 @@ end;
 procedure TfrmStacktrace.ListView1DblClick(Sender: TObject);
 begin
   if listview1.Selected<>nil then
+  begin
     memorybrowser.disassemblerview.TopAddress:=symhandler.getAddressFromName(listview1.Selected.Caption);
+    if memorybrowser.visible=false then
+      memorybrowser.show();
+  end;
 end;
 
-procedure TfrmStacktrace.shadowstacktrace(context: _context; stackcopy: pointer; stackcopysize: integer);
+procedure TfrmStacktrace.shadowstacktrace(context: pointer; stackcopy: pointer; stackcopysize: integer);
+var ch: TContextInfo;
 begin
+
+  {$ifdef windows}
+  ch:=getBestContextHandler;
   useshadow:=true;
-  shadowOrig:=context.{$ifdef cpu64}rsp{$else}esp{$endif};
+
+  shadowOrig:=ch.StackPointerRegister^.getValue(context);
   shadowNew:=ptruint(stackcopy);
   shadowSize:=stackcopysize;
+
+
   stacktrace(GetCurrentThread, context);
+  {$endif}
 end;
 
 
 procedure TfrmStacktrace.miManualStackwalkClick(Sender: TObject);
-var c: _CONTEXT;
+var c: pointer;
     frmManualStacktraceConfig: TfrmManualStacktraceConfig;
+    ch: TContextInfo;
 begin
-  zeromemory(@c, sizeof(_CONTEXT));
+  {$ifdef windows}
+  ch:=getBestContextHandler;
+  getmem(c, ch.ContextSize);
+  zeromemory(c, ch.ContextSize);
 
   frmManualStacktraceConfig:=tfrmManualStacktraceConfig.create(self);
   if frmManualStacktraceConfig.showmodal=mrok then
   begin
-    c.{$ifdef cpu64}Rip{$else}eip{$endif}:=frmManualStacktraceConfig.eip;
-    c.{$ifdef cpu64}Rbp{$else}ebp{$endif}:=frmManualStacktraceConfig.ebp;
-    c.{$ifdef cpu64}Rsp{$else}esp{$endif}:=frmManualStacktraceConfig.esp;
+    ch.InstructionPointerRegister.setValue(c, frmManualStacktraceConfig.eip);
+    ch.FramePointerRegister.setValue(c, frmManualStacktraceConfig.ebp);
+    ch.StackPointerRegister.setValue(c, frmManualStacktraceConfig.esp);
 
     if frmManualStacktraceConfig.useshadow then
     begin
@@ -222,11 +325,13 @@ begin
     end;
     stacktrace(GetCurrentThreadId, c);
 
+    freemem(c);
+
     useShadow:=false;
   end;
   frmManualStacktraceConfig.free;
 
-
+  {$endif}
 end;
 
 procedure TfrmStacktrace.Refresh1Click(Sender: TObject);
@@ -238,6 +343,11 @@ end;
 initialization
   {$i frmstacktraceunit.lrs}
 
+
+finalization
+  {$ifdef windows}
+  cleanupExceptionList;
+  {$endif}
 
 
 end.

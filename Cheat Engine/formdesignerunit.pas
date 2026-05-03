@@ -10,9 +10,9 @@ uses
   Dialogs, ComCtrls, StdCtrls, ExtCtrls, Buttons, Menus, JvDesignSurface,
   JvDesignImp, JvDesignUtils, typinfo, PropEdits, ObjectInspector, LResources,
   maps, ExtDlgs, PopupNotifier, IDEDialogs, ceguicomponents, LMessages, luacaller,
-  luahandler, cefuncproc, ListViewPropEdit, TreeViewPropEdit, AnchorEditor,
-  LCLType, GraphicPropEdit, GraphPropEdits, registry, math, LCLVersion;
-
+  luahandler, cefuncproc, ListViewPropEdit, TreeViewPropEdit,
+  LCLType, GraphicPropEdit, GraphPropEdits, registry, math, LCLVersion,
+  frmAnchorEditor, betterControls;
 
 
 
@@ -22,11 +22,14 @@ type
   { TFormDesigner }
 
   TFormDesigner = Class(TForm)
+    LazVirtualStringTree: TToolButton;
     FindDialog: TToolButton;
     ImageList1: TImageList;
     MainMenu1: TMainMenu;
     MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
     miAnchorEditor: TMenuItem;
+    miAnchorEditor2: TMenuItem;
     miMenuSep: TMenuItem;
     miMenuMoveUp: TMenuItem;
     miMenuMoveDown: TMenuItem;
@@ -44,6 +47,7 @@ type
     OpenDialog1: TOpenDialog;
     PopupMenu1: TPopupMenu;
     controlPopup: TPopupMenu;
+    pmToolbar: TPopupMenu;
     SaveDialog1: TSaveDialog;
     ToolBar1: TToolBar;
     CEButton: TToolButton;
@@ -75,6 +79,8 @@ type
     SelectDirectoryDialog: TToolButton;
     RadioButton: TToolButton;
     ScrollBox: TToolButton;
+    CheckListBox: TToolButton;
+    CECustomButton: TToolButton;
     ToolButton6: TToolButton;
     CEImage: TToolButton;
     procedure controlPopupPopup(Sender: TObject);
@@ -83,6 +89,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure foundlist3Data(Sender: TObject; Item: TListItem);
+    procedure MenuItem2Click(Sender: TObject);
     procedure miAddItemsClick(Sender: TObject);
     procedure miAddSubMenuClick(Sender: TObject);
     procedure miAddTabClick(Sender: TObject);
@@ -119,7 +126,8 @@ type
 
     ComponentTreeWindowProc: TWndMethod;
 
-    //anchorEditor: TAnchorDesigner;
+    ObjectInspectorSelectionChangeCount: integer;
+    DesignerSelectionChangeCount: integer;
 
     procedure UpdateMethodListIfNeeded;
 
@@ -127,8 +135,12 @@ type
     function MethodExists(const Name: String; TypeData: PTypeData; var MethodIsCompatible,MethodIsPublished,IdentIsMethod: boolean):boolean;
     function CompatibleMethodExists(const Name: String; InstProp: PInstProp; var MethodIsCompatible,MethodIsPublished,IdentIsMethod: boolean):boolean;
 
+    procedure OnObjectSelected(const ASelection: TPersistentSelectionList);
+    procedure OnObjectPropertyChanged(Sender: TObject);
     procedure OnComponentRenamed(AComponent: TComponent);
     procedure onRefreshPropertyValues;
+    function onMethodFromLookupRoot(const Method:TMethod):boolean;
+
     procedure setFormName;
     procedure mousedownhack(var TheMessage: TLMessage);
   public
@@ -160,11 +172,9 @@ type
     procedure onRenameMethod(const CurName, NewName: String);
     procedure onShowMethod(const Name: String);
     function onCreateMethod(const Name: ShortString; ATypeInfo: PTypeInfo; APersistent: TPersistent; const APropertyPath: string): TMethod;
-    {$if lcl_fullversion >= 1060400}
+
     function ogm(const Method: TMethod; CheckOwner: TObject; OrigLookupRoot: TPersistent): String;
-    {$else}
-    function ogm(const Method: TMethod; CheckOwner: TObject): String;
-    {$endif}
+
     procedure OnGetMethods(TypeData: PTypeData; Proc: TGetStrProc);
     procedure OnGetCompatibleMethods(InstProp: PInstProp; const Proc: TGetStrProc);
 
@@ -190,8 +200,7 @@ implementation
 
 { TFormDesigner }
 
-
-uses mainunit;
+uses mainunit, DPIHelper,lazdialogs{$ifdef windows}, DwmApi, UxTheme{$endif}, mainunit2;
 
 resourcestring
   rsInvalidObject = '{Invalid object}';
@@ -211,6 +220,17 @@ procedure TFormDesigner.foundlist3Data(Sender: TObject; Item: TListItem);
 begin
   item.caption:=inttostr(item.index);
   item.SubItems.Add(inttostr(globalcounter*(1+item.index)));
+end;
+
+procedure TFormDesigner.MenuItem2Click(Sender: TObject);
+var classname: string;
+begin
+  classname:='';
+  if inputquery('Custom class','Enter the component you wish to add. (E.g TButton)',classname) then
+  begin
+    componentToAdd:=classname;
+    NoSelection.Down:=false;
+  end;
 end;
 
 procedure TFormDesigner.miAddItemsClick(Sender: TObject);
@@ -260,15 +280,45 @@ begin
   TCEForm(GlobalDesignHook.LookupRoot).designsurface.Change;
 end;
 
-procedure TFormDesigner.miAnchorEditorClick(Sender: TObject);
+procedure TFormDesigner.OnObjectSelected(const ASelection: TPersistentSelectionList);
 begin
-  if AnchorDesigner=nil then
+  if AnchorEditor<>nil then
+    AnchorEditor.setselection(aselection);
+end;
+
+procedure TFormDesigner.OnObjectPropertyChanged(Sender: TObject);
+begin
+  if anchoreditor<>nil then
+    AnchorEditor.OnObjectPropertyChanged(sender);
+
+  if oid<>nil then
+    oid.RefreshPropertyValues;
+end;
+
+procedure TFormDesigner.miAnchorEditorClick(Sender: TObject);
+var defaultwidth: integer;
+begin
+  if AnchorEditor=nil then
   begin
-    AnchorDesigner:=TAnchorDesigner.Create(self);
-    AnchorDesigner.show;
+    GlobalDesignHook.AddHandlerSetSelection(OnObjectSelected);
+    GlobalDesignHook.AddHandlerModified(OnObjectPropertyChanged);
+
+    AnchorEditor:=TAnchorEditor.Create(self);
+
+
+
+    //this this is the most dpi unaware window I've seen
+    with AnchorEditor do
+    begin
+      show;
+
+      DoAutoSize;
+
+    end;
+    AnchorEditor.setSelection(oid.Selection);
   end
   else
-    AnchorDesigner.Show;
+    AnchorEditor.Show;
 end;
 
 procedure TFormDesigner.miDeleteClick(Sender: TObject);
@@ -285,9 +335,18 @@ begin
   OpenDialog1.Filter := rsFormFilesFrmFRM;
   if (GlobalDesignHook.LookupRoot<>nil) and (GlobalDesignHook.LookupRoot is TCEForm) and (OpenDialog1.Execute) then
   begin
+    //TCEForm(GlobalDesignHook.LookupRoot).Close;
+   // GlobalDesignHook.LookupRoot:=nil;
+
+   // f:=tceform.Create(application);
     f:=TCEForm(GlobalDesignHook.LookupRoot);
+    GlobalDesignHook.LookupRoot:=nil;
 
     f.LoadFromFile(UTF8ToAnsi(OpenDialog1.filename));
+    GlobalDesignHook.LookupRoot:=f;
+
+    surfaceOnChange(self);
+    //designForm(f);
     setFormName;
   end;
 end;
@@ -301,15 +360,19 @@ begin
   begin
     f:=TCEForm(GlobalDesignHook.LookupRoot);
 
+    GlobalDesignHook.LookupRoot:=nil;
     f.LoadFromFileLFM(UTF8ToAnsi(OpenDialog1.filename));
+    GlobalDesignHook.LookupRoot:=f;
+
+    surfaceOnChange(self);
     setFormName;
   end;
 end;
 
 procedure TFormDesigner.miMenuMoveDownClick(Sender: TObject);
 var
-  mi: TMenuItem;
-  p: TMenuItem;
+  mi: menus.TMenuItem;
+  p: menus.TMenuItem;
   i: integer;
 begin
   mi:=TMenuItem(oid.selection[0]);
@@ -326,8 +389,13 @@ begin
       p.Delete(i);
       p.Insert(i+1, mi);
 
+
       TCEForm(GlobalDesignHook.LookupRoot).designsurface.Change;
+      {$if lcl_fullversion < 2020000}
       oid.ComponentTree.RebuildComponentNodes;
+      {$else}
+      oid.ComponentTree.BuildComponentNodes(true);
+      {$endif}
     end;
 
   end;
@@ -335,8 +403,8 @@ end;
 
 procedure TFormDesigner.miMenuMoveUpClick(Sender: TObject);
 var
-  mi: TMenuItem;
-  p: TMenuItem;
+  mi: menus.TMenuItem;
+  p: menus.TMenuItem;
   i: integer;
 begin
   mi:=TMenuItem(oid.selection[0]);
@@ -353,7 +421,11 @@ begin
       p.Insert(i-1, mi);
 
       TCEForm(GlobalDesignHook.LookupRoot).designsurface.Change;
+      {$if lcl_fullversion < 2020000}
       oid.ComponentTree.RebuildComponentNodes;
+      {$else}
+      oid.ComponentTree.BuildComponentNodes(true);
+      {$endif}
     end;
 
   end;
@@ -362,14 +434,16 @@ end;
 procedure TFormDesigner.miSaveClick(Sender: TObject);
 var f: TCeform;
 begin
+
   SaveDialog1.DefaultExt := '.FRM';
   SaveDialog1.Filter := rsFormFilesFrmFRM;
   if (GlobalDesignHook.LookupRoot<>nil) and (GlobalDesignHook.LookupRoot is TCEForm) and (SaveDialog1.Execute) then
   begin
     f:=TCEForm(GlobalDesignHook.LookupRoot);
-
     f.SaveToFile(Utf8ToAnsi(Savedialog1.filename));
   end;
+
+
 end;
 
 procedure TFormDesigner.miSaveLFMClick(Sender: TObject);
@@ -427,6 +501,8 @@ begin
 
   miBringToFront.visible:=(oid.Selection.Count>0) and (oid.selection[0] is TControl);
   miSendToBack.visible:=miBringToFront.visible;
+
+  miAnchorEditor2.Visible:=miBringToFront.visible and not (oid.selection[0] is TCustomForm);;
 
   miMenuSep.visible:=miAddSubMenu.visible;
   miMenuMoveUp.visible:=miMenuSep.visible;
@@ -512,7 +588,11 @@ begin
   TCEform(GlobalDesignHook.LookupRoot).designsurface.UpdateDesigner;
 
 
+  {$if lcl_fullversion < 2020000}
   oid.ComponentTree.RebuildComponentNodes;
+  {$else}
+  oid.ComponentTree.BuildComponentNodes(true);
+  {$endif}
 
 end;
 
@@ -564,6 +644,11 @@ begin
  // showmessage('weee');
 end;
 
+function TFormDesigner.onMethodFromLookupRoot(const Method:TMethod):boolean;
+begin
+  result:=(method.code<>nil) and (TObject(method.data) is TLuaCaller);
+end;
+
 procedure TFormDesigner.FormCreate(Sender: TObject);
 var h: TPropertyEditorHook;
   gc: TOICustomPropertyGrid;
@@ -575,12 +660,18 @@ begin
   LazIDESelectDirectory:=IDESelectDirectory;
   idedialogs.InitIDEFileDialog:=self.InitIDEFileDialog;
   idedialogs.StoreIDEFileDialog:=self.InitIDEFileDialog;
-  idedialogs.IDEMessageDialog:=self.IDEMessageDialog;
-  idedialogs.IDEQuestionDialog:=self.IDEQuestionDialog;
+
+ { LazMsgDialogs.LazMessageDialog:=self.IDEMessageDialog;
+  LazMsgDialogs.LazQuestionDialog:=self.IDEQuestionDialog;
+
+  //todo: changed to  a class
+
+  }
+
 
   SurfaceList:=tlist.create;
 
-  GlobalDesignHook:=TPropertyEditorHook.Create;
+  GlobalDesignHook:=TPropertyEditorHook.Create(self);
   GlobalDesignHook.AddHandlerCreateMethod(onCreateMethod);
   GlobalDesignHook.AddHandlerGetMethodName(ogm);
   GlobalDesignHook.AddHandlerGetMethods(onGetMethods);
@@ -604,6 +695,8 @@ begin
 
   GlobalDesignHook.AddHandlerRefreshPropertyValues(onRefreshPropertyValues);
 
+  GlobalDesignHook.AddHandlerMethodFromLookupRoot(OnMethodFromLookuproot);
+
   setlength(x,0);
   loadedfromsave:=loadformposition(self, x);
 
@@ -613,20 +706,41 @@ end;
 
 
 procedure TFormDesigner.OIDDestroy(sender: Tobject);
+var x: array of integer;
 begin
-  saveformposition(TObjectInspectorDlg(sender),[]);
+  setlength(x,1);
+  x[0]:=TObjectInspectorDlg(sender).PropertyGrid.SplitterX;
+  saveformposition(TObjectInspectorDlg(sender), x);
 end;
 
 procedure TFormDesigner.FormDestroy(Sender: TObject);
 begin
-  saveformposition(self,[]);
+  saveformposition(self);
   if methodlist<>nil then
     freeandnil(methodlist);
 end;
 
 procedure TFormDesigner.FormShow(Sender: TObject);
+var
+  w: integer;
+  i: integer;
 begin
-  self.clientheight:=toolbar1.height;
+  //dpihelper.AdjustToolbar(Toolbar1);
+  if loadedfromsave=false then
+  begin
+    w:=0;
+    for i:=0 to toolbar1.ButtonCount-1 do
+      inc(w, toolbar1.buttons[i].Width);
+
+    if screen.width<oid.width+10+w then
+      w:=screen.width-oid.width+10;
+
+    self.clientwidth:=w+2;
+  end;
+
+  toolbar1.ButtonHeight:=scaley(32, 96);
+
+  self.clientheight:=max(toolbar1.height, toolbar1.ButtonHeight);
 end;
 
 
@@ -635,6 +749,10 @@ begin
   ioclass:=componentToAdd;
   componentToAdd:='';
   NoSelection.down:=true;
+
+  if ioclass<>'' then
+    oid.OnSelectPersistentsInOI:=nil;
+
 end;
 
 procedure TFormDesigner.ObjectInspectorSelectionChange(sender: tobject);
@@ -642,7 +760,14 @@ procedure TFormDesigner.ObjectInspectorSelectionChange(sender: tobject);
 var s: TPersistentSelectionList;
   i: integer;
   surface: TJvDesignSurface;
+
+  p: TPersistent;
 begin
+  if ObjectInspectorSelectionChangeCount<>0 then exit;
+
+  ObjectInspectorSelectionChangeCount:=1;
+
+
   if GlobalDesignHook.LookupRoot<>nil then
   begin
     surface:=TCEform(GlobalDesignHook.LookupRoot).designsurface;
@@ -657,15 +782,23 @@ begin
         s:=oid.Selection;
 
         for i:=0 to s.Count-1 do
-          surface.Selector.AddToSelection(tcontrol(s[i]));
+        begin
+          p:=s[i];
 
+          if p is tcontrol then
+            surface.Selector.AddToSelection(tcontrol(p));
+        end;
+
+        if AnchorEditor<>nil then
+          GlobalDesignHook.SetSelection(oid.Selection);
+          
         surface.onselectionchange:=designerSelectionChange;
-
-
       end;
 
     end;
   end;
+
+  ObjectInspectorSelectionChangeCount:=0;
 
 end;
 
@@ -688,64 +821,85 @@ var s: TJvDesignObjectArray;
   sl: TPersistentSelectionList;
 begin
   //oid.
-  if GlobalDesignHook=nil then exit;
+  if DesignerSelectionChangeCount<>0 then exit;
+  DesignerSelectionChangeCount:=1;
 
-  surface:=TJvDesignSurface(sender);
+  try
 
-  if GlobalDesignHook.LookupRoot<>nil then
-  begin
-    if GlobalDesignHook.LookupRoot<>surface.Container then //deselect the components on the other surface
+    if GlobalDesignHook=nil then exit;
+
+    surface:=TJvDesignSurface(sender);
+
+    if GlobalDesignHook.LookupRoot<>nil then
     begin
-      if (TCEform(GlobalDesignHook.LookupRoot).designsurface<>nil) and (TCEform(GlobalDesignHook.LookupRoot).designsurface.Selector<>nil) then
-        TCEform(GlobalDesignHook.LookupRoot).designsurface.Selector.ClearSelection;
+      if GlobalDesignHook.LookupRoot<>surface.Container then //deselect the components on the other surface
+      begin
+        if (TCEform(GlobalDesignHook.LookupRoot).designsurface<>nil) and (TCEform(GlobalDesignHook.LookupRoot).designsurface.Selector<>nil) then
+          TCEform(GlobalDesignHook.LookupRoot).designsurface.Selector.ClearSelection;
+      end;
+
     end;
 
-  end;
+
+    GlobalDesignHook.LookupRoot:=surface.Container;
+
+    surface.OnSelectionChange:=nil;
 
 
-  GlobalDesignHook.LookupRoot:=surface.Container;
+   // sl:=TPersistentSelectionList.Create;
 
-  surface.OnSelectionChange:=nil;
-
-
- // sl:=TPersistentSelectionList.Create;
-  s:=Surface.Selected;
-  if oid<>nil then
-  begin
-
-    oid.Selection.Clear;
-    if length(s)>0 then
+    s:=Surface.Selected;
+    if oid<>nil then
     begin
-      for i:=0 to length(s)-1 do
+
+      oid.Selection.Clear;
+      if length(s)>0 then
       begin
-        oid.Selection.Add(TPersistent(s[i]));
-       // sl.Add(TPersistent(s[i]));
-      end;
-    end
-    else
-      oid.selection.add(GlobalDesignHook.LookupRoot);
+        for i:=0 to length(s)-1 do
+        begin
+          oid.Selection.Add(TPersistent(s[i]));
+         // sl.Add(TPersistent(s[i]));
+        end;
+      end
+      else
+        oid.selection.add(GlobalDesignHook.LookupRoot);
 
-    oid.RefreshSelection;
-  end;
+      oid.RefreshSelection;
+    end;
 
-
-  oid.RefreshComponentTreeSelection;
-  oid.RefreshPropertyValues;
-
-  if AnchorDesigner<>nil then
     GlobalDesignHook.SetSelection(oid.Selection);
 
-  surface.OnSelectionChange:=DesignerSelectionChange;
 
-//  sl.free;
+    //laz 2 not needed anymore. gets it from designhook
+ //   oid.Selection.Clear;
+    //if oid.Selection.Count=1 then
+     // oid.RefreshComponentTreeSelection;
 
-  setFormName;
+    oid.RefreshPropertyValues;
+
+
+    surface.OnSelectionChange:=DesignerSelectionChange;
+
+  //  sl.free;
+
+    setFormName;
+
+
+  finally
+    DesignerSelectionChangeCount:=0;
+  end;
+
 end;
 
 procedure TFormDesigner.surfaceOnChange(sender: tobject);
 begin
-  oid.RefreshPropertyValues;
+  {$if lcl_fullversion < 2020000}
+  oid.FillComponentList;
+  {$else}
+  oid.FillComponentList(true);
+  {$endif}
 
+  oid.RefreshPropertyValues;
   oid.RefreshComponentTreeSelection;
 
   if GlobalDesignHook=nil then exit;
@@ -753,8 +907,7 @@ begin
   if (GlobalDesignHook.LookupRoot<>nil) and (GlobalDesignHook.LookupRoot is TCEForm) then
     TCEForm(GlobalDesignHook.LookupRoot).ResyncWithLua;
 
-
-
+  oid.OnSelectPersistentsInOI:=ObjectInspectorSelectionChange; //called after the object has been created
 end;
 
 function TFormDesigner.onCreateMethod(const Name: ShortString; ATypeInfo: PTypeInfo; APersistent: TPersistent; const APropertyPath: string): TMethod;
@@ -765,25 +918,29 @@ var f: TLuaCaller;
   old: TMethod;
 
   pn: string;
-  i: integer;
 
   NeedsToBeCreated: boolean;
   header: tstringlist;
+
+  ns: string;
 begin
   f:=TLuaCaller.create;
-  f.luaroutine:=name;
+
+  ns:=name;
+  ns:=TComponent(GlobalDesignHook.LookupRoot).name+'_'+copy(ns, RPos('.',ns)+1);
+
+  NeedsToBeCreated:=false;
+
+  if methodlist.IndexOf(name)<>-1 then
+    ns:=name
+  else
+    NeedsToBeCreated:=methodlist.IndexOf(ns)=-1;
+
+  f.luaroutine:=ns;
   f.owner:=APersistent;
 
   try
-    pn:=APropertyPath;
-    i:=pos('.',pn);
-    while i>0 do
-    begin
-      pn:=copy(pn,i+1, length(pn));
-      i:=pos('.',pn)
-    end;
-
-
+    pn:=copy(APropertyPath, RPos('.', APropertyPath)+1);
     old:=GetMethodProp(APersistent, pn);
     if (old.code<>nil) and (tobject(old.Data) is TLuaCaller) then
       TLuaCaller(old.data).free;
@@ -792,21 +949,18 @@ begin
     //failed to get the propertyname
   end;
 
-  i:=methodlist.IndexOf(name);
-  NeedsToBeCreated:=i=-1;
-
   header:=tstringlist.create;
-  result:=luacaller_getFunctionHeaderAndMethodForType(ATypeInfo, f, name, header);
+  result:=luacaller_getFunctionHeaderAndMethodForType(ATypeInfo, f, ns, header);
 
   if NeedsToBeCreated then
   begin
-    mainform.frmLuaTableScript.assemblescreen.Lines.AddStrings(header);
     header.add('');
+    mainform.frmLuaTableScript.assemblescreen.Lines.AddStrings(header);
   end;
 
   header.free;
 
-  onShowMethod(Name);
+  onShowMethod(ns);
 
 end;
 
@@ -861,7 +1015,6 @@ begin
 end;
 }
 
-{$if lcl_fullversion >= 1060400}
 function TFormDesigner.ogm(const Method: TMethod; CheckOwner: TObject; OrigLookupRoot: TPersistent): String;
 begin
   if method.code=nil then
@@ -874,20 +1027,6 @@ begin
       result:=rsInvalidObject;
   end;
 end;
-{$else}
-function TFormDesigner.ogm(const Method: TMethod; CheckOwner: TObject): String;
-begin
-  if method.code=nil then
-    result:=''
-  else
-  begin
-    if tobject(method.data) is TLuaCaller then
-      result:=TLuaCaller(method.Data).luaroutine
-    else
-      result:=rsInvalidObject;
-  end;
-end;
-{$endif}
 
 procedure TFormDesigner.UpdateMethodListIfNeeded;
 var s: string;
@@ -948,8 +1087,8 @@ begin
   if oid<>nil then
     FreeAndNil(oid);
 
-  if AnchorDesigner<>nil then
-    FreeAndNil(AnchorDesigner);
+  if AnchorEditor<>nil then
+    FreeAndNil(AnchorEditor);
 
   if GlobalDesignHook<>nil then
     FreeAndNil(GlobalDesignHook);
@@ -968,8 +1107,6 @@ begin
   miAddTab.visible:=controlpopup.PopupComponent is TCEPageControl;
 
 end;
-
-
 
 procedure TFormDesigner.OnWriteMethod(Writer: TWriter; Instance: TPersistent; PropInfo: PPropInfo; const MethodValue, DefMethodValue: TMethod; var Handled: boolean);
 begin
@@ -1015,10 +1152,10 @@ end;
 
 procedure TFormDesigner.SAD(sender: tobject);
 begin
-  if AnchorDesigner=nil then
-    AnchorDesigner:=TAnchorDesigner.create(self);
+  if AnchorEditor=nil then
+    AnchorEditor:=TAnchorEditor.create(self);
 
-  AnchorDesigner.show;
+  AnchorEditor.show;
 end;
 
 //{$define OLDLAZARUS11}
@@ -1039,13 +1176,43 @@ begin
   reg:=tregistry.create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('\Software\Cheat Engine',true) then
+    if Reg.OpenKey('\Software\'+strCheatEngine,true) then
       reg.WriteBool('FormDesigner CheckboxForBoolean', oid.GridControl[oipgpProperties].CheckboxForBoolean);
   finally
     reg.free;
   end;
   {$endif}
 end;
+
+{$ifdef windows}
+
+procedure DarkenComponents(c: TComponent);
+var
+  i: integer;
+  wc: TWinControl;
+begin
+  if c is TPageControl then
+  begin
+    asm
+    nop
+    end;
+  end;
+
+  if c is twincontrol then
+  begin
+    wc:=twincontrol(c);
+    AllowDarkModeForWindow(wc.handle,1);
+    SetWindowTheme(wc.Handle, 'explorer', nil);
+
+    wc.Color:=clWindow;
+    wc.font.color:=clWindowtext;
+  end;
+
+  for i:=0 to c.ComponentCount-1 do
+    DarkenComponents(c.Components[i]);
+end;
+
+{$endif}
 
 procedure TFormDesigner.designForm(f: tceform);
 var x: array of integer;
@@ -1056,25 +1223,90 @@ var x: array of integer;
   miChangeCheckboxSetting: TMenuItem;
   reg: Tregistry;
   i: integer;
+  dpmi: tmenuitem;
+  ldark: dword;
+
+  ip: TObjectInspectorPage;
+  wc: TWinControl;
 begin
+
   GlobalDesignHook.LookupRoot:=f;
 
+
   setFormName;
+
+//  f.designsurface.OnChange
 
   if oid=nil then //no oid yet
   begin
     oid:=TObjectInspectorDlg.Create(self);
+    {$ifdef windows}
+    if ShouldAppsUseDarkMode then
+    begin
+      //force it into darkmode
+
+
+      with oid do
+      begin
+
+        AllowDarkModeForWindow(handle,1);
+
+        color:=$242424;
+        if font.color=clDefault then
+          font.color:=colorset.FontColor;
+
+        if InitDwmLibrary then
+        begin
+          ldark:=1;
+          DwmSetWindowAttribute(handle, 19, @Ldark, sizeof(Ldark));
+        end;
+
+
+
+
+        DarkenComponents(oid);
+
+        for ip:=oipgpProperties to oipgpRestricted do
+        begin
+          GridControl[ip].BackgroundColor:=clWindow;
+          GridControl[ip].GutterColor:=clWindow;
+          GridControl[ip].GutterEdgeColor:=clGray;
+          GridControl[ip].HighlightColor:=clGreen;
+
+          GridControl[ip].SubPropertiesColor:=clBlue;
+          GridControl[ip].ReadOnlyColor:=clGray;
+          GridControl[ip].NameFont.color:=clWindowtext;
+          GridControl[ip].DefaultValueFont.color:=clWindowtext;
+          GridControl[ip].ValueFont.color:=clWindowtext;
+          GridControl[ip].HighlightFont.color:=clAqua;
+
+          GridControl[ip].CheckboxForBoolean:=false;
+        end;
+
+        ComponentTree.BackgroundColor:=clWindow;
+        ComponentTree.ExpandSignColor:=clWindowtext;
+        ComponentTree.TreeLineColor:=clWindowtext;
+        ComponentTree.Font.color:=clWindowtext;
+
+        ComponentTree.options:=ComponentTree.options-[tvoThemedDraw];
+      end;
+    end;
+    {$endif}
+
     oid.AutoSize:=false;
     oid.PropertyEditorHook:=GlobalDesignHook; //needs to be created
     oid.ShowFavorites:=false;
     oid.ComponentTree.PopupMenu:=popupmenu1; //nil;
+
+    oid.EnableHookGetSelection:=true;
+
 
 
     {$ifndef OLDLAZARUS11}
     reg:=tregistry.create;
     try
       Reg.RootKey := HKEY_CURRENT_USER;
-      if Reg.OpenKey('\Software\Cheat Engine',false) then
+      if Reg.OpenKey('\Software\'+strCheatEngine,false) then
       begin
         if reg.ValueExists('FormDesigner CheckboxForBoolean') then
           oid.GridControl[oipgpProperties].CheckboxForBoolean:=reg.ReadBool('FormDesigner CheckboxForBoolean')
@@ -1085,6 +1317,9 @@ begin
       reg.free;
     end;
 
+    if ShouldAppsUseDarkMode then
+      oid.PropertyGrid.CheckboxForBoolean:=false; //checkboxes are rendered themed and I have no control over these
+
     miChangeCheckboxSetting:=tmenuitem.create(oid.MainPopupMenu);
     miChangeCheckboxSetting.caption:=rsShowCheckboxesForBoolean;
     miChangeCheckboxSetting.checked:=oid.GridControl[oipgpProperties].CheckboxForBoolean;
@@ -1094,21 +1329,18 @@ begin
     oid.MainPopupMenu.Items.Add(miChangeCheckboxSetting);
     {$endif}
 
-//    AnchorDesigner:=TAnchorDesigner.Create(oid);
-
-
-    ShowAnchorDesigner:=SAD; //panda       (I wanted to call it ShowAnchorDesigner but that was causing 'issues')
-
-
     ComponentTreeWindowProc:=oid.ComponentTree.WindowProc;
 
 
-    oid.ComponentTree.WindowProc:=mousedownhack;
+    //oid.ComponentTree.WindowProc:=mousedownhack;
 
     oid.OnSelectPersistentsInOI:=ObjectInspectorSelectionChange;
 
-    oid.DeletePopupmenuItem.OnClick:=oidOnDelete;
+    dpmi:=tmenuitem(oid.FindComponent('DeletePopupmenuItem'));
+    if dpmi<>nil then
+      dpmi.OnClick:=oidOnDelete;
     oid.ComponentTree.OnKeyDown:=oidComponentTreeKeyDown;
+    //oid.ComponentTree.PropertyEditorHook;
 
     oid.Selection.Add(f);
 
@@ -1117,16 +1349,35 @@ begin
     begin
       oid.left:=0;
       oid.top:=0;
-    end;
+      oid.height:=screen.WorkAreaHeight;
+      oid.show;
 
-    oid.show;
+      oid.PropertyGrid.PreferredSplitterX:=oid.canvas.TextWidth('XXXXXXXXXXXXXXXX');
+      oid.EventGrid.PreferredSplitterX:=oid.canvas.TextWidth('XXXXXXXXXXXXXXXX');
+
+      oid.PropertyGrid.SplitterX:=oid.propertygrid.preferredSplitterX;
+      oid.EventGrid.SplitterX:=oid.propertygrid.preferredSplitterX;
+      oid.width:=oid.PropertyGrid.PreferredSplitterX*2+oid.PropertyGrid.Indent;
+
+      oid.AutoSize:=false;
+    end
+    else
+    begin
+      oid.show;
+      if length(x)>0 then
+      begin
+        oid.PropertyGrid.PreferredSplitterX:=x[0];
+        oid.EventGrid.PreferredSplitterX:=x[0];
+        oid.PropertyGrid.SplitterX:=x[0];
+        oid.EventGrid.SplitterX:=x[0];
+      end;
+    end;
     {
     oipgpProperties,
     oipgpEvents,
     oipgpFavorite,
     oipgpRestricted
     }
-
 
 
     oid.DefaultItemHeight:=max(oid.DefaultItemHeight, oid.Canvas.TextHeight('QFDZj')+2); //make sure the itemheight fits the current dpi
@@ -1143,10 +1394,35 @@ begin
   end;
 
 
-  f.active:=true;
+  oid.Selection.Clear;
+  oid.Selection.Add(f);
 
+  oid.Refresh;
+
+
+
+  f.active:=true;
   f.designsurface.PopupMenu:=controlPopup;
   f.show;
+
+
+
+  TCEForm(GlobalDesignHook.LookupRoot).designsurface.Change;
+  {$if lcl_fullversion < 2020000}
+  oid.ComponentTree.RebuildComponentNodes;
+  {$else}
+  oid.ComponentTree.BuildComponentNodes(true);
+  {$endif}
+
+  oid.RefreshPropertyValues;
+  oid.RebuildPropertyLists;
+  {$if lcl_fullversion < 2020000}
+  oid.FillComponentList;
+  {$else}
+  oid.FillComponentList(true);
+  {$endif}
+  oid.UpdateComponentValues;
+
 end;
 
 

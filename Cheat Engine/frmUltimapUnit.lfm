@@ -1,7 +1,7 @@
 object frmUltimap: TfrmUltimap
-  Left = 435
+  Left = 764
   Height = 516
-  Top = 172
+  Top = 448
   Width = 847
   AutoSize = True
   Caption = 'Ultimap'
@@ -11,9 +11,8 @@ object frmUltimap: TfrmUltimap
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  PopupMode = pmAuto
   Position = poScreenCenter
-  LCLVersion = '1.6.0.4'
+  LCLVersion = '2.2.2.0'
   object Panel1: TPanel
     Left = 0
     Height = 516
@@ -300,9 +299,9 @@ object frmUltimap: TfrmUltimap
           Left = 8
           Height = 15
           Top = 152
-          Width = 75
+          Width = 79
           BorderSpacing.Top = 8
-          Caption = 'Banch targets:'
+          Caption = 'Branch targets:'
           ParentColor = False
         end
         object cbPreemptiveFlush: TCheckBox
@@ -537,38 +536,69 @@ object frmUltimap: TfrmUltimap
   object Timer1: TTimer
     Interval = 250
     OnTimer = Timer1Timer
-    left = 85
-    top = 320
+    Left = 85
+    Top = 320
   end
   object PopupMenu1: TPopupMenu
-    left = 85
-    top = 258
+    Images = umImageList
+    Left = 85
+    Top = 258
     object MenuItem2: TMenuItem
       Caption = 'Flush buffers'
+      ImageIndex = 0
       OnClick = MenuItem2Click
     end
     object MenuItem1: TMenuItem
       Caption = 'Add selection to code list'
+      ImageIndex = 2
       OnClick = MenuItem1Click
+    end
+    object miCopyToClipboard: TMenuItem
+      Caption = 'Copy selection to clipboard'
+      ImageIndex = 1
+      OnClick = miCopyToClipboardClick
     end
   end
   object pmSetHotkey: TPopupMenu
+    Images = umImageList
     OnPopup = pmSetHotkeyPopup
-    left = 296
-    top = 56
+    Left = 296
+    Top = 56
     object miSetHotkey: TMenuItem
       Caption = 'Set hotkey'
+      ImageIndex = 1
       OnClick = miSetHotkeyClick
     end
     object miRemoveHotkey: TMenuItem
       Caption = 'Remove hotkey'
+      ImageIndex = 0
       OnClick = miRemoveHotkeyClick
     end
   end
   object Flusher: TTimer
     Interval = 100
     OnTimer = FlusherTimer
-    left = 224
-    top = 64
+    Left = 224
+    Top = 64
+  end
+  object umImageList: TImageList
+    Left = 323
+    Top = 326
+    Bitmap = {
+      4C7A0300000010000000100000009B0100000000000078DADD94314FC2601086
+      5D4D8438B899E8E8AE717271D1C99F80898BE107884E0E1D30FE011617C32231
+      3A488CC6684834AE3228465B1A03545214EC8022242D8457AE4A53095FA12D31
+      E0256F7AB9BBE772BDEF6B010CE19F48798367751991740A13AD398A518E6A58
+      3CE5A7A7808539A4CC3DC8A718E5A886C59BEB9A3DDAC5ACDEA1B5DE0EDBAE87
+      5DD62DEF667EB7FB737B7E6EEFCFA02A1C0EAF701C77D5498140E032168BCDB6
+      F28D1C872ECDEFF7E704411877CA572A15F87CBE78B1581C76C293C9B28C6030
+      B8E19427FB617ACA170A05F03C6F29555599BCA6692897CB96AAD7EB4CBEB153
+      4892A42B123DC6E2F91D0E1E252346AA56AB4C5E511488A2A82B91143116D7E0
+      8D02BB0F25234E33B2789AAD56AB19DACB00238780A7A1FDF477CCEEFEB6AF9F
+      8D1EA19B57CBFDB1CC3CC745567574FED463FE288F93D3333CF1EF8EEE8F2C67
+      11DA4AE03EFEF18BEFF6FB25ADAF6DEA4F62FAFABFF499F722B294D145BE5DBE
+      941BC5CE0C7491DFEF3CBD23D535F5723B69F0E49B73EDF6417B6AD67712D5F6
+      9A773BFFA09F5FAFEFEF1FE90BC23A1D49
+    }
   end
 end

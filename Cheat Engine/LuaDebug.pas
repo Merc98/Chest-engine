@@ -7,7 +7,8 @@ unit LuaDebug;
 interface
 
 uses
-  Classes, SysUtils, newkernelhandler, debug, DebugHelper, DebuggerInterfaceAPIWrapper, lua, lualib, lauxlib, LuaHandler;
+  Classes, SysUtils, newkernelhandler, debug, DebugHelper,
+  DebuggerInterfaceAPIWrapper, lua, lualib, lauxlib, LuaHandler{$ifdef darwin},macport{$endif};
 
 procedure initializeLuaDebug;
 
@@ -20,12 +21,15 @@ var
 begin
   OutputDebugString('debug_setLastBranchRecording');
   result:=0;
+
   parameters:=lua_gettop(L);
+  {$ifdef windows}
   if parameters=1 then
   begin
     newstate:=lua_toboolean(L, -1);
     DBKDebug_SetStoreLBR(newstate);
   end;
+  {$endif}
 
   lua_pop(L, parameters);
 end;
@@ -75,7 +79,7 @@ begin
 
         result:=1;
       finally
-        freemem(lbrbuf);
+        FreeMemAndNil(lbrbuf);
       end;
     end;
 
@@ -99,7 +103,7 @@ begin
   begin
     xmmreg:=lua_tointeger(L, -1);
     if (debuggerthread<>nil) and (debuggerthread.CurrentThread<>nil) then
-      c:=ptruint(@debuggerthread.CurrentThread.context.{$ifdef cpu64}FltSave.XmmRegisters{$else}ext.XMMRegisters.LegacyXMM{$endif}[xmmreg]);
+      c:=ptruint(@debuggerthread.CurrentThread.context.{$ifdef cpu64}FltSave.{$else}ext.{$endif}XmmRegisters[xmmreg]);
   end;
 
   lua_pop(L, lua_gettop(L));

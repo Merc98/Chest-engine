@@ -8,7 +8,12 @@ A container specifically for storing and looking up pages
 interface
 
 uses
+  {$ifdef windows}
   windows, Classes, SysUtils;
+  {$endif}
+  {$ifdef darwin}
+  macport, Classes, SysUtils;
+  {$endif}
 
 type
   TPageInfo=record
@@ -33,6 +38,7 @@ type
     procedure DeletePath(list: PPageEntryArray; level: integer);
   public
     function Add(pageindex: integer; pagedata: pointer): PPageInfo;
+    function Remove(pageindex: integer): boolean;
     function GetPageInfo(pageindex: integer): PPageInfo;
     constructor create;
     destructor destroy; override;
@@ -66,6 +72,39 @@ begin
   //got till level (maxlevel)
   entrynr:=pageindex shr ((maxlevel-level)*4) and $f;
   result:=currentarray[entrynr].pageinfo;   //can be nil
+end;
+
+function TPagemap.Remove(pageindex: integer): boolean;
+var
+  level: integer;
+  maxlevel: integer;
+  currentarray: PPageEntryArray;
+  entrynr: integer;
+begin
+  result:=false;
+  maxlevel:=self.maxlevel;
+  currentarray:=@level0list;
+
+  level:=0;
+
+  while level<maxlevel do
+  begin
+    entrynr:=pageindex shr ((maxlevel-level)*4) and $f;
+    if currentarray[entrynr].PageEntryArray=nil then exit; //not found
+
+    currentarray:=currentarray[entrynr].PageEntryArray;
+    inc(level);
+  end;
+
+  entrynr:=pageindex shr ((maxlevel-level)*4) and $f;
+  if currentarray^[entrynr].pageinfo<>nil then
+  begin
+    if currentarray^[entrynr].pageinfo.data<>nil then
+      FreeMemAndNil(currentarray^[entrynr].pageinfo.data);
+
+    freememandnil(currentarray^[entrynr].pageinfo);
+    result:=true;
+  end;
 end;
 
 function TPagemap.Add(pageindex: integer; pagedata: pointer): PPageInfo;
@@ -133,10 +172,9 @@ begin
         if list^[i].pageinfo.data<>nil then
           freemem(list^[i].pageinfo.data);
 
-        freemem(list^[i].pageinfo);
+        FreeMemAndNil(list^[i].pageinfo);
       end;
 
-      list^[i].pageinfo:=nil;
     end;
   end
   else
@@ -146,8 +184,8 @@ begin
       if list^[i].PageEntryArray<>nil then
       begin
         deletepath(list^[i].PageEntryArray,level+1);
-        freemem(list^[i].PageEntryArray);
-        list^[i].PageEntryArray:=nil;
+        FreeMemAndNil(list^[i].PageEntryArray);
+
       end;
     end;
   end;

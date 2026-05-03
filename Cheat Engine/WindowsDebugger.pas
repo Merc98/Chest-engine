@@ -8,11 +8,14 @@ It's basically just a forward for everything
 
 interface
 
+{$ifdef windows}
+
 uses
   Classes, SysUtils, DebuggerInterface, windows, cefuncproc,newkernelhandler,
   symbolhandler, dialogs;
 
-type TWindowsDebuggerInterface=class(TDebuggerInterface)
+type
+  TWindowsDebuggerInterface=class(TDebuggerInterface)
   public
 
     function WaitForDebugEvent(var lpDebugEvent: TDebugEvent; dwMilliseconds: DWORD): BOOL; override;
@@ -21,12 +24,15 @@ type TWindowsDebuggerInterface=class(TDebuggerInterface)
     function GetThreadContext(hThread: THandle; var lpContext: TContext; isFrozenThread: Boolean=false): BOOL; override;
     function DebugActiveProcess(dwProcessId: DWORD): WINBOOL; override;
     function DebugActiveProcessStop(dwProcessID: DWORD): BOOL; override;
+    function canUseIPT: boolean; override;
     constructor create;
 end;
 
+{$endif}
 
 implementation
 
+{$ifdef windows}
 uses autoassembler, pluginexports, CEDebugger, DebugHelper, processhandlerunit;
 
 resourcestring
@@ -36,7 +42,7 @@ resourcestring
 constructor TWindowsDebuggerInterface.create;
 begin
   inherited create;
-  fDebuggerCapabilities:=[dbcSoftwareBreakpoint, dbcHardwareBreakpoint, dbcExceptionBreakpoint, dbcBreakOnEntry];
+  fDebuggerCapabilities:=fDebuggerCapabilities+[dbcSoftwareBreakpoint, dbcHardwareBreakpoint, dbcExceptionBreakpoint, dbcBreakOnEntry];
   name:='Windows Debugger';
 
   fmaxSharedBreakpointCount:=4;
@@ -62,6 +68,11 @@ begin
   result:=newkernelhandler.GetThreadContext(hThread, lpContext);
 end;
 
+function TWindowsDebuggerInterface.canUseIPT: boolean;
+begin
+  result:=true;
+end;
+
 function TWindowsDebuggerInterface.DebugActiveProcessStop(dwProcessID: DWORD): BOOL;
 begin
   if assigned(CEDebugger.DebugActiveProcessStop) then
@@ -74,14 +85,14 @@ function TWindowsDebuggerInterface.DebugActiveProcess(dwProcessId: DWORD): WINBO
 var d: tstringlist;
 begin
  // OutputDebugString('Windows Debug Active Process');
-  processhandler.processid:=dwProcessID;
+  if processhandler.processid<>dwProcessId then
+  begin
+    processhandler.processid:=dwProcessID;
+    Open_Process;
 
-//  OutputDebugString('Before calling Open_Process');
-  Open_Process;
-
- // OutputDebugString('After calling Open_Process');
-  symhandler.reinitialize;
-  symhandler.waitforsymbolsloaded(true);
+    symhandler.reinitialize;
+    symhandler.waitforsymbolsloaded(true);
+  end;
 
   if PreventDebuggerDetection then
   begin
@@ -112,6 +123,7 @@ begin
 
 end;
 
+{$endif}
 
 end.
 

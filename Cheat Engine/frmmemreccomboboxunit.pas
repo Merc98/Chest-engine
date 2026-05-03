@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  ExtCtrls, MemoryRecordUnit, math;
+  ExtCtrls, MemoryRecordUnit, math, betterControls;
 
 type
 
@@ -84,6 +84,8 @@ begin
   valuelist:=tstringlist.create;
   for i:=0 to memrec.DropDownCount-1 do
   begin
+    if (memrec.DropDownValue[i]='*') and (i=memrec.DropDownCount-1) then break; //don't add the wildcard if it's the last in the list
+
     valuelist.add(memrec.DropDownValue[i]);
     if memrec.DropDownDescriptionOnly then
       cbMemrecCombobox.Items.Add(memrec.DropDownDescription[i])

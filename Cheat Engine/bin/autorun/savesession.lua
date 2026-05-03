@@ -15,223 +15,200 @@ end
 
 require("lfs")
 
-function loadMemoryScan_thread(t)
+function loadMemoryScan_internal(filename)
+  --print("loadMemoryScan")
+  
   --the thread is used to bypasses a bug in 6.3
-  t.synchronize(function(t)
-	  ms=getCurrentMemscan()
-	  mf=getMainForm()
 
-	  if getOpenedProcessID()==0 then
-		messageDialog(translate("Open a process first"), mtError, mbOK)
-		return
-	  end
-
-
-	  dialog=createOpenDialog()
-	  dialog.DefaultExt=".CS"
-	  dialog.Filter=translate("Cheat Engine Scan files").." (*.CS)|*.CS"
-	  dialog.FilterIndex=1
-
-	  if dialog.execute()==false then return end
-	   filename=dialog.Filename
-	  dialog.destroy()
-
-
-	   input=io.open(filename,"rb")
-
-	   scanvaluelength=string.byte(input:read(1))
-	   scanvalue=input:read(scanvaluelength)
+	local ms=getCurrentMemscan()
+	local mf=getMainForm()
 
 
 
-	   scantype=string.byte(input:read(1))
-	   vartype=string.byte(input:read(1))
 
-	   savedscancount=string.byte(input:read(1))
-
-	  savedscans={}
-	  for i=1,savedscancount do
-		 length=string.byte(input:read(1))
-		savedscans[i]=input:read(length)
-	  end
-
-	  --initial data has been read, now setup the scan state to be compatible with the saved state
-	  --easiest is just do a small scan
-
-	  --ms.newscan()
-	  --since ms.newScan was never implemented in ce 6.3 click on new scan if needed
-	  if ms.LastScanType~="stNewScan" then
-
-		if mf.btnNewScan==nil then --ce 6.4 uses this name, 6.3 still uses the not so normal name
-		  mf.button2.doClick() --new scan
-		else
-		  mf.btnNewScan.doClick() --new scan
-		end
-	  end
-
-
-	  mf.scanvalue.Text='982451653' --nice number
-	  mf.vartype.itemindex=vartype --while I could have used ms.firstScan this is easier since I don't need to convert itemindex to vartype
-	  mf.scantype.itemindex=0 --exact value
-
-	  mf.cbWritable.setState(cbGrayed)
-	  mf.cbExecutable.setState(cbGrayed)
-	  mf.cbCopyOnWrite.setState(cbGrayed)
-
-    if mf.FromAddress.Lines==nil then
-      mf.FromAddress.Text=string.format("%x", getAddress("kernel32.dll"))    
-    else
-	    mf.FromAddress.Lines.Text=string.format("%x", getAddress("kernel32.dll"))
-    end
-    
-    if mf.ToAddress.Lines==nil then
-      mf.ToAddress.Text=string.format("%x", getAddress("kernel32.dll")+1)        
-    else
-      mf.ToAddress.Lines.Text=string.format("%x", getAddress("kernel32.dll")+1)    
-    end
-    
-	  
-
-	  --first scan
-	  if mf.btnNewScan==nil then --ce 6.4 uses this name, 6.3 still uses the not so normal name
-		mf.button2.doClick() --new scan
-	  else
-		mf.btnNewScan.doClick() --new scan
-	  end
-
-
-  end)
-
-
-  if (savedscancount==nil) then
+	local input,err=createFileStream(filename,fmOpenRead or fmShareDenyNone)
+  if input==nil then
+    MessageDialog(err, mtError,mbOK)
     return
   end
+
+	local scanvalue=input.readAnsiString()
+  local originalFromAddress=input.readAnsiString()  
+  local originalToAddress=input.readAnsiString()  
+	local scantype=input.readByte()
+	local vartype=input.readByte()
+  local formhex=input.readByte()==1
+  local memscanhex=input.readByte()==1
   
 
+	local savedscancount=input.readByte()
 
-  ms.waitTillDone() --this would freeze in the main thread in 6.3
+	local savedscans={}
+	for i=1,savedscancount do	 
+		savedscans[i]=input.readAnsiString()
+	end
+
+  --initial data has been read, now setup the scan state to be compatible with the saved state
+	--easiest is just do a small scan
+
+	--ms.newscan()
+	--since ms.newScan was never implemented in ce 6.3 click on new scan if needed
+	if ms.LastScanType~="stNewScan" then
+    mf.btnNewScan.doClick() --new scan
+  end
 
 
+	mf.scanvalue.Text='123' --nice number
+	mf.vartype.itemindex=vartype --while I could have used ms.firstScan this is easier since I don't need to convert itemindex to vartype
+	mf.scantype.itemindex=0 --exact value
+
+	mf.cbWritable.setState(cbGrayed)
+	mf.cbExecutable.setState(cbGrayed)
+	mf.cbCopyOnWrite.setState(cbGrayed)
+
+  mf.FromAddress.Text=string.format("%x", getAddress("kernel32.dll"))    
+  mf.ToAddress.Text=string.format("%x", getAddress("kernel32.dll")+1)        
+
+	--first scan
+  local oldOnScanDone=ms.OnScanDone
+  local oldOnInitialScanDone=ms.OnInitialScanDone
+  ms.OnScanDone=function(m)
+    ms.OnScanDone=oldOnScanDone
+    ms.OnInitialScanDone=oldOnInitialScanDone
+      
+    --tell the memscan that there are saved scans
+    for i=1, savedscancount do
+      ms.saveCurrentResults(savedscans[i])
+    end
+
+    local fl=ms.FoundList;
+    
+    if ms.OnScanStart then
+      ms.OnScanStart()
+    end
+
+    fl.deinitialize() --release the file handles
+
+
+
+    --overwrite the files with the ones in this archive
+
+    local filecount=input.readByte() --nr of files
+    --print("filecount="..filecount)
+
+    for i=1, filecount do  --for each file
+      --get the filename
+      local name=input.readAnsiString()
+      
+      --print("loading "..name)
+
+      --get the filesize
+      local filesize=input.readQword()
+      --print("loading "..name.." with size "..filesize)
+      local trycount=0
+      local output,err
+      while trycount<20 do
+        output,err=createFileStream(getCurrentMemscan().ScanresultFolder..name, fmCreate)
+        if not output then
+          trycount=trycount+1
+          sleep(100)
+        else
+          break
+        end
+      end
+      
+      if not output then
+        MessageDialog(err, mtError,mbOK)
+        input.destroy()    
+        return      
+      end
+      
+      if filesize>0  then    
+        output.CopyFrom(input, filesize)         
+      end
+      output.destroy()
+    end
+
+    input.destroy()
+    
+    if oldOnInitialScanDone then
+      oldOnInitialScanDone(m)
+    end
+    
+    if oldOnScanDone then
+      oldOnScanDone(m)
+    end
+    
+
+    ms.Hexadecimal=memscanhex
+    fl.initialize() --reopen the files
+
+    mf.scanvalue.Text=scanvalue --nice number
+    mf.vartype.itemindex=vartype --while I could have used ms.firstScan this is easier since I don't need to convert itemindex to vartype
+    mf.scantype.itemindex=scantype --exact value
+
+    mf.FromAddress.Text=originalFromAddress
+    mf.ToAddress.Text=originalToAddress  
+    mf.foundcountlabel.Caption=fl.Count
+    
+    mf.cbHexadecimal.Checked=formhex
+
+    
+   
   
+  end
+  ms.OnInitialScanDone=nil
   
+  mf.btnNewScan.doClick() --new scan
   
-  
-  t.synchronize(function(t)
-
-	  --tell the memscan that there are saved scans
-	  for i=1, savedscancount do
-		ms.saveCurrentResults(savedscans[i])
-	  end
-
-
-
-	  local fl=ms.FoundList;
-
-	  fl.deinitialize() --release the file handles
-
-
-
-	  --overwrite the files with the ones in this archive
-	  local olddir=lfs.currentdir()
-	  lfs.chdir(getCurrentMemscan().ScanresultFolder)
-
-
-	  local filecount=string.byte(input:read(1)) --nr of files
-
-	  for i=1, filecount do  --for each file
-		--get the filename
-		local filenamelength=string.byte(input:read(1))
-		local name=input:read(filenamelength)
-
-		--get the filesize
-		local filesize=byteTableToQword({string.byte(input:read(8),1,8)})
-		local output=io.open(name,"wb")
-
-		while output==nil do --it's possible that the first scan save is in progress, so keep trying
-		  sleep(40)
-		  output=io.open(name,"wb")
-		end
-
-		local data
-
-		j=filesize
-		while j>0 do
-		  local block=512*1024
-		  if block>j then
-			block=j
-		  end
-
-		  data=input:read(block)
-		  output:write(data)
-
-		  j=j-block
-		end
-
-		output:close()
-	  end
-
-	  input:close()
-
-
-	  lfs.chdir(olddir)
-
-	  fl.initialize() --reopen the files
-
-	  mf.scanvalue.Text=scanvalue --nice number
-	  mf.vartype.itemindex=vartype --while I could have used ms.firstScan this is easier since I don't need to convert itemindex to vartype
-	  mf.scantype.itemindex=scantype --exact value
-
-
-	  mf.foundcountlabel.Caption=fl.Count
-
-	  mf.miResetRange.doClick()
-
-  end)
+  ms.waitTillDone() 
 end
 
 function loadMemoryScan()
 
+	if getOpenedProcessID()==0 then
+    messageDialog(translate("Open a process first"), mtError, mbOK)
+    return
+	end
 
-  createNativeThread(loadMemoryScan_thread)
 
+	local dialog=createOpenDialog()
+	dialog.DefaultExt=".CS"
+	dialog.Filter=translate("Cheat Engine Scan files").." (*.CS)|*.CS"
+	dialog.FilterIndex=1
+  dialog.Options="[ofEnableSizing]"    
 
+	if dialog.execute()==false then return end
+	
+  loadMemoryScan_internal(dialog.Filename)
+	dialog.destroy()
 end
 
 
-function saveMemoryScan()
+function saveMemoryScan_internal(filename)
   local i,j
-
-  if getOpenedProcessID()==0 then
-    messageDialog(translate("Open a process first and do a scan"), mtError, mbOk)
-    return
-  end
-
-
-  local dialog=createSaveDialog()
-  dialog.DefaultExt=".CS"
-  dialog.Filter=translate("Cheat Engine Scan files").." (*.CS)|*.CS"
-  dialog.FilterIndex=1
-
-  if dialog.execute()==false then return nil end
-
-  local filename=dialog.Filename
-  dialog.destroy()
-
 
 
   --6.3 doesn't have a folder picker, so create one file that holds all data
-  local output=io.open(filename,"wb")
+  local output,err=createFileStream(filename,fmCreate)
+  if output==nil then
+    MessageDialog(err, mtError,mbOK)
+    return
+  end
+  
+  
 
   --save some settings
   local mf=getMainForm()
 
   --current scanvalue
-  output:write(string.char(#mf.scanvalue.Text))
-  output:write(mf.scanvalue.Text)
-
-  output:write(string.char(mf.scantype.ItemIndex))
-  output:write(string.char(mf.VarType.ItemIndex))
-
+  output.writeAnsiString(mf.scanvalue.Text)
+  output.writeAnsiString(mf.fromAddress.Text)  
+  output.writeAnsiString(mf.toAddress.Text)    
+  output.writeByte(mf.scantype.ItemIndex)
+  output.writeByte(mf.VarType.ItemIndex)
+  output.writeByte(mf.cbHexadecimal.Checked and 1 or 0)
+  output.writeByte(getCurrentMemscan().Hexadecimal and 1 or 0)
 
   --get the filelist
   local files={}
@@ -242,86 +219,95 @@ function saveMemoryScan()
 
   for file in lfs.dir('.') do
     if string.sub(file,1,1)~='.' then
-    local f={}
-    f.name=file
-    f.size=lfs.attributes(file).size
-
-    table.insert(files, f)
-  end
+      local f={}
+      f.name=file
+      f.size=lfs.attributes(file).size
+      
+      if extractFileExt(file)~='.lock' then
+        table.insert(files, f)
+      end
+    end
   end
 
   --check the extensions for other things than first, undo or tmp
   local savedscans={}
-  for i=1,#files do
+  for i=1,#files do    
     local ext=files[i].name:match("%.([^%.]+)$")
 
-  if (string.upper(ext)~='FIRST') and
-     (string.upper(ext)~='TMP') and
-     (string.upper(ext)~='UNDO') then
+    if (string.upper(ext)~='FIRST') and
+       (string.upper(ext)~='TMP')   and
+       (string.upper(ext)~='UNDO')  then
+      --check if it's already in the list
+      local found=false
 
-     --check if it's already in the list
-     local found=false
+      for j=1,#savedscans do
+        if savedscans[j]==ext then
+          found=true
+          break
+        end
+      end
 
-     for j=1,#savedscans do
-       if savedscans[j]==ext then
-       found=true
-       break
-     end
-     end
-
-     if found==false then
-       table.insert(savedscans, found)
-     end
+      if found==false then
+        table.insert(savedscans, found)
+      end
+    end
   end
-  end
 
-  output:write(string.char(#savedscans))
+  output.writeByte(#savedscans)
 
   for i=1,#savedscans do
-    output:write(string.char(#savedscans[i]))
-    output:write(savedscans[i])
+    output.writeAnsiString(savedscans[i])  
   end
 
   --now save the files
-  output:write(string.char(#files)) --number of files
+  output.writeByte(#files) --number of files
   for i=1, #files do
+
     --write the filename
-    output:write(string.char(#files[i].name))
-    output:write(files[i].name)
-
-    local input=io.open(files[i].name,"rb")
-  local data
-
-  --write the filesize (qword)
-  j=files[i].size
-
-  output:write(string.char(unpack(qwordToByteTable(files[i].size))))
+    output.writeAnsiString(files[i].name)
+  
+    --print("saving "..files[i].name)
+  
 
 
-  --write the file
-  while j>0 do
-    local block=512*1024
-    if block>j then
-      block=j
+    local input,err=createFileStream(getCurrentMemscan().ScanresultFolder..files[i].name,fmOpenRead | fmShareDenyNone)
+    
+    if input==nil then
+      MessageDialog(err, mtError,mbOK)
+      output.destroy()
+      return
+    else    
+      --write the filesize (qword)
+      output.writeQword(input.Size)
+      output.CopyFrom(input,input.Size)    
+      input.destroy()
     end
-
-    data=input:read(block)
-    output:write(data)
-
-    j=j-block
   end
-
-
-
-
-  input:close()
-  end
-
   lfs.chdir(olddir)
 
 
-  output:close()
+  output.destroy()
+  
+  --print("done")
+end
 
+function saveMemoryScan()
+	if getOpenedProcessID()==0 then
+    messageDialog(translate("Open a process first"), mtError, mbOK)
+    return
+	end
+
+
+  local dialog=createSaveDialog()
+  dialog.DefaultExt=".CS"
+  dialog.Filter=translate("Cheat Engine Scan files").." (*.CS)|*.CS"
+  dialog.FilterIndex=1
+  dialog.Options="[ofEnableSizing,ofOVerwritePrompt]"
+
+  if dialog.execute()==false then return nil end
+
+  saveMemoryScan_internal(dialog.Filename)
+  dialog.destroy()
 end
 
 local mf=getMainForm()
@@ -331,17 +317,51 @@ SaveScanSession={}
 
 SaveScanSession.miSaveScanSession=createMenuItem(mf.Menu)
 SaveScanSession.miSaveScanSession.caption=translate('Save scan session')
+--SaveScanSession.miSaveScanSession.ImageIndex=39
 SaveScanSession.miSaveScanSession.Shortcut='Ctrl+Alt+Shift+S'
 SaveScanSession.miSaveScanSession.OnClick=saveMemoryScan
+SaveScanSession.miSaveScanSession.Enabled=false
+
+local s=createPicture()
+s.LoadFromFile(getCheatEngineDir()..[[autorun\images\export128x128.png]])
+local ii=MainForm.mfImageList.add(s.Bitmap)
+SaveScanSession.miSaveScanSession.ImageIndex=ii
+s.destroy()
+
 mf.Menu.Items[0].insert(9, SaveScanSession.miSaveScanSession)
 
 
 SaveScanSession.miLoadScanSession=createMenuItem(mf.Menu)
 SaveScanSession.miLoadScanSession.caption=translate('Load scan session')
+--SaveScanSession.miLoadScanSession.ImageIndex=38
 SaveScanSession.miLoadScanSession.Shortcut='Ctrl+Alt+Shift+O'
 SaveScanSession.miLoadScanSession.OnClick=loadMemoryScan
+SaveScanSession.miLoadScanSession.Enabled=false
+
+local s=createPicture()
+s.LoadFromFile(getCheatEngineDir()..[[autorun\images\import128x128.png]])
+local ii=MainForm.mfImageList.add(s.Bitmap)
+SaveScanSession.miLoadScanSession.ImageIndex=ii
+s.destroy()
+
 mf.Menu.Items[0].insert(10, SaveScanSession.miLoadScanSession)
 
-mi=createMenuItem(mf.Menu) --seperator
+local mi=createMenuItem(mf.Menu) --seperator
 mi.caption='-'
 mf.Menu.Items[0].insert(11, mi)
+
+mi.Visible=MainForm.miSignTable.Visible
+
+local oldFileMenuClick=mf.Menu.Items[0].OnClick
+
+mf.Menu.Items[0].OnClick=function(sender)
+  if (oldFileMenuClick) then
+    oldFileMenuClick(sender)
+  end
+
+  --check that it isn't a first scan
+  local enable=getCurrentMemscan().lastScanWasRegionScan==false
+
+  SaveScanSession.miSaveScanSession.Enabled=enable
+  SaveScanSession.miLoadScanSession.Enabled=true
+end

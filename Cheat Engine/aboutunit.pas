@@ -5,8 +5,13 @@ unit aboutunit;
 interface
 
 uses
-  windows, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources,shellapi, vmxfunctions, NewKernelHandler;
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,shellapi,
+  {$endif}LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, ExtCtrls, LResources, vmxfunctions, NewKernelHandler, betterControls;
 
 type
 
@@ -25,6 +30,7 @@ type
     Label27: TLabel;
     Label28: TLabel;
     Label29: TLabel;
+    Label3: TLabel;
     Label30: TLabel;
     Label31: TLabel;
     Label32: TLabel;
@@ -33,6 +39,7 @@ type
     Label5: TLabel;
     Image1: TImage;
     Button1: TButton;
+    Label6: TLabel;
     Label8: TLabel;
     Label9: TLabel;
     Panel1: TPanel;
@@ -45,7 +52,9 @@ type
     procedure Button1Click(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Button2Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure Label4Click(Sender: TObject);
     procedure Label8Click(Sender: TObject);
     procedure Label9Click(Sender: TObject);
     procedure Image1MouseDown(Sender: TObject; Button: TMouseButton;
@@ -68,9 +77,9 @@ uses tlgUnit,MainUnit2, MainUnit, dbvmLoadManual;
 
 
 resourcestring
-  rsYourSystemDOESNOTSupportDBVM = 'Your system DOES NOT support DBVM';
+  rsYourSystemDOESNOTSupportDBVM = 'Your system does not support DBVM. Perhaps it is already inside a VM';
   rsThisMeansThatYouWillNeedANewCpuIntelToBeAbleToUseT = 'This means that you will need a new cpu (intel) to be able to use the advanced dbvm options';
-  rsYourSystemIsRunningDBVMVersion = 'Your system is running DBVM version %s';
+  rsYourSystemIsRunningDBVMVersion = 'Your system is running DBVM version %s (%.0n bytes free (%d pages))';
   rsThisMeansThatYourSystemIsRunningDbvm = 'This means that your system is running dbvm. This means ce will make use of some advanced tools that are otherwise unavailable';
   rsYourSystemSupportsDBVM = 'Your system supports DBVM';
   rsThisMeansThatYouReCurrentlyNotRunningDbvm = 'This means that you''re currently not running dbvm, but that your system is capable of running it';
@@ -92,19 +101,25 @@ end;
 procedure TAbout.Button2Click(Sender: TObject);
 begin
 
-  shellexecute(0,'open','https://www.paypal.com/xclick/business=dark_byte%40hotmail.com&no_note=1&tax=0&lc=US',nil,nil,sw_maximize);
+end;
+
+procedure TAbout.FormCreate(Sender: TObject);
+begin
+  if ShouldAppsUseDarkMode then
+  begin
+    label8.font.color:=clTeal;
+    label9.font.color:=clTeal;
+  end;
 end;
 
 procedure TAbout.FormShow(Sender: TObject);
 var
     a,b,c,d: dword;
     i: integer;
+    rs: TResourceStream;
+    logopic: tpicture;
 begin
-  {$ifdef net}
-    groupbox1.Caption:=unit2.CEnorm;
-  {$else}
-    groupbox1.Caption:=mainunit2.CEnorm;
-  {$endif}
+  groupbox1.Caption:=cenamewithversion;
 
 
   i:=GetFontData(font.Handle).Height;
@@ -122,11 +137,31 @@ begin
     label10.AnchorSideTop.Control:=panel4;
 
   UpdateDBVMStatus;
+
+  {$ifdef altname}
+  rs := TResourceStream.Create(HInstance, 'IMAGES_ALT_CELOGO', RT_RCDATA);
+  logopic:=TPicture.Create;
+  logopic.LoadFromStreamWithFileExt(rs,'.PNG');
+  image1.Picture:=logopic;
+  image1.Stretch:=true;
+
+
+  logopic.free;
+  freeandnil(rs);
+  {$endif}
+
+
+
+end;
+
+procedure TAbout.Label4Click(Sender: TObject);
+begin
+  shellexecute(0,'open',pchar('https://www.patreon.com/cheatengine'),nil,nil,sw_maximize);
 end;
 
 procedure TAbout.Label8Click(Sender: TObject);
 begin
-  ShellExecute(0, pchar('open'),pchar('http://cheatengine.org/'), pchar(''),pchar(''), SW_MAXIMIZE	);
+  ShellExecute(0, pchar('open'),pchar('https://cheatengine.org/'), pchar(''),pchar(''), SW_MAXIMIZE	);
 end;
 
 procedure TAbout.Label9Click(Sender: TObject);
@@ -148,6 +183,7 @@ end;
 procedure TAbout.lblDBVMClick(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
+  {$ifdef windows}
   //if not isRunningDBVM then
   begin
     //if not isDBVMCapable then exit;
@@ -178,62 +214,63 @@ begin
       end;
     end
     else
-      if frmDBVMLoadManual<>nil then frmDBVMLoadManual.SetFocus
-      else tfrmDBVMLoadManual.create(Application).Show;
+      if frmDBVMLoadManual<>nil then
+        frmDBVMLoadManual.SetFocus
+      else
+        tfrmDBVMLoadManual.create(Application).Show;
   end;
+  {$endif}
 end;
 
 procedure TAbout.UpdateDBVMStatus;
 var
   supportsdbvm: boolean;
+  pages: QWORD;
+  memfree: qword;
+  dmemfree: double;
+  vers: DWORD;
+
+  oldvmx_password1: QWORD;
+  oldvmx_password2: DWORD;
+  oldvmx_password3: QWORD;
+
 begin
-  if (vmx_password1=0) and (vmx_password2=0) then
+  {$ifdef windows}
+  oldvmx_password1:=vmx_password1;
+  oldvmx_password2:=vmx_password2;
+  oldvmx_password3:=vmx_password3;
+  OutputDebugString('UpdateDBVMStatus');
+
+  if (vmx_password1=0) and (vmx_password2=0) and (vmx_password3=0) then
+  begin
+    OutputDebugString('vmx_password1=0');
+    OutputDebugString('vmx_password2=0');
+    OutputDebugString('vmx_password3=0');
+    vmx_password1:=$76543210;
+    vmx_password2:=$fedcba98;
+    vmx_password3:=$90909090;
+  end;
+
+  if dbvm_version=0 then
   begin
     vmx_password1:=$76543210;
     vmx_password2:=$fedcba98;
+    vmx_password3:=$90909090;
   end;
 
-  if not isDBVMCapable then
+  if (dbvm_version>0) then
   begin
-    //force the default password
+    lblDBVM.Font.Color:=clLime;
 
+    memfree:=dbvm_getMemory(pages);
+    dmemfree:=memfree;
 
-    vmx_password1:=$76543210;
-    vmx_password2:=$fedcba98;
-  end;
-
-  if not isDBVMCapable then
-  begin
-    lblDBVM.Font.Color:=clRed;
-    lbldbvm.caption:=rsYourSystemDOESNOTSupportDBVM;
-    lbldbvm.Hint:=rsThisMeansThatYouWillNeedANewCpuIntelToBeAbleToUseT;
+    lbldbvm.caption:=Format(rsYourSystemIsRunningDBVMVersion, [inttostr(dbvm_version and $00ffffff), dmemfree, pages]);
+    lbldbvm.Hint:=rsThisMeansThatYourSystemIsRunningDbvm;
     lbldbvm.ShowHint:=true;
+    lbldbvm.Cursor:=crDefault;
   end
   else
-  begin
-
-//{$ifdef cpu32}
-//    Loaddbk32;
-//{$endif}
-
-    if (dbvm_version>0) then
-    begin
-      lblDBVM.Font.Color:=clLime;
-      lbldbvm.caption:=Format(rsYourSystemIsRunningDBVMVersion, [inttostr(dbvm_version and $00ffffff)]);
-      lbldbvm.Hint:=rsThisMeansThatYourSystemIsRunningDbvm;
-      lbldbvm.ShowHint:=true;
-    end
-    else
-    begin
-      lblDBVM.Font.Color:=clGreen;
-      lbldbvm.caption:=rsYourSystemSupportsDBVM;
-      lbldbvm.Hint:=rsThisMeansThatYouReCurrentlyNotRunningDbvm;
-      lbldbvm.ShowHint:=true;
-    end;
-  end;
-
-
-  if (dbvm_version=0) then
   begin
     supportsdbvm:=isDBVMCapable;
 
@@ -253,15 +290,14 @@ begin
       lbldbvm.ShowHint:=true;
       lbldbvm.Cursor:=crNo;
     end;
-  end
-  else
-  begin
-    lblDBVM.Font.Color:=clLime;
-    lbldbvm.caption:=Format(rsYourSystemIsRunningDBVMVersion, [inttostr(dbvm_version and $00ffffff)]);
-    lbldbvm.Hint:=rsThisMeansThatYourSystemIsRunningDbvm;
-    lbldbvm.ShowHint:=true;
-    lbldbvm.Cursor:=crDefault;
   end;
+
+  vmx_password1:=oldvmx_password1;
+  vmx_password2:=oldvmx_password2;
+  vmx_password3:=oldvmx_password3;
+  {$else}
+  lblDBVM.visible:=false;
+  {$endif}
 end;
 
 

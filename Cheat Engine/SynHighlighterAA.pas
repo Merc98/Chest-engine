@@ -206,7 +206,11 @@ uses
   QSynEditTypes,
   QSynEditHighlighter,
 {$ELSE}
+{$ifdef darwin}
+macport,  lcltype,
+{$else}
   Windows,
+{$endif}
   Graphics,
   SynEditTypes,
   SynEditHighlighter,
@@ -214,15 +218,17 @@ uses
   SysUtils,
   Classes,
   assemblerunit,
-  LuaSyntax;
+  LuaSyntax,
+  SynHighlighterCpp,
+  SynHighlighterPas;
 
 type
-  TtkTokenKind = (tkAsm, tkComment, tkIdentifier, tkKey, tkNull, tkNumber,
-    tkSpace, tkString, tkSymbol, tkUnknown, tkFloat, tkHex, tkDirec, tkChar,
-    tkRegister);
+  TtkTokenKind = (tkAsm, tkComment, tkIdentifier, tkOpcode, tkKey, tkNull, tkNumber,
+    tkSpace, tkString, tkSymbol, tkUnknown, tkHex, tkDirec, tkChar,
+    tkRegister, tkTryExcept);
 
   TRangeState = (rsANil, rsAnsi, rsAnsiAsm, rsAsm, rsBor, rsBorAsm, rsProperty,
-    rsExports, rsDirective, rsDirectiveAsm, rsLua, rsUnKnown);
+    rsExports, rsDirective, rsDirectiveAsm, rsSecondaryHighlighter, rsUnKnown);
 
   TProcTableProc = procedure of object;
 
@@ -235,10 +241,22 @@ type
 const
   LastAutoAssemblerVersion = dvAutoAssembler2005;
 
+
+type
+  TSynCustomHighlighterHelper=class helper for TSynCustomHighlighter
+  public
+    function loadFromRegistryDefault(RootKey: HKEY; Key: string): boolean;
+    function loadFromRegistryDefault: boolean;
+  end;
+
+
 type
   TSynAASyn = class(TSynCustomHighlighter)
   private
+    fCurrentSecondaryHighlighter: TSynCustomHighlighter;
     fLuaSyntaxHighlighter: TSynLuaSyn;
+    fCPPSyntaxHighlighter: TSynCppSyn;
+    fFPCSyntaxHighlighter: TSynPasSyn;
 
     fLineRef: string;
     fAsmStart: Boolean;
@@ -255,9 +273,9 @@ type
     fStringAttri: TSynHighlighterAttributes;
     fCharAttri: TSynHighlighterAttributes;
     fNumberAttri: TSynHighlighterAttributes;
-    fFloatAttri: TSynHighlighterAttributes;
     fHexAttri: TSynHighlighterAttributes;
     fKeyAttri: TSynHighlighterAttributes;
+    fOpcodeAttri: TSynHighlighterAttributes;
     fSymbolAttri: TSynHighlighterAttributes;
     fAsmAttri: TSynHighlighterAttributes;
     fCommentAttri: TSynHighlighterAttributes;
@@ -265,6 +283,7 @@ type
     fIdentifierAttri: TSynHighlighterAttributes;
     fSpaceAttri: TSynHighlighterAttributes;
     fRegisterAttri: TSynHighlighterAttributes;
+    fTryExceptAttri: TSynHighlighterAttributes;
     fAutoAssemblerVersion: TAutoAssemblerVersion;
     fPackageSource: Boolean;
     function KeyHash(ToHash: PChar): Integer;
@@ -309,7 +328,9 @@ type
     function Func62: TtkTokenKind; //luacall
     function Func65: TtkTokenKind; //resw
     function Func68: TtkTokenKind; //include
-    function Func82: TtkTokenKind; //assert
+    function Func81: TtkTokenKind; //allocnx
+    function Func82: TtkTokenKind; //assert //allocxo
+    function Func84: TtkTokenKind; //aobscanex
     function Func92: TtkTokenKind; //globalalloc
     function Func99: TtkTokenKind; //reassemble
     function Func101: TtkTokenKind; //fullaccess/loadbinary/struct
@@ -318,6 +339,7 @@ type
     function Func123: TtkTokenKind; //aobscanregion
     function Func124: TtkTokenKind; //endstruct
     function Func125: TtkTokenKind; //aobscanmodule
+    function Func180: TtkTokenKind; //createthreadandwait
     function Func187: TtkTokenKind; //registersymbol
     function Func222: TtkTokenKind; //unregistersymbol
 
@@ -376,6 +398,8 @@ type
     function GetRange: Pointer; override;
     procedure SetRange(Value: Pointer); override;
     property IdentChars;
+
+    function LoadFromRegistry(RootKey: HKEY; Key: string): boolean; override;
   published
     property AsmAttri: TSynHighlighterAttributes read fAsmAttri write fAsmAttri;
     property CommentAttri: TSynHighlighterAttributes read fCommentAttri
@@ -384,12 +408,12 @@ type
       write fDirecAttri;
     property IdentifierAttri: TSynHighlighterAttributes read fIdentifierAttri
       write fIdentifierAttri;
+    property OpcodeAttri:TSynHighlighterAttributes read fOpcodeAttri write fOpcodeAttri;
     property KeyAttri: TSynHighlighterAttributes read fKeyAttri write fKeyAttri;
     property RegisterAttri: TSynHighlighterAttributes read fRegisterAttri write fRegisterAttri;
+    property TryExceptAttri: TSynHighlighterAttributes read fTryExceptAttri write fTryExceptAttri;
     property NumberAttri: TSynHighlighterAttributes read fNumberAttri
       write fNumberAttri;
-    property FloatAttri: TSynHighlighterAttributes read fFloatAttri
-      write fFloatAttri;
     property HexAttri: TSynHighlighterAttributes read fHexAttri
       write fHexAttri;
     property SpaceAttri: TSynHighlighterAttributes read fSpaceAttri
@@ -416,14 +440,89 @@ uses
 {$IFDEF SYN_CLX}
   QSynEditStrConst;
 {$ELSE}
-  SynEditStrConst;
+  SynEditStrConst, registry, betterControls,mainunit2;
 {$ENDIF}
+
+
 
 var
   Identifiers: array[#0..#255] of ByteBool;
   mHashTable: array[#0..#255] of Integer;
 
   extraCommands: Tstringlist;
+
+function TSynCustomHighlighterHelper.loadFromRegistryDefault(RootKey: HKEY; Key: string): boolean;
+//for highlighters that do not implement loadFromRegistry , like the cpp highlighter
+var
+  reg: TRegistry;
+  i: integer;
+begin
+  reg:=tregistry.create;
+  reg.RootKey:=Rootkey;
+  result:=false;
+
+  if reg.OpenKey(Key,false) then
+  begin
+    result:=true;
+    for i:=0 to AttrCount-1 do
+      result:=result and Attribute[i].LoadFromRegistry(reg);
+  end;
+
+  reg.free;
+
+  if result=false then
+  begin
+    if self is TSynCppSyn then //load default C colors
+    begin
+      with TSynCppSyn(Self) do
+      begin
+        if ShouldAppsUseDarkMode then
+        begin
+
+          CommentAttri.Foreground:=$ff00;
+          CommentAttri.Style:=[fsItalic];
+          CommentAttri.StyleMask:=[fsItalic];
+
+          IdentifierAttri.Foreground:=$ffff;
+          InvalidAttri.Foreground:=$ff;
+          NumberAttri.Foreground:=$ffff00;
+          DirecAttri.Foreground:=$5024b5;
+          KeyAttri.Foreground:=$e1af04;
+          KeyAttri.Style:=[fsBold];
+          KeyAttri.StyleMask:=[fsBold];
+          StringAttri.Foreground:=$c0dcc0;
+          SymbolAttri.Foreground:=$c0c0c0;
+        end
+        else
+        begin
+          CommentAttri.Foreground:=$808000;
+          CommentAttri.Style:=[fsItalic];
+          CommentAttri.StyleMask:=[fsItalic];
+
+          IdentifierAttri.Foreground:=$364bc5;
+          InvalidAttri.Foreground:=$ff;
+          NumberAttri.Foreground:=$ff0000;
+          DirecAttri.Foreground:=$5024b5;
+          KeyAttri.Foreground:=$800000;
+          KeyAttri.Style:=[fsBold];
+          KeyAttri.StyleMask:=[fsBold];
+          StringAttri.Foreground:=$3de12f;
+          SymbolAttri.Foreground:=$808080;
+
+        end;
+
+      end;
+    end;
+
+  end;
+
+  DefHighlightChange(self);
+end;
+
+function TSynCustomHighlighterHelper.loadFromRegistryDefault: boolean;
+begin
+  result:=loadFromRegistryDefault(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\CPP Highlighter'+darkmodestring);
+end;
 
 procedure aa_AddExtraCommand(command:pchar);
 begin
@@ -523,7 +622,9 @@ begin
   fIdentFuncTable[62] := {$IFDEF FPC}@{$ENDIF}Func62;
   fIdentFuncTable[65] := {$IFDEF FPC}@{$ENDIF}Func65;
   fIdentFuncTable[68] := {$IFDEF FPC}@{$ENDIF}Func68;
+  fIdentFuncTable[81] := {$IFDEF FPC}@{$ENDIF}Func81;
   fIdentFuncTable[82] := {$IFDEF FPC}@{$ENDIF}Func82;
+  fIdentFuncTable[84] := {$IFDEF FPC}@{$ENDIF}Func84;
   fIdentFuncTable[92] := {$IFDEF FPC}@{$ENDIF}Func92;
   fIdentFuncTable[99] := {$IFDEF FPC}@{$ENDIF}Func99;
   fIdentFuncTable[101] := {$IFDEF FPC}@{$ENDIF}Func101;
@@ -532,6 +633,7 @@ begin
   fIdentFuncTable[123] := {$IFDEF FPC}@{$ENDIF}Func123;
   fIdentFuncTable[124] := {$IFDEF FPC}@{$ENDIF}Func124;
   fIdentFuncTable[125] := {$IFDEF FPC}@{$ENDIF}Func125;
+  fIdentFuncTable[180] := {$IFDEF FPC}@{$ENDIF}Func180;
   fIdentFuncTable[187] := {$IFDEF FPC}@{$ENDIF}Func187;
   fIdentFuncTable[222] := {$IFDEF FPC}@{$ENDIF}Func222;
 end;
@@ -791,7 +893,8 @@ end;
 function TSynAASyn.Func39: TtkTokenKind; //enable
 begin
   if KeyComp('enable') then Result := tkspace else
-    Result := tkIdentifier;
+    if KeyComp('jmp1') then Result := tkopcode else
+      Result := tkIdentifier;
 end;
 
 function TSynAASyn.Func40: TtkTokenKind; //esp/sil
@@ -933,9 +1036,22 @@ begin
     Result := tkIdentifier;
 end;
 
+function TSynAASyn.Func81: TtkTokenKind; //allocnx
+begin
+  if KeyComp('allocnx') then Result := tkKey else
+    Result := tkIdentifier;
+end;
+
 function TSynAASyn.Func82: TtkTokenKind; //include
 begin
   if KeyComp('assert') then Result := tkKey else
+    if KeyComp('allocxo') then Result := tkKey else
+      Result := tkIdentifier;
+end;
+
+function TSynAASyn.Func84: TtkTokenKind; //aobscanex
+begin
+  if KeyComp('aobscanex') then Result := tkKey else
     Result := tkIdentifier;
 end;
 
@@ -989,6 +1105,12 @@ begin
     Result := tkIdentifier;
 end;
 
+function TSynAASyn.Func180: TtkTokenKind; //createthreadandwait
+begin
+  if KeyComp('createthreadandwait') then Result := tkKey else
+    Result := tkIdentifier;
+end;
+
 function TSynAASyn.Func187: TtkTokenKind; //registersymbol
 begin
   if KeyComp('registersymbol') then Result := tkKey else
@@ -1035,7 +1157,7 @@ begin
   begin
     ft:=getfirsttoken(maybe);
     if GetOpcodesIndex(ft)<>-1 then
-      result:=tkKey
+      result:=tkOpcode
     else
     if isExtraCommand(ft) then
       result:=tkKey;
@@ -1087,40 +1209,57 @@ begin
   fAutoAssemblerVersion := LastAutoAssemblerVersion;
   fPackageSource := True;
 
-  fAsmAttri := TSynHighlighterAttributes.Create(SYNS_AttrAssembler);
-  AddAttribute(fAsmAttri);
+  fAsmAttri := TSynHighlighterAttributes.Create('{$ASM}');
+  fAsmAttri.Foreground:=clred;
+
   fCommentAttri := TSynHighlighterAttributes.Create(SYNS_AttrComment);
   fCommentAttri.Style:= [fsItalic];
-  fCommentAttri.Foreground:=clBlue;
+  if ShouldAppsUseDarkMode() then
+    fCommentAttri.Foreground:=$ff7f00
+  else
+    fCommentAttri.Foreground:=clBlue;
 
   AddAttribute(fCommentAttri);
-  fDirecAttri := TSynHighlighterAttributes.Create(SYNS_AttrPreprocessor);
+
+  fDirecAttri := TSynHighlighterAttributes.Create(SYNS_AttrDirective);
   fDirecAttri.Style:= [fsItalic];
   AddAttribute(fDirecAttri);
+
   fIdentifierAttri := TSynHighlighterAttributes.Create(SYNS_AttrIdentifier);
   AddAttribute(fIdentifierAttri);
+
+  fOpcodeAttri := TSynHighlighterAttributes.Create('Mnemonic');
+  fOpcodeAttri.Style:= [fsBold];
+  AddAttribute(fOpcodeAttri);
+
   fKeyAttri := TSynHighlighterAttributes.Create(SYNS_AttrReservedWord);
+  fKeyAttri.Foreground:=$101080;
   fKeyAttri.Style:= [fsBold];
+  AddAttribute(fKeyAttri);
 
   fRegisterAttri := TSynHighlighterAttributes.Create('Register');
   fRegisterAttri.Style:= [fsBold];
   fRegisterAttri.Foreground:=$0080f0;
+  AddAttribute(fRegisterAttri);
 
-  AddAttribute(fKeyAttri);
+  fTryExceptAttri := TSynHighlighterAttributes.Create('Try/Except');
+  fTryExceptAttri.Style:= [fsBold, fsUnderline];
+  fTryExceptAttri.Foreground:=$0080f0;
+  AddAttribute(fTryExceptAttri);
+
   fNumberAttri := TSynHighlighterAttributes.Create(SYNS_AttrNumber);
   fNumberAttri.Foreground:=clGreen;
-
   AddAttribute(fNumberAttri);
-  fFloatAttri := TSynHighlighterAttributes.Create(SYNS_AttrFloat);
-  fFloatAttri.Foreground:=clGreen;
-  AddAttribute(fFloatAttri);
 
   fHexAttri := TSynHighlighterAttributes.Create(SYNS_AttrHexadecimal);
   fHexAttri.Foreground:=clGreen;
   AddAttribute(fHexAttri);
 
   fSpaceAttri := TSynHighlighterAttributes.Create(SYNS_AttrSpace);
-  fSpaceAttri.Foreground:=clNavy;
+  if ShouldAppsUseDarkMode then
+    fSpaceAttri.Foreground:=$9f7f1f
+  else
+    fSpaceAttri.Foreground:=clNavy;
   AddAttribute(fSpaceAttri);
 
   fStringAttri := TSynHighlighterAttributes.Create(SYNS_AttrString);
@@ -1130,8 +1269,10 @@ begin
   fCharAttri := TSynHighlighterAttributes.Create(SYNS_AttrCharacter);
 //  fCharAttri.Foreground:=clRed;
   AddAttribute(fCharAttri);
+
   fSymbolAttri := TSynHighlighterAttributes.Create(SYNS_AttrSymbol);
   AddAttribute(fSymbolAttri);
+
   SetAttributesOnChange({$IFDEF FPC}@{$ENDIF}DefHighlightChange);
 
   InitIdent;
@@ -1143,8 +1284,8 @@ end; { Create }
 
 procedure TSynAASyn.SetLine(const NewValue: string; LineNumber:Integer);
 begin
-  if fRange=rsLua then
-    fLuaSyntaxHighlighter.SetLine(NewValue, LineNumber);
+  if fRange=rsSecondaryHighlighter then
+    fCurrentSecondaryHighlighter.SetLine(NewValue, LineNumber);
 
 
   fLineRef := NewValue;
@@ -1152,7 +1293,7 @@ begin
   Run := 0;
   fLineNumber := LineNumber;
 
-  if fRange<>rsLua then //prevent a double next
+  if fRange<>rsSecondaryHighlighter then //prevent a double next
     Next;
 end; { SetLine }
 
@@ -1205,13 +1346,13 @@ begin
   if uppercase(fLine)='{$ASM}' then
   begin
     inc(run,6);
-    fTokenID := tkIdentifier;
+    fTokenID := tkAsm;
     fRange:=rsUnKnown;
   end
   else
   begin
 
-    fLuaSyntaxHighlighter.Next;
+    fCurrentSecondaryHighlighter.Next;
 
 
    { case fLine[Run] of
@@ -1232,30 +1373,134 @@ begin
 end;
 
 procedure TSynAASyn.BraceOpenProc;
-var l: integer;
+var i,l: integer;
+  changeHighlighter: (chlNo, chlLua, chlPascal, chlCPP);
+  braceend: integer;
 begin
+  changeHighlighter:=chlNo;
+  braceend:=0;
+
   l:=StrLen(fLine);
-
-  if (Run=0) and (l>=6) and (fLine[Run + 1] = '$') and   //{$LUA}
-     (uppercase(fLine[Run + 2]) = 'L') and
-     (uppercase(fLine[Run + 3]) = 'U') and
-     (uppercase(fLine[Run + 4]) = 'A') and
-     (fLine[Run + 5] = '}')
-  then
+  //check for syntax highlighter changes
+  if (Run=0) and
+     (l>=6) and (fLine[1] = '$') and   //{$LUA}
+     (uppercase(fLine[2]) = 'L') and
+     (uppercase(fLine[3]) = 'U') and
+     (uppercase(fLine[4]) = 'A') then
   begin
-    inc(run,5);
-    FTokenID:=tkIdentifier;
-    if fLuaSyntaxHighlighter=nil then
-      fLuaSyntaxHighlighter:=TSynLuaSyn.Create(self);
+    braceend:=length(fline);
+    if (fLine[5] = '}') then
+    begin
+      changeHighlighter:=chlLua;
+      braceend:=5;
+    end
+    else
+    begin
+      //could be {$LuaCode  xxxx=xxxx yyyy=yyyy() zzzz=[zzzzz]}   or  just {$luacode}
+      if l>=9 then
+      begin
+        if (uppercase(fLine[5])='C') and
+           (uppercase(fLine[6])='O') and
+           (uppercase(fLine[7])='D') and
+           (uppercase(fLine[8])='E') then
+        begin
+          if (fLine[9] in ['}',' ']) then
+            for i:=9 to l do
+              if fline[i]='}' then
+              begin
+                changeHighlighter:=chlLua;
+                braceend:=i;
+                break;
+              end;
+        end;
+      end;
+    end;
+  end;
 
-    fLuaSyntaxHighlighter.AttachToLines(CurrentLines);
-    fLuaSyntaxHighlighter.CurrentLines:=CurrentLines;
-    fLuaSyntaxHighlighter.StartAtLineIndex(fLineNumber);
+  if (Run=0) and
+     (l>=8) and (fLine[1] = '$') and   //{$CCODE}
+     (uppercase(fLine[2]) = 'C') and
+     (uppercase(fLine[3]) = 'C') and
+     (uppercase(fLine[4]) = 'O') and
+     (uppercase(fLine[5]) = 'D') and
+     (uppercase(fLine[6]) = 'E') then
+  begin
+    if (fLine[7] in ['}',' ']) then
+      for i:=7 to l do
+        if fline[i]='}' then
+        begin
+          changeHighlighter:=chlCPP;
+          braceend:=i;
+          break;
+        end;
+  end;
 
-    fRange := rsLua;
+  if (Run=0) and
+     (l>=4) and (fLine[1] = '$') and   //{$C}
+     (uppercase(fLine[2]) = 'C') then
+  begin
+    //{$C} block
+    if (fLine[3] in ['}',' ']) then
+      for i:=3 to l do
+        if fline[i]='}' then
+        begin
+          changeHighlighter:=chlCPP;
+          braceend:=i;
+          break;
+        end;
+  end;
+
+
+  if changeHighlighter<>chlNo then
+  begin
+    inc(run,braceend);
+    FTokenID:=tkAsm;
+
+    //just in case I add {$pascode} and {$cppcode}
+    case changeHighlighter of
+      chlLua:
+      begin
+        if fLuaSyntaxHighlighter=nil then
+        begin
+          fLuaSyntaxHighlighter:=TSynLuaSyn.Create(self);
+          fLuaSyntaxHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\Lua Highlighter'+darkmodestring);
+        end;
+        fCurrentSecondaryHighlighter:=fLuaSyntaxHighlighter;
+      end;
+
+      chlPascal:
+      begin
+        if fFPCSyntaxHighlighter=nil then
+        begin
+          fFPCSyntaxHighlighter:=TSynPasSyn.Create(self);
+          fFPCSyntaxHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\Pascal Highlighter'+darkmodestring);
+        end;
+        fCurrentSecondaryHighlighter:=fFPCSyntaxHighlighter;
+      end;
+
+      chlCPP:
+      begin
+        if fCPPSyntaxHighlighter=nil then
+        begin
+          fCPPSyntaxHighlighter:=TSynCppSyn.Create(self);
+
+
+          fCPPSyntaxHighlighter.loadFromRegistryDefault(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\CPP Highlighter'+darkmodestring);
+
+        end;
+        fCurrentSecondaryHighlighter:=fCPPSyntaxHighlighter;
+      end;
+    end;
+
+    fCurrentSecondaryHighlighter.AttachToLines(CurrentLines);
+    fCurrentSecondaryHighlighter.CurrentLines:=CurrentLines;
+    fCurrentSecondaryHighlighter.StartAtLineIndex(fLineNumber);
+
+    fRange := rsSecondaryHighlighter;
     exit;
-  end
-  else
+  end;
+
+
   if (Run=0) and (l>=6) and (fLine[Run + 1] = '$') and   //{$ASM}
      (uppercase(fLine[Run + 2]) = 'A') and
      (uppercase(fLine[Run + 3]) = 'S') and
@@ -1283,6 +1528,33 @@ begin
     exit;
   end
   else
+  if (Run=0) and (l>=6) and (fLine[Run + 1] = '$') and   //{$TRY}
+    (uppercase(fLine[Run + 2]) = 'T') and
+    (uppercase(fLine[Run + 3]) = 'R') and
+    (uppercase(fLine[Run + 4]) = 'Y') and
+    (fLine[Run + 5] = '}')
+  then
+  begin
+    FTokenID:=tkTryExcept;
+    inc(run,6);
+    exit;
+  end
+  else
+  if (Run=0) and (l>=9) and (fLine[Run + 1] = '$') and   //{$EXCEPT}
+    (uppercase(fLine[Run + 2]) = 'E') and
+    (uppercase(fLine[Run + 3]) = 'X') and
+    (uppercase(fLine[Run + 4]) = 'C') and
+    (uppercase(fLine[Run + 5]) = 'E') and
+    (uppercase(fLine[Run + 6]) = 'P') and
+    (uppercase(fLine[Run + 7]) = 'T') and
+    (fLine[Run + 8] = '}')
+  then
+  begin
+    FTokenID:=tkTryExcept;
+    inc(run,9);
+    exit;
+  end
+  else
   begin
     if fRange = rsAsm then
       fRange := rsBorAsm
@@ -1291,7 +1563,7 @@ begin
 
   end;
   BorProc;
-end;
+ end;
 
 procedure TSynAASyn.ColonOrGreaterProc;
 begin
@@ -1550,6 +1822,7 @@ begin
 end;
 
 procedure TSynAASyn.UnknownProc;
+var utf8len: integer;
 begin
 {$IFDEF SYN_MBCSSUPPORT}
   if FLine[Run] in LeadBytes then
@@ -1559,7 +1832,13 @@ begin
 
   fTokenID := tkUnknown;
   if ord(fline[run])>$80 then  //utf8
-    inc(Run,2)
+  begin
+    utf8len:=Utf8CodePointLen(@fline[run],length(fline)-run,false);
+    if utf8len=0 then
+      utf8len:=2; //guess...
+
+    inc(Run,utf8len);
+  end
   else
     inc(run);
 end;
@@ -1573,7 +1852,7 @@ begin
       AnsiProc;
     rsBor, rsBorAsm, rsDirective, rsDirectiveAsm:
       BorProc;
-    rsLua:
+    rsSecondaryHighlighter:
       LuaProc;
   else
     fProcTable[fLine[Run]];
@@ -1583,10 +1862,12 @@ end;
 function TSynAASyn.GetDefaultAttribute(Index: integer):
   TSynHighlighterAttributes;
 begin
-  if fRange=rsLua then
+  if fRange=rsSecondaryHighlighter then
   begin
-    result:=fLuaSyntaxHighlighter.GetDefaultAttribute(index);
-    exit;
+    if fCurrentSecondaryHighlighter is TSynLuaSyn then exit(TSynLuaSyn(fCurrentSecondaryHighlighter).GetDefaultAttribute(index));
+    if fCurrentSecondaryHighlighter is TSynCppSyn then exit(TSynCppSyn(fCurrentSecondaryHighlighter).GetDefaultAttribute(index));
+    if fCurrentSecondaryHighlighter is TSynPasSyn then exit(TSynPasSyn(fCurrentSecondaryHighlighter).GetDefaultAttribute(index));
+    exit(nil);
   end;
 
   case Index of
@@ -1603,8 +1884,8 @@ end;
 
 function TSynAASyn.GetEol: Boolean;
 begin
-  if fRange=rsLua then
-    result:=fLuaSyntaxHighlighter.GetEol
+  if fRange=rsSecondaryHighlighter then
+    result:=fCurrentSecondaryHighlighter.GetEol
   else
     Result := fTokenID = tkNull;
 end;
@@ -1621,9 +1902,9 @@ function TSynAASyn.GetToken: String;
 var
   Len: LongInt;
 begin
-  if frange=rsLua then
+  if frange=rsSecondaryHighlighter then
   begin
-    result:=fLuaSyntaxHighlighter.GetToken;
+    result:=fCurrentSecondaryHighlighter.GetToken;
     exit;
   end;
 
@@ -1636,9 +1917,9 @@ end;
 procedure TSynAASyn.GetTokenEx(out TokenStart: PChar;
   out TokenLength: integer);
 begin
-  if fRange=rsLua then
+  if fRange=rsSecondaryHighlighter then
   begin
-    fLuaSyntaxHighlighter.GetTokenEx(tokenstart, TokenLength);
+    fCurrentSecondaryHighlighter.GetTokenEx(tokenstart, TokenLength);
 
     if uppercase(tokenstart)='{$ASM}' then
     begin
@@ -1657,10 +1938,12 @@ end;
 
 function TSynAASyn.GetTokenID: TtkTokenKind;
 begin
-  if frange=rsLua then
+  if frange=rsSecondaryHighlighter then
   begin
-    result:=TtkTokenKind(fLuaSyntaxHighlighter.GetTokenID);
-    exit;
+    if fCurrentSecondaryHighlighter is TSynLuaSyn then exit(TtkTokenKind(TSynLuaSyn(fCurrentSecondaryHighlighter).GetTokenID));
+    if fCurrentSecondaryHighlighter is TSynCppSyn then exit(TtkTokenKind(TSynCppSyn(fCurrentSecondaryHighlighter).GetTokenID));
+    if fCurrentSecondaryHighlighter is TSynPasSyn then exit(TtkTokenKind(TSynPasSyn(fCurrentSecondaryHighlighter).GetTokenID));
+    exit(TtkTokenKind(0));
   end;
 
   if not fAsmStart and (fRange = rsAsm)
@@ -1673,26 +1956,24 @@ end;
 
 function TSynAASyn.GetTokenAttribute: TSynHighlighterAttributes;
 begin
-  if fRange=rsLua then
-  begin
-    result:=fLuaSyntaxHighlighter.GetTokenAttribute;
-    exit;
-  end;
+  if fRange=rsSecondaryHighlighter then
+    exit(fCurrentSecondaryHighlighter.GetTokenAttribute);
 
   case GetTokenID of
     tkAsm: Result := fAsmAttri;
     tkComment: Result := fCommentAttri;
     tkDirec: Result := fDirecAttri;
     tkIdentifier: Result := fIdentifierAttri;
+    tkOpcode: Result := fOpcodeAttri;
     tkKey: Result := fKeyAttri;
     tkRegister: Result := fRegisterAttri;
     tkNumber: Result := fNumberAttri;
-    tkFloat: Result := fFloatAttri;
     tkHex: Result := fHexAttri;
     tkSpace: Result := fSpaceAttri;
     tkString: Result := fStringAttri;
     tkChar: Result := fCharAttri;
     tkSymbol: Result := fSymbolAttri;
+    tkTryExcept: result :=fTryExceptAttri;
     tkUnknown: Result := fSymbolAttri;
   else
     Result := fCommentAttri; //nil;
@@ -1701,34 +1982,34 @@ end;
 
 function TSynAASyn.GetTokenKind: integer;
 begin
-  if frange=rsLua then
-    result:=fLuaSyntaxHighlighter.GetTokenKind
+  if frange=rsSecondaryHighlighter then
+    result:=fCurrentSecondaryHighlighter.GetTokenKind
   else
     Result := Ord(GetTokenID);
 end;
 
 function TSynAASyn.GetTokenPos: Integer;
 begin
-  if frange=rsLua then
-    result:=fLuaSyntaxHighlighter.GetTokenPos
+  if frange=rsSecondaryHighlighter then
+    result:=fCurrentSecondaryHighlighter.GetTokenPos
   else
     Result := fTokenPos;
 end;
 
 function TSynAASyn.GetRange: Pointer;
 begin
-  if frange=rsLua then
-    result := pointer(PtrInt(fLuaSyntaxHighlighter.GetRange)+$1000)
+  if frange=rsSecondaryHighlighter then
+    result := pointer(PtruInt(fCurrentSecondaryHighlighter.GetRange)+$1000)
   else
-    Result := Pointer(PtrInt(fRange));
+    Result := Pointer(PtruInt(fRange));
 end;
 
 procedure TSynAASyn.SetRange(Value: Pointer);
 begin
-  if ptrint(value) >= $1000 then //lua
+  if ptruint(value) >= $1000 then //lua
   begin
-    fLuaSyntaxHighlighter.SetRange(pointer(ptrint(value)-$1000));
-    frange:=rsLua;
+    fCurrentSecondaryHighlighter.SetRange(pointer(ptruint(value)-$1000));
+    frange:=rsSecondaryHighlighter;
   end
   else
     fRange := TRangeState(PtrUInt(Value));
@@ -1736,8 +2017,8 @@ end;
 
 procedure TSynAASyn.ResetRange;
 begin
-  //if frange=rsLua then
-  //  fLuaSyntaxHighlighter.ResetRange
+  //if frange=rsSecondaryHighlighter then
+  //  fCurrentSecondaryHighlighter.ResetRange
  // else
     fRange:= rsUnknown;
 
@@ -1792,6 +2073,31 @@ begin
   end;
 end;
 
+function TSynAASyn.LoadFromRegistry(RootKey: HKEY; Key: string): boolean;
+var
+  reg: TRegistry;
+  i: integer;
+begin
+  reg:=tregistry.create;
+  reg.RootKey:=Rootkey;
+  result:=false;
+  if reg.OpenKey(Key,false) then
+  begin
+    result:=true;
+    for i:=0 to AttrCount-1 do
+      result:=result and Attribute[i].LoadFromRegistry(reg);
+  end;
+
+  reg.free;
+
+  if fLuaSyntaxHighlighter<>nil then
+    fLuaSyntaxHighlighter.LoadFromRegistry(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\Lua Highlighter'+darkmodestring);  //perhaps make this a var
+
+  if fCPPSyntaxHighlighter<>nil then
+    fCPPSyntaxHighlighter.loadFromRegistryDefault(HKEY_CURRENT_USER, '\Software\'+strCheatEngine+'\CPP Highlighter'+darkmodestring);  //perhaps make this a var
+
+  DefHighlightChange(self);
+end;
 
 initialization
   MakeIdentTable;

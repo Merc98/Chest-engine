@@ -7,10 +7,20 @@ interface
 uses
   Classes, SysUtils, DOM, zstream, math, custombase85, fgl, xmlutils;
 
-type TLuafile=class
+type
+  EDoNotFreeManually=class(Exception);
+  TProtectedMemoryStream=class(TMemoryStream)
+  private
+    canbedestroyed: boolean;
+  public
+    destructor Destroy; override;
+  end;
+
+  TLuafile=class
   private
     fname: string;
-    filedata: TMemorystream;
+    filedata: TProtectedMemoryStream;
+    fdonotsave: boolean;
   public
 
     constructor create(name: string; stream: TStream);
@@ -21,12 +31,21 @@ type TLuafile=class
 
   published
     property name: string read fname write fname;
-    property stream: TMemoryStream read filedata;
+    property stream: TProtectedMemoryStream read filedata;
+    property doNotSave: boolean read fdonotsave write fdonotsave;
   end;
 
   TLuaFileList =  TFPGList<TLuafile>;
 
 implementation
+
+destructor TProtectedMemoryStream.Destroy;
+begin
+  if canbedestroyed then
+    inherited destroy
+  else
+    raise EDoNotFreeManually.create('You may not destroy this stream manually. Destroy the LuaFile instead');
+end;
 
 constructor TLuafile.createFromXML(node: TDOMNode);
 var s: string;
@@ -40,7 +59,7 @@ var s: string;
   a: TDOMNode;
 begin
   name:=node.NodeName;
-  filedata:=TMemorystream.create;
+  filedata:=TProtectedMemorystream.create;
 
   s:=node.TextContent;
 
@@ -50,8 +69,11 @@ begin
   begin
     a:=node.Attributes.GetNamedItem('Encoding');
     useascii85:=(a<>nil) and (a.TextContent='Ascii85');
-  end;
 
+    a:=node.Attributes.GetNamedItem('Name');
+    if a<>nil then
+      name:=a.TextContent;
+  end;
 
   if useascii85 then
   begin
@@ -69,11 +91,8 @@ begin
     HexToBin(pchar(s), b, size);
   end;
 
-
-
-
   try
-    m:=tmemorystream.create;
+    m:=TMemoryStream.create;
     m.WriteBuffer(b^, size);
     m.position:=0;
     dc:=Tdecompressionstream.create(m, true);
@@ -81,7 +100,7 @@ begin
     if useascii85 then //this ce version also added a filesize (This is why I usually don't recommend using svn builds for production work. Of coure, not many people using the svn made use of the file stuff)
     begin
       size:=dc.ReadDWord;
-      freemem(b);
+      FreeMemAndNil(b);
       getmem(b, size);
       read:=dc.read(b^, size);
       filedata.WriteBuffer(b^, read);
@@ -96,7 +115,8 @@ begin
     end;
 
   finally
-    freemem(b);
+    FreeMemAndNil(b);
+    FreeAndNil(m);
   end;
 end;
 
@@ -111,7 +131,12 @@ var
   n: TDOMNode;
   a: TDOMAttr;
   s: string;
+  xmlname: boolean;
+  i: integer;
+  namecount: integer;
 begin
+  if donotsave then exit;
+
   outputastext:=nil;
   //compress the file
   m:=tmemorystream.create;
@@ -127,27 +152,28 @@ begin
   BinToBase85(pchar(m.memory), outputastext, m.size);
 
   doc:=node.OwnerDocument;
-  n:=Node.AppendChild(doc.CreateElement(name));
+
+  n:=Node.AppendChild(doc.CreateElement('File'+node.ChildNodes.Count.ToString));
+
   n.TextContent:=outputastext;
 
+  a:=doc.createAttribute('Name');
+  a.TextContent:=name;
+  n.Attributes.SetNamedItem(a);
 
   a:=doc.CreateAttribute('Encoding');
   a.TextContent:='Ascii85';
   n.Attributes.SetNamedItem(a);
 
-  freemem(outputastext);
-  m.free;
+  FreeMemAndNil(outputastext);
+  freeandnil(m);
 end;
 
 constructor TLuafile.create(name: string; stream: tstream);
 begin
-  if not IsXmlName(name, true) then
-    name:='_'+name;
-
-
   self.name:=name;
 
-  filedata:=tmemorystream.create;
+  filedata:=TProtectedMemorystream.create;
   stream.position:=0;
   filedata.LoadFromStream(stream);
   filedata.position:=0;
@@ -156,7 +182,10 @@ end;
 destructor TLuafile.destroy;
 begin
   if filedata<>nil then
+  begin
+    filedata.canbedestroyed:=true;
     filedata.free;
+  end;
 
   inherited destroy;
 end;

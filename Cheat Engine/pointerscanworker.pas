@@ -6,9 +6,17 @@ unit PointerscanWorker;
 
 interface
 
+{$ifdef darwin}
+uses
+  macport, Classes, SysUtils, syncobjs, PointerscanStructures, ProcessHandlerUnit, pointervaluelist,
+  pointeraddresslist, NewKernelHandler, zstream, zstreamext, macportdefines, SyncObjs2, math;
+{$endif}
+
+{$ifdef windows}
 uses
   windows, Classes, SysUtils, syncobjs, PointerscanStructures, ProcessHandlerUnit, pointervaluelist,
   pointeraddresslist, NewKernelHandler, zstream, zstreamext;
+{$endif}
 
 type
   TPointerscanWorker = class (tthread)
@@ -32,13 +40,19 @@ type
     procedure flushifneeded; virtual;
   public
     pointerlisthandler: TReversePointerListHandler;
+    {$ifdef windows}
     pathqueuesemaphore: THandle;
+    {$else}
+    pathqueuesemaphore: TSemaphore;
+    {$endif}
     pathqueuelength: ^integer;
     pathqueueCS: TCriticalSection;
     pathqueue: PMainPathQueue;
 
     OutOfDiskSpace: ^boolean;
+
     mustEndWithSpecificOffset: boolean;
+    mustEndWithSpecificOffsetMaxDeviation: dword;
     mustendwithoffsetlist: array of dword;
 
     useHeapData: boolean;
@@ -97,6 +111,7 @@ type
     pathsEvaluated: qword;
     pointersfound: qword;
 
+    NegativeOffsets: boolean;
     compressedptr: boolean;
     MaxBitCountModuleIndex: dword;
     MaxBitCountModuleOffset: dword;
@@ -168,7 +183,7 @@ type
 
 implementation
 
-uses frmMemoryAllocHandlerUnit, pointerscancontroller;
+uses {$ifdef windows}frmMemoryAllocHandlerUnit,{$endif} pointerscancontroller;
 
 //---------------Reversescanworker
 
@@ -326,7 +341,7 @@ end;
 destructor TPointerscanWorker.destroy;
 begin
   if compressedEntry<>nil then
-    FreeMem(compressedEntry);
+    FreeMemAndNil(compressedEntry);
 
   inherited destroy;
 end;
@@ -344,7 +359,11 @@ begin
     try
       Initialize;
 
-      compressedEntrySize:=MaxBitCountModuleOffset+MaxBitCountModuleIndex+MaxBitCountLevel+MaxBitCountOffset*(maxlevel-mustendwithoffsetlistlength);
+      if mustEndWithSpecificOffsetMaxDeviation=0 then
+        compressedEntrySize:=MaxBitCountModuleOffset+MaxBitCountModuleIndex+MaxBitCountLevel+MaxBitCountOffset*(maxlevel-mustendwithoffsetlistlength)
+      else
+        compressedEntrySize:=MaxBitCountModuleOffset+MaxBitCountModuleIndex+MaxBitCountLevel+MaxBitCountOffset*maxlevel;
+
       compressedEntrySize:=(compressedEntrySize+7) div 8;
 
       getmem(compressedEntry, compressedEntrySize+4); //+4 so there's some space for overhead (writing using a dword pointer to the last byte)
@@ -365,13 +384,20 @@ begin
 
       while (not terminated) do
       begin
+        {$ifdef windows}
         wr:=WaitForSingleObject(pathqueueSemaphore, 500); //obtain semaphore
-
         if wr=WAIT_OBJECT_0 then
+        {$else}
+        if pathqueueSemaphore.TryAcquire(500) then
+        {$endif}
         begin
           if stop or terminated then
           begin
+            {$ifdef windows}
             ReleaseSemaphore(pathqueueSemaphore, 1, nil);
+            {$else}
+            pathqueueSemaphore.Release;
+            {$endif}
             exit;
           end;
 
@@ -379,7 +405,12 @@ begin
           //fetch the data from the queue and staticscanner
           if outofdiskspace^ then
           begin
+            {$ifdef windows}
             ReleaseSemaphore(pathqueueSemaphore, 1, nil); //don't use it. give the semaphore back
+            {$else}
+            pathqueueSemaphore.Release;
+            {$endif}
+
             sleep(2000);
             continue;
           end;
@@ -475,6 +506,7 @@ var
   bd8, bm8: dword;
 
   bit: integer;
+  endlevel: integer;
 begin
   if instantrescan and (not DoRescan(level, moduleid, offset)) then exit;
 
@@ -523,7 +555,8 @@ begin
 
     //so, the compressed version should be almost 3 times as small on a default scan (the shifting and alignment might cause a slightly slower scan)
 
-    if level<(mustendwithoffsetlistlength-1) then exit; //on a multi offset end scan, entries with a partial match resulting in a static are saved as well. Don't as they are not what the user wished, and would cause problems
+
+    if (mustEndWithSpecificOffsetMaxDeviation=0) and (level<(mustendwithoffsetlistlength-1)) then exit; //on a multi offset end scan, entries with a partial match resulting in a static are saved as well. Don't as they are not what the user wished, and would cause problems
 
 
     bit:=0;
@@ -539,13 +572,22 @@ begin
     bd8:=bit shr 3; //bit div 8;
     bm8:=bit and $7; //bit mod 8;
 
-    pdword(@compressedEntry[bd8])^:=pdword(@compressedEntry[bd8])^ and (not (MaskLevel shl bm8)) or ((1+(level-mustendwithoffsetlistlength)) shl bm8);
+    if mustEndWithSpecificOffsetMaxDeviation=0 then
+      pdword(@compressedEntry[bd8])^:=pdword(@compressedEntry[bd8])^ and (not (MaskLevel shl bm8)) or ((1+(level-mustendwithoffsetlistlength)) shl bm8)
+    else
+      pdword(@compressedEntry[bd8])^:=pdword(@compressedEntry[bd8])^ and (not (MaskLevel shl bm8)) or ((1+(level)) shl bm8);
+
     bit:=bit+MaxBitCountLevel;    //next section
 
 
 
     //compress the offsets
-    for i:=mustendwithoffsetlistlength to level do
+    if mustEndWithSpecificOffsetMaxDeviation=0 then
+      endlevel:=mustendwithoffsetlistlength
+    else
+      endlevel:=0;
+
+    for i:=endlevel to level do
     begin
       bd8:=bit shr 3; //bit div 8;
       bm8:=bit and $7; //bit mod 8;
@@ -597,8 +639,11 @@ var p: ^byte;
 
 
     ExactOffset: boolean;
+    {$ifdef windows}
     mae: TMemoryAllocEvent;
+    {$endif}
 
+    ev: ptruint;
   startvalue: ptrUint;
   stopvalue: ptrUint;
   plist: PPointerlist;
@@ -621,16 +666,22 @@ begin
 
   if exactOffset then
   begin
-    startvalue:=valuetofind-mustendwithoffsetlist[level];
-    stopvalue:=startvalue;
+    ev:=valuetofind-mustendwithoffsetlist[level];
+
+    startvalue:=ev-mustEndWithSpecificOffsetMaxDeviation;
+    stopvalue:=ev+mustEndWithSpecificOffsetMaxDeviation;
+    if stopvalue>valuetofind then
+      stopvalue:=valuetofind;
   end
   else
   begin
     startvalue:=valuetofind-structsize;
     stopvalue:=valuetofind;
+    if NegativeOffsets then inc(stopvalue, structsize);
 
     if startvalue>stopvalue then startvalue:=0;
 
+    {$ifdef windows}
     if useheapdata then
     begin
       mae:=frmMemoryAllocHandler.FindAddress(@frmMemoryAllocHandler.HeapBaselevel, valuetofind);
@@ -644,6 +695,7 @@ begin
        if useOnlyHeapData then
          exit;
     end;
+    {$endif}
   end;
 
 
@@ -674,6 +726,10 @@ begin
 
     if plist<>nil then
     begin
+     { if stopvalue>valuetofind then
+      asm
+      nop
+      end;  }
       tempresults[level]:=valuetofind-stopvalue; //store the offset
 
 
@@ -754,7 +810,12 @@ begin
                         pathqueue[pathqueuelength^].valuetofind:=plist.list[j].address;
 
                         inc(pathqueuelength^);
+                        {$ifdef windows}
                         ReleaseSemaphore(pathqueueSemaphore, 1, nil);
+                        {$else}
+                        pathqueueSemaphore.Release;
+                        {$endif}
+
                         addedToQueue:=true;
                       end;
                       pathqueueCS.Leave;

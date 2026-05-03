@@ -13,7 +13,8 @@
 #define EXTCMD_CREATETHREAD            2
 #define EXTCMD_LOADMODULE              3
 #define EXTCMD_SPEEDHACK_SETSPEED      4
-//#define EXTCMD_CHANGEMEMORYPROTECTION  5
+#define EXTCMD_CHANGEMEMORYPROTECTION  5
+#define EXTCMD_LOADMODULEEX            6
 
 
 #endif /* SERVER_H_ */

@@ -6,8 +6,10 @@ unit unrandomizer;
 
 interface
 
-uses windows, CEFuncProc,dialogs,classes,comctrls,LCLIntf,sysutils,formsettingsunit,
-     NewKernelHandler, commonTypeDefs, MemFuncs;
+uses {$ifdef darwin}macport,{$endif}
+     {$ifdef windows}windows,{$endif}
+     CEFuncProc,dialogs,classes,comctrls,LCLIntf,sysutils,formsettingsunit,
+     NewKernelHandler, commonTypeDefs, MemFuncs, betterControls;
 
 type Tunrandomize=class(tthread)
 private
@@ -154,7 +156,7 @@ begin
   if not e then
   begin
     readprocessmemory(processhandle, pointer(a), @buffer[0], length(genericreplace), ar);
-    save(a,@buffer[j],length(genericreplace));
+    save(a,@buffer[0],length(genericreplace));
     l:=length(genericreplace);
     rewritecode(processhandle,a,@genericreplace[0],l);
   end;
@@ -163,7 +165,7 @@ begin
   if not e then
   begin
     readprocessmemory(processhandle, pointer(a), @buffer[0], length(genericreplace), ar);
-    save(a,@buffer[j],length(genericreplace));
+    save(a,@buffer[0],length(genericreplace));
     l:=length(genericreplace);
     rewritecode(processhandle,a,@genericreplace[0],l);
   end;
@@ -172,7 +174,7 @@ begin
   if not e then
   begin
     readprocessmemory(processhandle, pointer(a), @buffer[0], length(genericreplace), ar);
-    save(a,@buffer[j],length(genericreplace));
+    save(a,@buffer[0],length(genericreplace));
     l:=length(genericreplace);
     rewritecode(processhandle,a,@genericreplace[0],l);
   end;
@@ -413,7 +415,7 @@ begin
   else
   begin
     //allocate 4 bytes to store the current value
-    counter:=virtualallocex(processhandle,nil,8,MEM_COMMIT	,PAGE_EXECUTE_READWRITE);
+    counter:=virtualallocex(processhandle,nil,8,MEM_COMMIT or MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     writeprocessmemory(processhandle,counter,@defaultreturn,4,aw);
 
 

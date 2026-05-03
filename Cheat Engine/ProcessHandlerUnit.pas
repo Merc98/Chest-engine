@@ -10,17 +10,29 @@ process will set it to the different tab's process
 
 interface
 
-uses {$ifndef jni}LCLIntf, {$endif}newkernelhandler, classes, sysutils;
+uses
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  {$ifndef jni}LCLIntf, {$endif}
+  newkernelhandler, classes, sysutils;
 
 type
   TSystemArchitecture=(archX86=0, archArm=1);
+  TOperatingsystemABI=(abiWindows=0, abiSystemV=1);
 
 type TProcessHandler=class
   private
     fis64bit: boolean;
+    fIsAndroid: boolean;
     fprocesshandle: THandle;
     fpointersize: integer;
     fSystemArchitecture: TSystemArchitecture;
+    fOSABI: TOperatingsystemABI;  //for c-code
+    fHexDigitPreference: integer;
     procedure setIs64bit(state: boolean);
     procedure setProcessHandle(processhandle: THandle);
   public
@@ -30,10 +42,14 @@ type TProcessHandler=class
     procedure Open;
     function isNetwork: boolean;  //perhaps name it isLinux ?
     procedure overridePointerSize(newsize: integer);
+
     property is64Bit: boolean read fIs64Bit write setIs64bit;
+    property isAndroid: boolean read fIsAndroid;
     property pointersize: integer read fPointersize;
     property processhandle: THandle read fProcessHandle write setProcessHandle;
-    property SystemArchitecture: TSystemArchitecture read fSystemArchitecture;
+    property SystemArchitecture: TSystemArchitecture read fSystemArchitecture write fSystemArchitecture;
+    property OSABI: TOperatingsystemABI read fOSABI;
+    property hexdigitpreference: integer read fHexDigitPreference;
 end;
 
 
@@ -48,7 +64,8 @@ implementation
 {$ifdef jni}
 uses networkinterface, networkInterfaceApi;
 {$else}
-uses LuaHandler, mainunit, networkinterface, networkInterfaceApi, ProcessList, lua, FileUtil;
+uses LuaHandler, mainunit, networkInterface, networkInterfaceApi, ProcessList, lua,
+  FileUtil, globals;
 {$endif}
 
 procedure TProcessHandler.overridePointerSize(newsize: integer);
@@ -65,25 +82,36 @@ procedure TProcessHandler.setIs64bit(state: boolean);
 begin
   fis64bit:=state;
   if state then
-  begin
-    fpointersize:=8;
-  end
+    fpointersize:=8
   else
-  begin
     fpointersize:=4;
-  end;
+
+  fhexdigitpreference:=fpointersize*2;
 end;
 
 procedure TProcessHandler.setProcessHandle(processhandle: THandle);
-var c: TCEConnection;
+var
+  c: TCEConnection;
   arch: integer;
+  abi: integer;
 begin
+  //outputdebugstring('TProcessHandler.setProcessHandle');
+  if (fprocesshandle<>0) and (fprocesshandle<>getcurrentprocess) and (processhandle<>getcurrentprocess) then
+  begin
+    try
+      closehandle(fprocesshandle);
+    except //debugger issue
+    end;
+    fprocesshandle:=0;
+  end;
+
   fprocesshandle:=processhandle;
 
   c:=getConnection;
   if c<>nil then
   begin
-    arch:=c.getArchitecture;
+    fIsAndroid:=c.isAndroid;
+    arch:=c.getArchitecture(fprocesshandle);
     case arch of
       0:   //i386
       begin
@@ -103,63 +131,83 @@ begin
         setIs64Bit(false);
       end;
 
-      3: //arm64 (untested, not seen yet)
+      3: //arm64
       begin
         fSystemArchitecture:=archArm;
         setIs64Bit(true);
       end;
     end;
 
+    abi:=c.GetABI;
+    case abi of
+      0: fOSABI:=abiWindows;
+      1: fOSABI:=abiSystemV;
+    end;
+
   end
   else
   begin
+    fIsAndroid:=false;
+    //outputdebugstring('setProcessHandle not windows');
+
+    {$ifdef darwin}
+    outputdebugstring('setProcessHandle');
+    if MacIsArm64 then  //rosetta2 or I finally ported it to full armv8
+    begin
+      if isProcessTranslated(processid) then
+      begin
+        outputdebugstring('rosetta. So x86');
+        fSystemArchitecture:=archX86;
+        globals.SystemSupportsWritableExecutableMemory:=true;
+      end
+      else
+      begin
+        outputdebugstring('not rosetta. So pure ARM');
+        fSystemArchitecture:=archArm;
+        globals.SystemSupportsWritableExecutableMemory:=false;
+      end;
+    end;
+    {$else}
     fSystemArchitecture:=archX86;
+    {$endif}
+    {$ifdef windows}
+    fOSABI:=abiWindows;
+    {$else}
+    fOSABI:=abiSystemV;
+    {$endif}
+
     setIs64Bit(newkernelhandler.Is64BitProcess(fProcessHandle));
-
-
   end;
 
   {$ifdef ARMTEST}
   fSystemArchitecture:=archArm;
+  fOSABI:=abiSystemV;
   setIs64Bit(false);
   {$endif}
 
   if processhandle<>0 then
   begin
-    //OutputDebugString('setProcessHandle: Calling open');
+    outputdebugstring('calling open');
     open;
-    //OutputDebugString('After open');
   end;
 
-
-
-    {if GetCurrentThreadId<>MainThreadID then
-        TThread.Synchronize(nil, open) }
-
-
-
-
-    //(synchronize(open));
-//  if (mainform<>nil) and (mainform.addresslist<>nil) then
-//    mainform.addresslist.needsToReinterpret:=true;
 end;
 
 procedure TProcessHandler.Open;
-{$ifdef windows}
 var mn: string;
-{$endif}
 begin
+ // outputdebugstring('TProcessHandler.Open');
   //GetFirstModuleNa
   {$ifndef jni}
-  {$ifdef windows}
+
   if processid<>0 then
   begin
     mn:=GetFirstModuleName(processid);
+
     lua_pushstring(luavm, pchar(extractfilename(mn)));
     lua_setglobal(luavm, 'process');
   end;
 
-  {$endif}
 
   LUA_functioncall('onOpenProcess', [ptruint(processid)]);   //todo: Change to a callback array/list
   {$endif}
@@ -179,4 +227,5 @@ initialization
   processhandler:=TProcessHandler.create;
 
 end.
+
 

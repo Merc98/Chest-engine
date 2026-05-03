@@ -5,16 +5,28 @@ unit formFoundcodeListExtraUnit;
 interface
 
 uses
-  windows, LResources, LCLIntf, Messages, SysUtils, Variants, Classes, Graphics,
+  {$ifdef darwin}
+  macport,
+  {$else}
+  windows,
+  {$endif}
+  LResources, LCLIntf, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, StdCtrls, Menus,Clipbrd, ExtCtrls, Buttons,
-  frmFloatingPointPanelUnit, NewKernelHandler,cefuncproc, frmStackViewUnit;
+  frmFloatingPointPanelUnit, NewKernelHandler,cefuncproc, frmStackViewUnit, betterControls;
 
 type
 
   { TFormFoundCodeListExtra }
 
   TFormFoundCodeListExtra = class(TForm)
+    eiImageList: TImageList;
+    lblGSBaseKernel: TLabel;
+    lblGSBase: TLabel;
+    lblCR3: TLabel;
     Label18: TLabel;
+    lblPhysicalAddress: TLabel;
+    lblVirtualAddress: TLabel;
+    lblFSBase: TLabel;
     lblRAX: TLabel;
     lblRBP: TLabel;
     lblRBX: TLabel;
@@ -24,6 +36,7 @@ type
     lblRIP: TLabel;
     lblRSI: TLabel;
     lblRSP: TLabel;
+    pnlEPTWatch: TPanel;
     pnlRegisters: TPanel;
     Panel8: TPanel;
     pmCopy: TPopupMenu;
@@ -47,6 +60,7 @@ type
     pmEmpty: TPopupMenu;
     sbShowFloats: TSpeedButton;
     sbShowStack: TSpeedButton;
+    sbShowIPT: TSpeedButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Button1Click(Sender: TObject);
     procedure Copyaddresstoclipboard1Click(Sender: TObject);
@@ -59,6 +73,7 @@ type
     procedure RegisterMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure Panel6Resize(Sender: TObject);
+    procedure sbShowIPTClick(Sender: TObject);
     procedure sbShowStackClick(Sender: TObject);
     procedure sbShowFloatsClick(Sender: TObject);
   private
@@ -70,10 +85,15 @@ type
     procedure setprobably(address:ptrUint);
   public
     { Public declarations }
-    context: Context;
+    context: PContext;  //needs to free this on destroy
     stack: record
       savedsize: dword;
       stack: pbyte;
+    end;
+
+    ipt: record
+      log: pointer;
+      size: integer;
     end;
 
     lblR8: tlabel;
@@ -93,12 +113,13 @@ type
 
 implementation
 
-uses MemoryBrowserFormUnit;
+uses MemoryBrowserFormUnit, ProcessHandlerUnit, globals, debughelper,
+  DebuggerInterfaceAPIWrapper, IPTLogDisplay, disassembler;
 
 resourcestring
-  rsTheValueOfThePointerNeededToFindThisAddressIsProba = 'The value of the '
-    +'pointer needed to find this address is probably %s';
+  rsTheValueOfThePointerNeededToFindThisAddressIsProba = 'The value of the pointer needed to find this address is probably %s';
   rsProbableBasePointer = 'Probable base pointer =%s';
+  rsNeedsIPTFindWhat = 'The debugger did not collect any IPT data. This may be due to the Intel PT feature not being enabled in settings/malfunctioning, or that the option to also log the trace in "find what..." results was disabled. Do you wish to enable this for this debugging session? You will need to recollect this information again though.'#13#10'(This is for this session only. If you wish to always turn it on from the start, go to settings->debugger options, and enable "Use Intel-PT feature" and the suboption for recording elements in "find what ..." routines)';
 
 procedure TFormFoundCodeListExtra.setprobably(address: ptrUint);
 begin
@@ -117,7 +138,7 @@ begin
     freeandnil(fpp);
 
   if stack.stack<>nil then
-    freemem(stack.stack);
+    freememandnil(stack.stack);
     
   action:=cafree;
 end;
@@ -129,27 +150,7 @@ end;
 
 procedure TFormFoundCodeListExtra.Copyaddresstoclipboard1Click(
   Sender: TObject);
-var clip: tclipboard;
-s: string;
 begin
-  s:=lblRAX.Caption+#13#10;
-  s:=s+lblRBX.Caption+#13#10;
-  s:=s+lblRCX.Caption+#13#10;
-  s:=s+lblRDX.Caption+#13#10;
-  s:=s+lblRSI.Caption+#13#10;
-  s:=s+lblRDI.Caption+#13#10;
-  s:=s+lblRBP.Caption+#13#10;
-  s:=s+lblRSP.Caption+#13#10;
-  s:=s+lblRIP.Caption+#13#10;
-  s:=s+#13#10;
-  s:=s+Format(rsProbableBasePointer, [inttohex(probably, 8)])+#13#10#13#10;
-
-  s:=s+label1.Caption+#13#10;
-  s:=s+label2.Caption+#13#10;
-  s:=s+label3.Caption+#13#10;
-  s:=s+label4.Caption+#13#10;
-  s:=s+label5.Caption+#13#10;
-  clipboard.SetTextBuf(pchar(s));
 end;
 
 procedure TFormFoundCodeListExtra.Copyguesstoclipboard1Click(
@@ -161,11 +162,26 @@ begin
   clipboard.SetTextBuf(pchar(s));
 end;
 
+procedure setFontColor(control: TWinControl; color: TColor);
+var i: integer;
+begin
+  for i:=0 to control.ControlCount-1 do
+  begin
+    control.controls[i].Font.color:=color;
+    if control.Controls[i] is twincontrol then setfontcolor(twincontrol(control.controls[i]),color);
+  end;
+end;
+
 procedure TFormFoundCodeListExtra.FormCreate(Sender: TObject);
 var x: array of integer;
 begin
   setlength(x,0);
   loadformposition(self,x);
+
+  Font.Color:=clWindowtext;
+  setFontColor(self, clWindowtext);
+
+  sbShowIPT.visible:=systemSupportsIntelPT and not hideiptcapability and (CurrentDebuggerInterface<>nil) and CurrentDebuggerInterface.canUseIPT;
 end;
 
 procedure TFormFoundCodeListExtra.FormDestroy(Sender: TObject);
@@ -173,27 +189,39 @@ begin
   if stackview<>nil then
     stackview.free;
 
+  if stack.stack<>nil then
+    freememandnil(stack.stack);
+
   if fpp<>nil then
     fpp.Free;
 
-  saveformposition(self,[]);
+  if context<>nil then
+    freememandnil(context);
+
+  if ipt.log<>nil then
+    freememandnil(ipt.log);
+
+  saveformposition(self);
 end;
 
 procedure TFormFoundCodeListExtra.FormShow(Sender: TObject);
 begin
-  label3.font.color:=clRed;
-  label10.font.color:=clred;
 
-  panel1.Font.Height:=GetFontData(font.reference.Handle).Height;     ;
+  panel1.Font.Height:=GetFontData(font.reference.Handle).Height-5;
   pnlRegisters.Font.Height:=panel1.Font.Height;
 
-  label3.Font.Height:=GetFontData(font.reference.Handle).Height;     ;
-  label10.Font.Height:=panel1.Font.Height;
+  label3.parentfont:=false;
+  label10.parentfont:=false;
+  label3.font.assign(pnlRegisters.font);
+  label10.font.assign(pnlRegisters.font);
 
+  label3.font.color:=clRed;
+  label10.font.color:=clRed;
 
   Constraints.MaxHeight:=panel5.Top+panel5.height+10;
   Constraints.MinHeight:=Constraints.MaxHeight;
 
+  autosize:=false;
 end;
 
 procedure TFormFoundCodeListExtra.Label1DblClick(Sender: TObject);
@@ -247,45 +275,37 @@ begin
 end;
 
 procedure TFormFoundCodeListExtra.Panel6Resize(Sender: TObject);
-var maxrightwidth: integer;
 begin
-  {maxrightwidth:=lblRBP.width;
-  maxrightwidth:=max(maxrightwidth, lblRSP.Width);
-  maxrightwidth:=max(maxrightwidth, lblRIP.Width);
-  if lblR10<>nil then
+
+end;
+
+procedure TFormFoundCodeListExtra.sbShowIPTClick(Sender: TObject);
+var
+  f: TfrmIPTLogDisplay;
+begin
+  {$IFDEF WINDOWS}
+  if (ipt.log=nil) then
   begin
-    maxrightwidth:=max(maxrightwidth, lblR10.Width);
-    maxrightwidth:=max(maxrightwidth, lblR13.Width);
-  end;
-
-  lblRBP.Left:=(panel6.ClientWidth-sbShowFloats.width)-maxrightwidth-lblRAX.Left;
-  lblRSP.left:=lblRBP.left;
-  lblRIP.Left:=lblRBP.Left;
-
-  lblRDX.Left:=((panel6.ClientWidth-sbShowFloats.width) div 2)-(lblRDX.Width div 2);
-  lblRSI.left:=lblRDX.left;
-  lblRDI.Left:=lblRDX.left;
-
-  if lblR8<>nil then
+    if debuggerthread<>nil then
+    begin
+      if (useintelptfordebug=false) or (inteliptlogfindwhatroutines=false) then
+      begin
+        if messagedlg(rsNeedsIPTFindWhat, mtConfirmation, [mbyes,mbno],0)=mryes then
+        begin
+          useintelptfordebug:=true;
+          inteliptlogfindwhatroutines:=true;
+          debuggerthread.initIntelPTTracing;
+        end;
+      end;
+    end;
+  end
+  else
   begin
-    lblR9.left:=lblRDX.left;
-    lblR12.Left:=lblRDX.Left;
-    lblR15.Left:=lblRDX.Left;
-
-    lblR10.left:=lblRBP.left;
-    lblR13.left:=lblRBP.left;
+    f:=TfrmIPTLogDisplay.create(application);
+    f.show;
+    f.loadlog('log'+GetTickCount64.ToHexString, ipt.log, ipt.size, context^.{$ifdef cpu64}Rip{$else}Eip{$endif});
   end;
-
-
-  sbShowFloats.top:=lblRSP.Top+(lblRSP.height div 2)-(sbShowFloats.height);
-  sbShowFloats.Left:=panel6.ClientWidth-sbShowFloats.Width;
-
-  sbShowstack.top:=lblRSP.Top+(lblRSP.height div 2);
-  sbShowstack.left:=sbShowFloats.left;
-
-  label18.top:=panel6.clientheight-label18.height;
-
-         }
+  {$ENDIF}
 end;
 
 procedure TFormFoundCodeListExtra.sbShowStackClick(Sender: TObject);
@@ -295,7 +315,7 @@ begin
   if Stackview=nil then
     stackview:=TfrmStackView.create(self);
 
-  stackview.SetContextPointer(@context, stack.stack, stack.savedsize);
+  stackview.SetContextPointer(context, stack.stack, stack.savedsize);
   stackview.show;
 end;
 
@@ -306,7 +326,7 @@ begin
 
   fpp.Left:=self.left+self.Width;
   fpp.Top:=self.top;
-  fpp.SetContextPointer(@context);
+  fpp.SetContextPointer(context);
   fpp.show;//pop to foreground
 end;
 

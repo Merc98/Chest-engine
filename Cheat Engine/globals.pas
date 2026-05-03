@@ -9,18 +9,30 @@ This unit will hold some global variables (previously cefuncproc.pas)
 interface
 
 uses
-  Classes, SysUtils, commonTypeDefs;
+  Classes, SysUtils, commonTypeDefs, syncobjs, Graphics, betterControls;
+
+//type TUnexpectedExceptionAction=(ueaIgnore, ueaBreak, ueaBreakIfInRegion);
 
 var
 //  AllIncludesCustomType: boolean;
+
+  mtid: TThreadID;
+
+  overridefont: TFont;
+  aprilfools: boolean;
+
   ScanAllTypes: TVariableTypes=[vtDword, vtSingle, vtDouble];
 
   buffersize: dword=512*1024;
 
   Skip_PAGE_NOCACHE: boolean=false;
+  Skip_PAGE_WRITECOMBINE: boolean=true;
   Scan_MEM_PRIVATE: boolean=true;
   Scan_MEM_IMAGE: boolean=true;
   Scan_MEM_MAPPED: boolean=false;
+
+  repeatDelay: integer=0;
+  delayAfterDebuggerAttach: dword=0;
 
   scan_dirtyonly: boolean=true;
   scan_pagedonly: boolean=true;
@@ -29,7 +41,9 @@ var
   networkRPMCacheTimeout: single=1.0;
 
   systemtype: integer;
+  {$if defined(CPU386) or defined(CPUX86_64)}
   old8087CW: word;  //you never know...
+  {$endif}
   ProcessSelected: Boolean;
   //ProcessID: Dword; //deperecated
   //ProcessHandle: Thandle;
@@ -142,9 +156,62 @@ var
 
 
   fontmultiplication: single=1.0; //for some gui stuff
+  istrainer: boolean=false;
+  isExeTrainer: boolean=false;
 
+  luagc_MinSize: dword;
+
+  SystemSupportsWritableExecutableMemory: boolean={$ifdef windows}true{$else}false{$endif};
+  SkipVirtualProtectEx: boolean;
+  alwaysforceload: boolean;
+
+  allocsAddToUnexpectedExceptionList: boolean;
+
+  WarnOnNearbyAllocationFailure: boolean=true; //not saved in settings. Inconvenience the user every fucking time they restart (Learn to use 14 byte jmps people)
+  NearbyAllocationFailureFatal: boolean=true;
+
+  {$ifdef darwin}
+  speedhack_HookMachAbsoluteTime:boolean;
+  {$endif}
+
+  {$ifdef USELAZFREETYPE}
+  UseOriginalRenderingSystem: boolean;
+  {$endif}
+
+  dbvmbp_options: record
+    TriggerCOW:boolean;
+    TargetedProcessOnly:boolean;
+    KernelmodeBreaks: boolean;
+  end;
+  DBVMWatchBPActive: boolean;
+
+  forceCR3VirtualQueryEx: boolean;
+
+  skippdb: boolean;
+
+
+  systemSupportsIntelPT: boolean=false;
+  useintelptfordebug: boolean;
+  inteliptlogfindwhatroutines: boolean;
+  maxiptconfigsize: integer;
+  hideiptcapability: boolean; //in case it's unstable and you really really do not wish to accidentally use it
+  runningAsAdmin: boolean;
+  askAboutRunningAsAdmin: boolean;
+
+  SyncSymbols: boolean;
+  symsync_ClearSymbolListWhenOpeningADifferentProcess: boolean;
+  symsync_DontDeleteSymbolsWhenSynchronizing: boolean;
+  symsync_Interval: integer;
+
+  GDBReadProcessMemory: boolean;
+  GDBWriteProcessMemory: boolean;
+  GDBWriteProcessMemoryCodeOnly: boolean;
+
+  cedebugsymbolspresent: boolean;
+  threadsafetycheck: boolean;
 
 implementation
+
 
 end.
 

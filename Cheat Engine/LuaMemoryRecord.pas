@@ -91,6 +91,37 @@ begin
   end;
 end;
 
+function memoryrecord_getDropDownValue(L: PLua_State): integer; cdecl;
+var
+  memrec: TMemoryRecord;
+  index: integer;
+begin
+  result:=0;
+  memrec:=luaclass_getClassObject(L);
+  if lua_gettop(L)=1 then
+  begin
+    index:=lua_toInteger(L,1);
+    lua_pushstring(L, memrec.DropDownValue[index]);
+    result:=1;
+  end;
+end;
+
+
+function memoryrecord_getDropDownDescription(L: PLua_State): integer; cdecl;
+var
+  memrec: TMemoryRecord;
+  index: integer;
+begin
+  result:=0;
+  memrec:=luaclass_getClassObject(L);
+  if lua_gettop(L)=1 then
+  begin
+    index:=lua_toInteger(L,1);
+    lua_pushstring(L, memrec.DropDownDescription[index]);
+    result:=1;
+  end;
+end;
+
 
 function memoryrecord_getchild(L: PLUA_State): integer; cdecl;
 var
@@ -171,7 +202,11 @@ begin
   if lua_gettop(L)>=1 then
   begin
     //address
-    memrec.interpretableaddress:=Lua_ToString(L, 1);
+    if lua_type(L,1)=LUA_TNUMBER then
+      memrec.interpretableaddress:=inttohex(lua_tointeger(L,1),8)
+    else
+      memrec.interpretableaddress:=Lua_ToString(L, 1);
+
     memrec.ReinterpretAddress(true);
     memrec.offsetCount:=0;
 
@@ -326,6 +361,136 @@ begin
 
   if lua_gettop(L)>=1 then
     memrec.Value:=lua_tostring(L,-1);
+end;
+
+
+function memoryrecord_getNumericalValue(L: PLua_State): integer; cdecl;
+var
+  r: string;
+  memrec: TMemoryRecord;
+
+  vi64: qword;
+  vd: double;
+
+  validinteger: boolean;
+  validdouble: boolean;
+begin
+  result:=0;
+  memrec:=luaclass_getClassObject(L);
+  r:=memrec.Value;
+  if memrec.ShowAsHex then
+    r:=r+'$';
+
+
+  try
+    vi64:=strtoint64(r);
+    validinteger:=true;
+  except
+    validinteger:=false;
+  end;
+
+  if memrec.ShowAsHex then
+  begin
+    if validinteger then
+    begin
+      //convert floats to numbers
+      case memrec.VarType of
+        vtSingle:
+        begin
+          vd:=psingle(@vi64)^;
+          lua_pushnumber(L,vd);
+          exit(1);
+        end;
+
+        vtDouble:
+        begin
+          vd:=pdouble(@vi64)^;
+          lua_pushnumber(L,vd);
+          exit(1);
+        end;
+
+        vtCustom:
+        begin
+          if memrec.CustomType.scriptUsesFloat then
+          begin
+            vd:=psingle(@vi64)^;
+            lua_pushnumber(L,vd);
+            exit(1);
+          end
+          else
+          begin
+            lua_pushnumber(L,vi64);
+            exit(1);
+          end;
+        end;
+
+        else
+        begin
+          lua_pushnumber(L,vi64); //the hexadecimal integer is good enough
+          exit(1);
+        end;
+      end;
+    end
+    else
+      exit(0); //show as hex and could not be parsed. Unreadable
+  end
+  else
+  begin
+    //not shown as hex.
+    if (memrec.VarType in [vtSingle, vtDouble, vtCustom]) and ((memrec.vartype<>vtCustom) or memrec.CustomType.scriptUsesFloat) then
+    begin
+      try
+        vd:=StrToFloat(r);
+        lua_pushnumber(L,vd);
+        exit(1);
+      except
+        exit(0);
+      end;
+    end;
+
+    //still here, so a normal integer type
+    if validinteger then
+    begin
+      lua_pushinteger(L,vi64);
+      exit(1);
+    end; //else not a valid integer, or float, so bug out with nil
+  end;
+end;
+
+function memoryrecord_setNumericalValue(L: PLua_State): integer; cdecl;
+var
+  memrec: TMemoryRecord;
+  vs: string;
+  vd: double;
+  vi64: qword absolute vd;
+  vsi64: int64 absolute vd;
+begin
+  result:=0;
+  memrec:=luaclass_getClassObject(L);
+
+  if lua_gettop(L)>=1 then
+  begin
+    if (memrec.VarType in [vtSingle, vtDouble, vtCustom]) and ((memrec.vartype<>vtCustom) or memrec.CustomType.scriptUsesFloat) then
+      vd:=lua_tonumber(L,1)
+    else
+      vi64:=lua_tointeger(L,1);
+
+    if memrec.ShowAsHex then
+      memrec.value:=IntToHex(vi64,1)
+    else
+    begin
+      if (memrec.VarType in [vtSingle, vtDouble, vtCustom]) and ((memrec.vartype<>vtCustom) or memrec.CustomType.scriptUsesFloat) then
+        memrec.value:=FloatToStr(vd)
+      else
+      begin
+        if memrec.ShowAsSigned then
+          memrec.value:=IntToStr(vsi64)
+        else
+          memrec.value:=IntToStr(vi64);
+      end;
+    end;
+
+  end;
 end;
 
 function memoryrecord_getScript(L: PLua_State): integer; cdecl;
@@ -492,7 +657,7 @@ var
 begin
   result:=0;
   memoryrecord:=luaclass_getClassObject(L);
-  if lua_gettop(L)=4 then
+  if lua_gettop(L)>=2 then
   begin
     if (not lua_istable(L, 1)) or (not lua_isnumber(L, 2)) then exit(0);
 
@@ -519,8 +684,16 @@ begin
 
     action:=TMemrecHotkeyAction(lua_tointeger(L, 2));
 
-    value:=Lua_ToString(L, 3);
-    description:=Lua_ToString(L, 4);
+    if lua_gettop(L)>=3 then
+      value:=Lua_ToString(L, 3)
+    else
+      value:='';
+
+
+    if lua_gettop(L)>=4 then
+      description:=Lua_ToString(L, 4)
+    else
+      description:='';
 
     hk:=memoryrecord.Addhotkey(keys, action, value, description);
     result:=1;
@@ -818,6 +991,18 @@ begin
   end;
 end;
 
+function memoryrecord_beginEdit(L: PLua_State): integer; cdecl;
+begin
+  TMemoryRecord(luaclass_getClassObject(L)).beginEdit;
+  exit(0);
+end;
+
+function memoryrecord_endEdit(L: PLua_State): integer; cdecl;
+begin
+  TMemoryRecord(luaclass_getClassObject(L)).endEdit;
+  exit(0);
+end;
+
 procedure memoryrecord_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
 var recordEntry: TRecordEntry;
   recordentries: TRecordEntries;
@@ -860,6 +1045,8 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getHotkeyByID', memoryrecord_getHotkeyByID);
 
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'createHotkey', memoryrecord_createHotkey);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'beginEdit', memoryrecord_beginEdit);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'endEdit', memoryrecord_endEdit);
 
 
 
@@ -868,6 +1055,7 @@ begin
   luaclass_addPropertyToTable(L, metatable, userdata, 'CurrentAddress', memoryrecord_getCurrentAddress, nil);
   luaclass_addPropertyToTable(L, metatable, userdata, 'Type', memoryrecord_getType, memoryrecord_setType);
   luaclass_addPropertyToTable(L, metatable, userdata, 'Value', memoryrecord_getValue, memoryrecord_setValue);
+  luaclass_addPropertyToTable(L, metatable, userdata, 'NumericalValue', memoryrecord_getNumericalValue, memoryrecord_setNumericalValue);
   luaclass_addPropertyToTable(L, metatable, userdata, 'Script', memoryrecord_getScript, memoryrecord_setScript);
   luaclass_addPropertyToTable(L, metatable, userdata, 'Active', memoryrecord_getActive, memoryrecord_setActive);
   luaclass_addPropertyToTable(L, metatable, userdata, 'Selected', memoryrecord_isSelected, nil);
@@ -879,6 +1067,10 @@ begin
   luaclass_addPropertyToTable(L, metatable, userdata, 'OffsetCount', memoryrecord_getOffsetCount, memoryrecord_setOffsetCount);
   luaclass_addArrayPropertyToTable(L, metatable, userdata, 'Offset', memoryrecord_getOffset, memoryrecord_setOffset);
   luaclass_addArrayPropertyToTable(L, metatable, userdata, 'OffsetText', memoryrecord_getOffsetText, memoryrecord_setOffsetText);
+
+  luaclass_addArrayPropertyToTable(L, metatable, userdata, 'DropDownValue', memoryrecord_getDropDownValue, nil);
+  luaclass_addArrayPropertyToTable(L, metatable, userdata, 'DropDownDescription', memoryrecord_getDropDownDescription, nil);
+
 
 
   luaclass_addPropertyToTable(L, metatable, userdata, 'Active', memoryrecord_getActive, memoryrecord_setActive);

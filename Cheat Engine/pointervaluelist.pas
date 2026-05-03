@@ -12,8 +12,17 @@ result: tree/map was slower than my own non threadsafe implementation. After ini
 
 interface
 
-uses windows, LCLIntf, dialogs, SysUtils, classes, ComCtrls, CEFuncProc, NewKernelHandler,
-     symbolhandler, math,bigmemallochandler, maps;
+uses
+  {$ifdef darwin}
+  macport, macportdefines,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  LCLIntf, dialogs, SysUtils, classes, ComCtrls, CEFuncProc,
+     NewKernelHandler, symbolhandler, symbolhandlerstructs, math,
+     bigmemallochandler, maps, luahandler, lua, lauxlib, lualib, LuaClass,
+     LuaObject, zstream, commonTypeDefs, AvgLvlTree, {$ifdef laztrunk}AVL_Tree{$else}laz_avl_Tree{$endif};
 
 const scandataversion=1;
 
@@ -34,7 +43,7 @@ type
 
   TMemoryRegion2 = record
     BaseAddress: ptrUint;
-    MemorySize: dword;
+    MemorySize: size_t;
     InModule: boolean;
     ValidPointerRange: boolean;
   end;
@@ -86,18 +95,31 @@ type
     bigalloc: TBigMemoryAllocHandler;
 
     specificBaseAsStaticOnly: boolean;
+    start,stop: ptruint;
     basestart: ptruint;
     basestop: ptruint;
 
+    includeSystemModules: boolean;
+    noreadonly: boolean;
+
 
     useStacks: boolean;
-    threadStacks: integer;
     stacksAsStaticOnly: boolean;
+    {$ifdef windows}
+    threadStacks: integer;
+
     stacksize: integer;
 
     stacklist: array of ptruint;
+    {$endif}
 
     ScannablePages: TMap;
+
+    progressbar: TProgressbar;
+    progressbarmax: integer;
+
+    vqevalidcache: TAvgLvlTree;
+    function isValidregion(address: ptruint): boolean;
 
     function BinSearchMemRegions(address: ptrUint): integer;
     function isModulePointer(address: ptrUint): boolean;
@@ -120,6 +142,9 @@ type
 
     procedure LoadModuleList(s: TStream);
     function  LoadHeader(s: TStream): qword;
+
+    procedure progressbarinit;
+    procedure progressbarstep;
   public
     count: qword;
 
@@ -133,13 +158,19 @@ type
     procedure saveModuleListToResults(s: TStream);
 
     function findPointerValue(startvalue: ptrUint; var stopvalue: ptrUint): PPointerList;
-    constructor create(start, stop: ptrUint; alligned: boolean; progressbar: tprogressbar; noreadonly: boolean; mustbeclasspointers, allowNonModulePointers: boolean; useStacks: boolean; stacksAsStaticOnly: boolean; threadstacks: integer; stacksize: integer; specificBaseAsStaticOnly: boolean; baseStart: ptruint; baseStop: ptruint; includeSystemModules: boolean=false; regionfilename: string='');
+    constructor create(start, stop: ptrUint; alligned: boolean; _progressbar: tprogressbar; scanpagedmemoryonly: boolean; noreadonly: boolean; mustbeclasspointers, allowNonModulePointers: boolean; useStacks: boolean; stacksAsStaticOnly: boolean; threadstacks: integer; stacksize: integer; specificBaseAsStaticOnly: boolean; baseStart: ptruint; baseStop: ptruint; includeSystemModules: boolean=false; regionfilename: string=''; shouldquit: pboolean=nil);
     constructor createFromStream(s: TStream; progressbar: tprogressbar=nil);
     constructor createFromStreamHeaderOnly(s: TStream);
     destructor destroy; override;
 
     property CanHaveStatic: boolean read specificBaseAsStaticOnly;
   end;
+
+  procedure initializeLuaPointerValueList;
+
+var
+  OnPointerMapGenerationStart: TNotifyEvent;
+  OnPointerMapGenerationFinish: TNotifyEvent;
 
 implementation
 
@@ -153,6 +184,19 @@ resourcestring
   rsPVInvalidScandataFile = 'Invalid scandata file';
   rsPVInvalidScandataVersion = 'Invalid scandata version';
   rsPVNotEnoughMemoryFreeToScan = 'Not enough memory free to scan';
+
+procedure TReversePointerListHandler.progressbarinit;
+begin
+  progressbar.Min:=0;
+  progressbar.Step:=1;
+  progressbar.Position:=0;
+  progressbar.max:=progressbarmax;
+end;
+
+procedure TReversePointerListHandler.progressbarstep;
+begin
+  progressbar.StepIt;
+end;
 
 function TReversePointerListHandler.BinSearchMemRegions(address: ptrUint): integer;
 var
@@ -204,6 +248,8 @@ var
   pfn: ptruint;
 
 begin
+  if address=0 then exit(false);
+
   i:=BinSearchMemRegions(address);
   result:=(i<>-1) and (memoryregion[i].ValidPointerRange);
 
@@ -246,6 +292,7 @@ function TReversePointerListHandler.isStatic2(address: ptruint; var mi: TModuleI
 var i: integer;
 begin
   result:=false;
+  {$ifdef windows}
   if useStacks then
   begin
     for i:=0 to threadStacks-1 do
@@ -257,6 +304,7 @@ begin
       end;
     end;
   end;
+  {$endif}
 
   if (result=false) and (stacksAsStaticOnly=false) then
     result:=symhandler.getmodulebyaddress(address, mi);  //fills mi.baseaddress
@@ -374,6 +422,7 @@ var
   moduleindex: integer;
 
 begin
+
   plist:=findoraddpointervalue(pointervalue);
 
   if not add then
@@ -807,7 +856,7 @@ begin
     mbase:=s.ReadQWord;
 
     modulelist.AddObject(mname, tobject(mbase));
-    freemem(mname);
+    freememandnil(mname);
   end;
 end;
 
@@ -927,7 +976,63 @@ begin
 
 end;
 
-constructor TReversePointerListHandler.create(start, stop: ptrUint; alligned: boolean; progressbar: tprogressbar; noreadonly: boolean; mustbeclasspointers, allowNonModulePointers: boolean; useStacks: boolean; stacksAsStaticOnly: boolean; threadstacks: integer; stacksize: integer; specificBaseAsStaticOnly: boolean; baseStart: ptruint; baseStop: ptruint; includeSystemModules: boolean=false; regionfilename: string='');
+type
+  TVQEValidCacheEntry=class
+    address: ptruint;
+    size: size_t;
+    valid: boolean;
+  end;
+
+function vqecachecompare(Item1, Item2: Pointer): Integer;
+begin
+  if InRangeX(TVQEValidCacheEntry(Item1).address, TVQEValidCacheEntry(Item2).address, TVQEValidCacheEntry(Item2).address+TVQEValidCacheEntry(Item2).size-1) then
+    exit(0)
+  else
+    result:=CompareValue(TVQEValidCacheEntry(Item1).address, TVQEValidCacheEntry(Item2).address);
+end;
+
+function TReversePointerListHandler.isValidregion(address: ptruint): boolean;
+var
+  mbi: _MEMORY_BASIC_INFORMATION;
+  e: TVQEValidCacheEntry;
+  n: TAVLTreeNode;
+begin
+  result:=false;
+
+  if address<start then exit(false);
+  if address>stop then exit(false);
+
+  e:=TVQEValidCacheEntry.Create;
+  e.address:=address;
+  n:=vqevalidcache.Find(e);
+
+  e.free;
+
+  if n<>nil then
+    exit(TVQEValidCacheEntry(n.Data).valid);
+
+  if VirtualQueryEx(processhandle, pointer(address), mbi,sizeof(mbi))<>0 then
+  begin
+    e:=TVQEValidCacheEntry.Create;
+    e.address:=ptruint(mbi.BaseAddress);
+    e.size:=mbi.RegionSize;
+
+    if (mbi.State=mem_commit) and (includeSystemModules or (not symhandler.inSystemModule(ptrUint(mbi.baseAddress))) ) and (not (not scan_mem_private and (mbi._type=mem_private))) and (not (not scan_mem_image and (mbi._type=mem_image))) and (not (not scan_mem_mapped and ((mbi._type and mem_mapped)>0))) and (mbi.State=mem_commit) and ((mbi.Protect and page_guard)=0) and ((mbi.protect and page_noaccess)=0) then  //look if it is commited
+    begin
+      if (Skip_PAGE_NOCACHE and ((mbi.AllocationProtect and PAGE_NOCACHE)=PAGE_NOCACHE)) or
+         {$ifdef windows}(Skip_PAGE_WRITECOMBINE and ((mbi.AllocationProtect and PAGE_WRITECOMBINE)=PAGE_WRITECOMBINE)) or{$endif}
+         (noreadonly and (mbi.protect in [PAGE_READONLY, PAGE_EXECUTE, PAGE_EXECUTE_READ]))  then
+        result:=false
+      else
+        result:=true;
+    end;
+
+    e.valid:=result;
+    vqevalidcache.Add(e);
+  end;
+end;
+
+constructor TReversePointerListHandler.create(start, stop: ptrUint; alligned: boolean; _progressbar: tprogressbar; scanpagedmemoryonly: boolean; noreadonly: boolean; mustbeclasspointers, allowNonModulePointers: boolean; useStacks: boolean; stacksAsStaticOnly: boolean; threadstacks: integer; stacksize: integer; specificBaseAsStaticOnly: boolean; baseStart: ptruint; baseStop: ptruint; includeSystemModules: boolean=false; regionfilename: string=''; ShouldQuit: pboolean=nil);
 var bytepointer: PByte;
     dwordpointer: PDword absolute bytepointer;
     qwordpointer: PQword absolute bytepointer;
@@ -939,7 +1044,7 @@ var bytepointer: PByte;
     mbi : _MEMORY_BASIC_INFORMATION;
     address: ptrUint;
     pfn: ptruint;
-    size:       dword;
+    size:       qword;
 
     i: Integer;
     j: Integer;
@@ -960,8 +1065,14 @@ var bytepointer: PByte;
 
     regionfile: TFilestream;
     prangelist: TPRangeDynArray;
-
+    {$ifdef windows}
+    wsisize: dword;
+    wsi: PPSAPI_WORKING_SET_INFORMATION;
+    {$endif}
 begin
+  LUA_functioncall('onPointerMapGenerationStart', [self]);
+
+  self.progressbar:=_progressbar;
   OutputDebugString('TReversePointerListHandler.create');
   try
     bigalloc:=TBigMemoryAllocHandler.create;
@@ -971,15 +1082,27 @@ begin
     symhandler.getModuleList(modulelist);
 
     self.useStacks:=useStacks;
+    {$ifdef windows}
+    self.useStacks:=useStacks;
     self.threadStacks:=threadStacks;
     self.stacksAsStaticOnly:=stacksAsStaticOnly;
     self.stacksize:=stacksize;
+    {$else}
+    self.useStacks:=false;
+    self.stacksAsStaticOnly:=false;
+    {$endif}
 
     self.specificBaseAsStaticOnly:=specificBaseAsStaticOnly;
+    self.start:=start;
+    self.stop:=stop;
     self.baseStart:=baseStart;
     self.baseStop:=baseStop;
 
+    self.includeSystemModules:=includeSystemModules;
+    self.noreadonly:=noreadonly;
+
     //fill the stacklist
+    {$ifdef windows}
     if useStacks then
     begin
       setlength(stacklist, threadstacks);
@@ -996,6 +1119,7 @@ begin
 
 
     end;
+    {$endif}
 
     if processhandler.is64Bit then
     begin
@@ -1028,6 +1152,7 @@ begin
       regionfile.free;
 
       //go through the list and add every page to a map
+      valid:=true;
       ScannablePages:=TMap.Create(ituPtrSize,0);
 
       for i:=0 to length(prangelist)-1 do
@@ -1045,24 +1170,76 @@ begin
 
     address:=start;
 
+    {$ifdef windows}
+    if scanpagedmemoryonly and assigned(QueryWorkingSet) then
+    begin
+      vqevalidcache:=TAvgLvlTree.Create(@vqecachecompare);
 
+      wsisize:=sizeof(PSAPI_WORKING_SET_INFORMATION);
+      getmem(wsi, sizeof(PSAPI_WORKING_SET_INFORMATION));
+      while (QueryWorkingSet(processhandle, wsi, wsisize)=false) do
+      begin
+        if GetLastError<>ERROR_BAD_LENGTH then
+          raise exception.create('Failure querying present memory: unexpected error');
+
+        wsisize:=(wsi^.NumberOfEntries+(wsi^.NumberOfEntries shr 1))*sizeof(ptruint);  //add a little bit extra
+        freemem(wsi);
+        if wsisize=0 then raise exception.create('Failure querying present memory: invalid size');
+        getmem(wsi, wsisize);
+      end;
+
+      valid:=false;
+      for i:=0 to wsi^.NumberOfEntries-1 do
+      begin
+        if (not valid) or ((wsi^.WorkingSetInfo[i-1] and $fff)<>(wsi^.WorkingSetInfo[i] and $fff)) or ((wsi^.WorkingSetInfo[i-1] shr 12)+1<>(wsi^.WorkingSetInfo[i-1] shr 12)) then
+        begin
+          //new section or became valid ?
+          if isValidRegion(wsi^.WorkingSetInfo[i] and qword($fffffffffffff000)) then
+          begin
+            j:=length(memoryregion);
+            setlength(memoryregion,length(memoryregion)+1);
+            memoryregion[j].BaseAddress:=wsi^.WorkingSetInfo[i] and qword($fffffffffffff000);
+            memoryregion[j].MemorySize:=4096;
+            memoryregion[j].InModule:=symhandler.inModule(memoryregion[j].BaseAddress);
+
+            memoryregion[j].ValidPointerRange:=true;
+
+            valid:=true;
+          end
+          else
+            valid:=false;
+        end
+        else
+        begin
+          if valid then //append to the current section
+            inc(memoryregion[length(memoryregion)-1].MemorySize,4096);
+        end;
+      end;
+
+      vqevalidcache.FreeAndClear;
+      vqevalidcache.free;
+    end
+    else
+    {$endif}
     while (Virtualqueryex(processhandle,pointer(address),mbi,sizeof(mbi))<>0) and (address<stop) and ((address+mbi.RegionSize)>address) do
     begin
       if (includeSystemModules or (not symhandler.inSystemModule(ptrUint(mbi.baseAddress))) ) and (not (not scan_mem_private and (mbi._type=mem_private))) and (not (not scan_mem_image and (mbi._type=mem_image))) and (not (not scan_mem_mapped and ((mbi._type and mem_mapped)>0))) and (mbi.State=mem_commit) and ((mbi.Protect and page_guard)=0) and ((mbi.protect and page_noaccess)=0) then  //look if it is commited
       begin
         if (Skip_PAGE_NOCACHE and ((mbi.AllocationProtect and PAGE_NOCACHE)=PAGE_NOCACHE)) or
+           {$ifdef windows}(Skip_PAGE_WRITECOMBINE and ((mbi.AllocationProtect and PAGE_WRITECOMBINE)=PAGE_WRITECOMBINE)) or{$endif}
            (noreadonly and (mbi.protect in [PAGE_READONLY, PAGE_EXECUTE, PAGE_EXECUTE_READ]))  then
           valid:=false
         else
           valid:=true;
 
+        i:=length(memoryregion);
         setlength(memoryregion,length(memoryregion)+1);
 
-        memoryregion[length(memoryregion)-1].BaseAddress:=ptrUint(mbi.baseaddress);  //just remember this location
-        memoryregion[length(memoryregion)-1].MemorySize:=mbi.RegionSize;
-        memoryregion[length(memoryregion)-1].InModule:=symhandler.inModule(ptrUint(mbi.baseaddress));
+        memoryregion[i].BaseAddress:=ptrUint(mbi.baseaddress);  //just remember this location
+        memoryregion[i].MemorySize:=mbi.RegionSize;
+        memoryregion[i].InModule:=symhandler.inModule(ptrUint(mbi.baseaddress));
 
-        memoryregion[length(memoryregion)-1].ValidPointerRange:=valid;
+        memoryregion[i].ValidPointerRange:=valid;
 
        // outputdebugstring(inttohex(ptrUint(mbi.baseaddress),8));
       end;
@@ -1100,7 +1277,8 @@ begin
     valid:=memoryregion[0].ValidPointerRange;
 
     for i:=1 to length(memoryregion)-1 do
-    begin                                                            //only concatenate if classpointers is false, or the same type of executable field is used
+    begin
+      //only concatenate if classpointers is false, or the same type of executable field is used
       if (memoryregion[i].BaseAddress=address+size) and (memoryregion[i].ValidPointerRange=valid) and ((mustbeclasspointers=false) or (memoryregion[i].InModule=InModule)) then
         inc(size,memoryregion[i].MemorySize)
       else
@@ -1125,7 +1303,6 @@ begin
     setlength(memoryregion,j+1);
 
 
-
     //split up the memory regions into small chunks of max 512KB (so don't allocate a fucking 1GB region)
     i:=0;
     while i<length(memoryregion) do
@@ -1146,16 +1323,17 @@ begin
     end;
 
     //sort memoryregions from small to high
+    OutputDebugString('After split:');
     quicksortmemoryregions(0,length(memoryregion)-1);
+
 
     TotalToRead:=0;
     For i:=0 to length(memoryregion)-1 do
       inc(TotalToRead,Memoryregion[i].MemorySize);
 
-    progressbar.Min:=0;
-    progressbar.Step:=1;
-    progressbar.Position:=0;
-    progressbar.max:=length(memoryregion)*2+1;
+    progressbarmax:=length(memoryregion)*2+1;
+
+    TThread.Queue(nil, progressbarinit);
 
 
     maxsize:=0;
@@ -1206,11 +1384,11 @@ begin
           begin
             while ptrUint(bytepointer)<=lastaddress do
             begin
-
-
               if (alligned and ((qwordpointer^ mod 4)=0) and ispointer(qwordpointer^)) or
                  ((not alligned) and ispointer(qwordpointer^) ) then
               begin
+                if (ShouldQuit<>nil) and ShouldQuit^ then exit;
+
                 valid:=true;
 
                 //initial add
@@ -1255,6 +1433,7 @@ begin
                  ((not alligned) and ispointer(dwordpointer^) ) then
               begin
                 //initial add
+                if (ShouldQuit<>nil) and ShouldQuit^ then exit;
                 valid:=true;
 
                 if mustbeclasspointers then
@@ -1263,8 +1442,8 @@ begin
                   if InModulePointerMap.GetData(dwordpointer^, valid)=false then //not in list yet
                   begin
                     //check that the memory it points to contains a pointer to executable code
-                    if ReadProcessMemory(processhandle, pointer(dwordpointer^), @tempdword, 4, actualread) then
-                      valid:=(allowNonModulePointers and (ReadProcessMemory(processhandle, pointer(tempdword), @tempdword,4, actualread))) or isModulePointer(tempdword)
+                    if ReadProcessMemory(processhandle, pointer(ptruint(dwordpointer^)), @tempdword, 4, actualread) then
+                      valid:=(allowNonModulePointers and (ReadProcessMemory(processhandle, pointer(ptruint(tempdword)), @tempdword,4, actualread))) or isModulePointer(tempdword)
                     else
                       valid:=false;
 
@@ -1292,7 +1471,8 @@ begin
 
         end;
 
-        progressbar.StepIt;
+        TThread.Queue(nil, progressbarstep);
+        //progressbar.StepIt;
       end;
 
       //actual add
@@ -1316,6 +1496,7 @@ begin
                  ((not alligned) and ispointer(qwordpointer^) ) then
               begin
                 //initial add
+                if (ShouldQuit<>nil) and ShouldQuit^ then exit;
                 valid:=true;
 
                 if mustbeclasspointers then
@@ -1363,7 +1544,9 @@ begin
                  ((not alligned) and ispointer(dwordpointer^) ) then
               begin
                 //initial add
+                if (ShouldQuit<>nil) and ShouldQuit^ then exit;
                 valid:=true;
+
 
                 if mustbeclasspointers then
                 begin
@@ -1371,8 +1554,8 @@ begin
                   if InModulePointerMap.GetData(dwordpointer^, valid)=false then //not in list yet
                   begin
                     //check that the memory it points to contains a pointer to executable code
-                    if ReadProcessMemory(processhandle, pointer(dwordpointer^), @tempdword, 4, actualread) then
-                      valid:=(allowNonModulePointers and (ReadProcessMemory(processhandle, pointer(tempdword), @tempdword, 4, actualread))) or isModulePointer(tempdword)
+                    if ReadProcessMemory(processhandle, pointer(ptruint(dwordpointer^)), @tempdword, 4, actualread) then
+                      valid:=(allowNonModulePointers and (ReadProcessMemory(processhandle, pointer(ptruint(tempdword)), @tempdword, 4, actualread))) or isModulePointer(tempdword)
                     else
                       valid:=false;
 
@@ -1402,19 +1585,19 @@ begin
           end;
         end;
 
-        progressbar.StepIt;
+        TThread.Queue(nil, progressbarstep);
+        //progressbar.StepIt;
       end;
 
       //and fill in the linked list
       OutputDebugString('filling linked list');
       fillLinkedList;
 
-      progressbar.Position:=0;
-
+      TThread.Queue(nil, progressbarinit);
     finally
       //OutputDebugString('Freeing the buffer');
       if buffer<>nil then
-        freemem(buffer);
+        freememandnil(buffer);
 
       if InModulePointerMap<>nil then
       begin
@@ -1433,7 +1616,173 @@ begin
       raise Exception.Create(e.message);
     end;
   end;
+
+  LUA_functioncall('onPointerMapGenerationFinish', [self]);
 end;
+
+//Lua support/testing
+
+function lua_createReversePointerListHandlerFromFile(L: PLua_State): integer; cdecl;
+var
+  filename: string='';
+  progressbar: tprogressbar=nil;
+  fs: tfilestream=nil;
+  ds: Tdecompressionstream=nil;
+  rplh: TReversePointerListHandler;
+begin
+  if lua_gettop(L)<0 then exit(0);
+  filename:=lua_tostring(L,1);
+
+  try
+    try
+      fs:=tfilestream.Create(filename, fmOpenRead);
+      ds:=Tdecompressionstream.create(fs);
+
+      if lua_gettop(L)>=2 then
+        progressbar:=tprogressbar(lua_touserdata(L,2));
+
+      rplh:=TReversePointerListHandler.createFromStream(ds,progressbar);
+      luaclass_newClass(L,rplh);
+      result:=1;
+    finally
+      if ds<>nil then
+        freeandnil(ds);
+
+      if fs<>nil then
+        freeandnil(fs);
+    end;
+  except
+    on e:exception do
+    begin
+      lua_pushnil(L);
+      lua_pushstring(L,e.message);
+      exit(2);
+    end;
+  end;
+end;
+
+function ReversePointerListHandler_enumMemoryRegions(L: PLua_State): integer; cdecl;
+var
+  list: TReversePointerListHandler;
+  i: integer;
+begin
+  list:=luaclass_getClassObject(L);
+  lua_createtable(L, length(list.memoryregion),0);
+
+  for i:=0 to length(list.memoryregion)-1 do
+  begin
+    lua_pushinteger(L,i+1);
+    lua_createtable(L,0,4);
+
+
+    lua_pushstring(L,'BaseAddress');
+    lua_pushinteger(L,list.memoryregion[i].BaseAddress);
+    lua_settable(L,-3);
+
+    lua_pushstring(L,'MemorySize');
+    lua_pushinteger(L,list.memoryregion[i].MemorySize);
+    lua_settable(L,-3);
+
+    lua_pushstring(L,'InModule');
+    lua_pushboolean(L,list.memoryregion[i].InModule);
+    lua_settable(L,-3);
+
+    lua_pushstring(L,'ValidPointerRange');
+    lua_pushboolean(L,list.memoryregion[i].ValidPointerRange);
+    lua_settable(L,-3);
+
+
+    lua_settable(L,-3);
+  end;
+
+  result:=1;
+end;
+
+function ReversePointerListHandler_enumModules(L: PLua_State): integer; cdecl;
+var
+  list: TReversePointerListHandler;
+  i: integer;
+begin
+  list:=luaclass_getClassObject(L);
+
+  lua_createtable(L,0, list.count);
+
+  for i:=0 to list.ModuleList.count-1 do
+  begin
+    lua_pushstring(L, list.modulelist[i]);
+    lua_pushinteger(L, ptruint(list.modulelist.Objects[i]));
+    lua_settable(L,-3);
+  end;
+
+  result:=1;
+end;
+
+function ReversePointerListHandler_findPointerValue(L: PLua_State): integer; cdecl;
+var
+  startvalue, stopvalue: ptruint;
+  list: TReversePointerListHandler;
+  pl: PPointerList;
+  pli: integer;
+  i: integer;
+begin
+  list:=luaclass_getClassObject(L);
+
+  result:=0;
+
+  if lua_gettop(L)>=1 then
+  begin
+    startvalue:=lua_tointeger(L,1);
+
+    if lua_gettop(L)>=2 then
+      stopvalue:=lua_tointeger(L,2)
+    else
+      stopvalue:=startvalue;
+
+    pl:=list.findPointerValue(startvalue, stopvalue);
+    if pl<>nil then
+    begin
+      lua_newtable(L);
+      pli:=lua_gettop(L);
+
+      for i:=0 to pl^.pos-1 do
+      begin
+        lua_pushinteger(L,i+1);
+        lua_pushinteger(L,pl^.list[i].address);
+        lua_settable(L,pli);
+      end;
+
+      pl:=pl^.previous;
+      if pl<>nil then
+      begin
+        stopvalue:=pl^.pointervalue;
+        lua_pushinteger(L,stopvalue);
+      end
+      else
+        lua_pushnil(L);
+
+      result:=2;
+    end
+  end;
+
+end;
+
+procedure ReversePointerListHandler_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
+begin
+  object_addMetaData(L, metatable, userdata);
+
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'findPointerValue', ReversePointerListHandler_findPointerValue);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'enumModules', ReversePointerListHandler_enumModules);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'enumMemoryRegions', ReversePointerListHandler_enumMemoryRegions);
+end;
+
+procedure initializeLuaPointerValueList;
+begin
+  Lua_register(LuaVM, 'createReversePointerListHandlerFromFile', lua_createReversePointerListHandlerFromFile);
+end;
+
+initialization
+
+  luaclass_register(TReversePointerListHandler, ReversePointerListHandler_addMetaData);
 
 end.
 

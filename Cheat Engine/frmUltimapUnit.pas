@@ -5,10 +5,17 @@ unit frmUltimapUnit;
 interface
 
 uses
-  windows, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   DBK32functions, NewKernelHandler, cefuncproc, AvgLvlTree, ExtCtrls, ComCtrls,
   math,  symbolhandler, maps, Menus, disassembler, multicpuexecution, syncobjs,
-  genericHotkey, HotKeys, frmHotkeyExUnit, frmSelectionlistunit, commonTypeDefs;
+  genericHotkey, HotKeys, frmHotkeyExUnit, frmSelectionlistunit, commonTypeDefs,
+  betterControls, Clipbrd;
 
 
 
@@ -80,6 +87,8 @@ type
     edtFilename: TEdit;
     edtWorkerCount: TEdit;
     Flusher: TTimer;
+    miCopyToClipboard: TMenuItem;
+    umImageList: TImageList;
     Label1: TLabel;
     Label2: TLabel;
     Label3: TLabel;
@@ -126,6 +135,7 @@ type
     procedure ListView1Data(Sender: TObject; Item: TListItem);
     procedure ListView1DblClick(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
+    procedure miCopyToClipboardClick(Sender: TObject);
     procedure miSetHotkeyClick(Sender: TObject);
     procedure MenuItem2Click(Sender: TObject);
     procedure miRemoveHotkeyClick(Sender: TObject);
@@ -176,19 +186,21 @@ var
 
   filteroutnewentries: boolean;
 
+resourcestring
+  rsRemoveHotkey = 'Remove hotkey (%s)';
+
 implementation
 
 {$R *.lfm}
 
-uses MemoryBrowserFormUnit, vmxfunctions, ProcessHandlerUnit, AdvancedOptionsUnit;
+uses MemoryBrowserFormUnit, vmxfunctions, ProcessHandlerUnit, AdvancedOptionsUnit, mainunit2;
 
 resourcestring
-  rsRemoveHotkey = 'Remove hotkey (%s)';
   rsUUOld = 'old=';
   rsUUNew = ' new=';
   rsUUErrorDuringMap = 'Error during map';
   rsUUSorryButThisFeatureIsOnlyAvailableOnIntelCpus = 'Sorry, but this feature is only available on intel cpu''s';
-  rsUUPleaseRunThe64bitVersionOfCheatEngineToMakeUseOfThisFeature = 'Please run the 64-bit version of Cheat Engine to make use of this feature';
+  rsUUPleaseRunThe64bitVersionOfCheatEngineToMakeUseOfThisFeature = 'Please run the 64-bit version of '+strCheatEngine+' to make use of this feature';
   rsUUThisFunctionNeedsAtLeast200BytesForTheHeaderOfTheBuffer = 'This function needs at least 200 bytes for the header of the buffer';
   rsUUTheMaximumNumberOfWorkersIs64 = 'The maximum number of workers is 64';
   rsUUPause = 'Pause';
@@ -323,6 +335,7 @@ var UltimapDataEvent: TUltimapDataEvent;
   i: integer;
   z: qword;
 begin
+  {$ifdef windows}
   while not terminated do
   begin
     if ultimap_waitForData(1000, @UltimapDataEvent) then
@@ -383,6 +396,7 @@ begin
   while ultimap_waitForData(10, @UltimapDataEvent) do
     ultimap_continue(@UltimapDataEvent);
 
+  {$endif}
 end;
 
 { TfrmUltimap }
@@ -411,6 +425,8 @@ begin
   {$endif}
 
   TotalBranches:=0;
+
+  {$ifdef windows}
 
   LoadDBK32;
 
@@ -446,7 +462,7 @@ begin
 
 
 
-  if ultimap(target_cr3, (1 shl 6) or (1 shl 7) or (1 shl 9) or (1 shl 8), bufsize, false, pwidechar(filename), workercount) then
+  if ultimap(target_cr3, (1 shl 6) or (1 shl 7) or (1 shl 9) or (1 shl 8), bufsize, cbLogToFile.checked, pwidechar(filename), workercount) then
   begin
     hashandled:=CreateEvent(nil, true, false, nil);
     setlength(workers, workercount);
@@ -473,11 +489,13 @@ begin
   btnstart.enabled:=false;
 
   beep;
+  {$endif}
 end;
 
 procedure TfrmUltimap.btnStopClick(Sender: TObject);
 var i: integer;
 begin
+  {$ifdef windows}
   ultimap_disable();
 
   for i:=0 to length(workers)-1 do
@@ -500,10 +518,12 @@ begin
   btnStart.enabled:=true;
 
   errorbeep;
+  {$endif}
 end;
 
 procedure TfrmUltimap.btnPauseClick(Sender: TObject);
 begin
+  {$ifdef windows}
   if not paused then
   begin
     ultimap_pause;
@@ -517,6 +537,7 @@ begin
     btnPause.caption:=rsUUPause;
   end;
   beep;
+  {$endif}
 end;
 
 procedure TfrmUltimap.btnFilterModuleClick(Sender: TObject);
@@ -670,8 +691,10 @@ end;
 
 procedure TfrmUltimap.Edit1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
+  {$ifdef windows}
   if key=VK_RETURN then
     btnFilterCallCount.click;
+  {$endif}
 end;
 
 function TfrmUltimap.iscall(address: ptruint): boolean;
@@ -720,7 +743,7 @@ begin
     isretdisassembler.disassemble(a, x);
     isret:=iscalldisassembler.LastDisassembleData.isret;
 
-    callTable.Add(address, isret);
+    rettable.Add(address, isret);
   end;
 
   result:=isret;
@@ -836,8 +859,10 @@ end;
 
 procedure TfrmUltimap.FlusherTimer(Sender: TObject);
 begin
+  {$ifdef windows}
   if btnStop.enabled then
     ultimap_flush;
+  {$endif}
 end;
 
 procedure TfrmUltimap.FormClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -942,8 +967,8 @@ end;
 
 procedure TfrmUltimap.ListView1Data(Sender: TObject; Item: TListItem);
 begin
-  item.caption:=symhandler.getNameFromAddress(validlist[item.Index].toAddress, true, true);
-  item.SubItems.Add(symhandler.getNameFromAddress(validlist[item.Index].lastFromAddress, true, true));
+  item.caption:=symhandler.getNameFromAddress(validlist[item.Index].toAddress, true, true, false);
+  item.SubItems.Add(symhandler.getNameFromAddress(validlist[item.Index].lastFromAddress, true, true, false));
   item.SubItems.Add(IntToStr(validlist[item.Index].count));
 
 {$ifdef predictlog}
@@ -985,14 +1010,39 @@ begin
         a:=validlist[i].lastFromAddress
       else
         a:=validlist[i].toAddress;
+
+      a2:=a;
+      disassemble(a2);
+
+      advancedoptions.AddToCodeList(a, a2-a,false,true);
     end;
-
-    a2:=a;
-    disassemble(a2);
-
-
-    advancedoptions.AddToCodeList(a, a2-a,false,true);
   end;
+end;
+
+procedure TfrmUltimap.miCopyToClipboardClick(Sender: TObject);
+var
+  i: integer;
+  a,a2: ptruint;
+  size: integer;
+
+  r: tstringlist;
+  s: string;
+begin
+  r:=tstringlist.create;
+
+  for i:=0 to listview1.Items.count-1 do
+  begin
+    if listview1.Items[i].Selected then
+    begin
+      s:=listview1.Items[i].Caption;
+      s:=s+ '-'+ listview1.Items[i].SubItems[0];
+      s:=s+ '-'+ listview1.Items[i].SubItems[1];
+      r.add(s);
+    end;
+  end;
+
+  Clipboard.AsText:=r.Text;
+  r.free;
 end;
 
 procedure TfrmUltimap.miSetHotkeyClick(Sender: TObject);
@@ -1018,6 +1068,8 @@ begin
       else
         FilterHotkey[i].keys:=f.newhotkey;
     end;
+
+    f.free;
   end;
 end;
 
@@ -1072,6 +1124,8 @@ var i: integer;
 begin
   if workercount=0 then exit;
 
+  {$ifdef windows}
+
   isFlushing:=false;
 
 
@@ -1111,6 +1165,7 @@ begin
   //done flushing
   isFlushing:=false;  //no more wasted cycles checking the critical section
 
+  {$endif}
 end;
 
 initialization

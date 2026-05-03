@@ -24,19 +24,7 @@ E
 interface
 
 uses
-  windows, LCLIntf, LMessages, Messages, SysUtils, Variants, Classes, Graphics, Controls,
-  Forms, Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls,CEFuncProc,NewKernelHandler,
-  symbolhandler, {XMLDoc, XMLIntf,} byteinterpreter, dom, xmlread, xmlwrite,
-  LResources, registry, scrollTreeView, commonTypeDefs;
-
-type
-  TfrmStructures = class(TForm)
-  private
-    { Private declarations }
-  public
-    { Public declarations }
-  end;
-
+  LCLIntf, LMessages, Messages, Classes;
 
 resourcestring
 
@@ -63,9 +51,6 @@ resourcestring
     +'you want to shift this and following offsets?';
   rsAreYouSureYouWantToDelete = 'Are you sure you want to delete %s?';
   rsThisIsNotAValidStructureFile = 'This is not a valid structure file';
-  rsWrongVersion = 'This structure file was generated with a newer version of '
-    +'Cheat Engine. (That means there''s more than likely a new version so '
-    +'please update....)';
   rsUnkownFileExtension = 'Unknown file extension';
   rsAreYouSureYouWantToRemoveAllStructures = 'Are you sure you want to remove '
     +'all structures?';
@@ -88,8 +73,6 @@ resourcestring
 
 implementation
 
-initialization
-  {$i Structuresfrm.lrs}
 
 end.
 

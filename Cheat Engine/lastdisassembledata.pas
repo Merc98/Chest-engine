@@ -10,16 +10,17 @@ uses
 type
   TDisAssemblerValueType=(dvtNone=0, dvtAddress=1, dvtValue=2);
 
-  TDisassemblerClass=(dcX86, dcArm, dcThumb);
+  TDisassemblerClass=(dcX86, dcArm, dcArm64, dcThumb);
 
 
   TLastDisassembleData=record
     address: PtrUint;
     prefix: string;
     prefixsize: integer;
-    opcode: string; //and sadly undone because I want to allow the user to change the string... pchar; //replaced string with pchar so it now only contains a pointer. Faster. string; //the result without bytes
+    opcode: string;
     parameters: string;
     description: string;
+    commentsoverride: string;
     Bytes: array of byte;
     SeperatorCount: integer;
     Seperators: Array [0..5] of integer; //an index in the byte array describing the seperators (prefix/instruction/modrm/sib/extra)
@@ -31,6 +32,8 @@ type
 
     datasize: integer;
     isfloat: boolean; //True if the data it reads/writes is a float (only when sure)
+    isfloat64: boolean;
+    iscloaked: boolean;
 
     hasSib: boolean;
     sibIndex: integer;
@@ -39,6 +42,7 @@ type
     isjump: boolean; //set for anything that can change eip/rip
     iscall: boolean; //set if it's a call
     isret: boolean; //set if it's a ret
+    isrep: boolean;
     isconditionaljump: boolean; //set if it's only effective when an conditon is met
     willJumpAccordingToContext: boolean; //only valid if a context was provided with the disassembler and isconditionaljump is true
 
@@ -53,6 +57,7 @@ type
   PLastDisassembleData=^TLastDisassembleData;
 
 implementation
+
 
 end.
 

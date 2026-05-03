@@ -5,17 +5,16 @@ unit frmBreakpointlistunit;
 interface
 
 uses
-  LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
+  LCLIntf, Messages, LMessages, LCLType, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
   StdCtrls, CEDebugger, KernelDebugger, ExtCtrls, LResources, ComCtrls, Menus,
-  debuggertypedefinitions;
+  debuggertypedefinitions, BreakpointTypeDef, betterControls;
 
-const
-  WM_BPUPDATE=WM_USER+1;
 
 type
   { TfrmBreakpointlist }
 
   TfrmBreakpointlist = class(TForm)
+    bplImageList: TImageList;
     ListView1: TListView;
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
@@ -38,11 +37,9 @@ type
     procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
-    procedure update(var m: tmessage); message WM_BPUPDATE; overload;
-    procedure updatebplist;
   public
     { Public declarations }
-
+    procedure updatebplist;
   end;
 
 var
@@ -51,37 +48,97 @@ var
 implementation
 
 
-uses formsettingsunit, MemoryBrowserFormUnit, DebugHelper, frmBreakpointConditionunit;
+uses formsettingsunit, MemoryBrowserFormUnit, DebugHelper, frmBreakpointConditionunit,
+  vmxfunctions;
+
+type
+  tdbvmbpinfo=record
+    VirtualAddress: ptruint;
+    PhysicalAddress: ptruint;
+  end;
 
 resourcestring
   rsBPAreYouSureYouWishToChangeThisToAPegewideBP = 'Are you sure you wish to change this to a pagewide breakpoint?';
 
-procedure TFrmBreakpointlist.update(var m: tmessage);
+
+function getDBVMInfo(s: string): tdbvmbpinfo;
+//s is formatted as 'DBVM VirtualAddress (PhysicalAddress)'
+var
+  sva: string;
+  spa: string;
 begin
-  updatebplist;
+  sva:=trim(copy(s,6,pos('(',s)-6));
+  spa:=copy(s,pos('(',s)+1,length(s));
+  spa:=trim(copy(spa,1,pos(')',spa)-1));
+
+  try
+    result.VirtualAddress:=strtoint64('$'+sva);
+  except
+    result.VirtualAddress:=0;
+  end;
+
+  try
+    result.PhysicalAddress:=strtoint64('$'+spa);
+  except
+    result.PhysicalAddress:=0
+  end;
 end;
 
 procedure TFrmBreakpointlist.updatebplist;
-var i: integer;
- s: pointer;
+var
+  i: integer;
+  s: pointer;
+  s2: string;
+  l: TStringList;
+  bp: PDBVMBreakpoint;
+
+  li: TListItem;
+  str: string;
 begin
   //store the selected item
   if listview1.Selected<>nil then
-    s:=listview1.selected.data
+  begin
+    s:=listview1.selected.data;
+    s2:=listview1.Caption;
+  end
   else
     s:=nil;
 
   if debuggerthread<>nil then
     debuggerthread.updatebplist(ListView1, miShowShadow.checked);
 
+  i:=0;
+  while i<listview1.items.count do
+  begin
+    if listview1.items[i].data=pointer(-1) then
+      listview1.Items[i].Delete
+    else
+      inc(i);
+  end;
+
+  l:=TStringList.create;
+  try
+    dbvm_getBreakpointList(l);
+    for i:=0 to l.count-1 do
+    begin
+      li:=Listview1.Items.Add;
+      li.caption:='DBVM '+l[i];
+      li.Data:=pointer(-1);
+    end;
+  finally
+    l.free;
+  end;
+
   if s<>nil then //if something was selected then try to find it back
   begin
     for i:=0 to listview1.Items.count-1 do
-      if listview1.items[i].data=s then
+    begin
+      if ((s=pointer(-1)) and (s2=listview1.items[i].caption)) or (listview1.items[i].data=s) then
       begin
         listview1.items[i].Selected:=true;
         exit;
       end;
+    end;
   end;
 
 end;
@@ -106,9 +163,31 @@ begin
 end;
 
 procedure TfrmBreakpointlist.ListView1DblClick(Sender: TObject);
-var bp: pbreakpoint;
- address: ptruint;
+var
+  bp: pbreakpoint;
+  address: ptruint;
+  s: string;
+
+  dbvmbpinfo: tdbvmbpinfo;
 begin
+  if (listview1.selected=nil) then exit;
+  
+  bp:=listview1.selected.data;
+  if bp=pointer(-1) then
+  begin
+    //dbvm bp
+    dbvmbpinfo:=getDBVMInfo(listview1.selected.caption);
+
+    if dbvmbpinfo.virtualAddress<>0 then
+    begin
+      try
+        memorybrowser.disassemblerview.SelectedAddress:=dbvmbpinfo.virtualAddress
+      except
+      end;
+    end;
+    exit;
+  end;
+
   if debuggerthread<>nil then
   begin
     debuggerthread.lockbplist;
@@ -122,7 +201,6 @@ begin
         if bp.breakpointTrigger=bptExecute then
         begin
           //show in disassembler
-          memorybrowser.AddToDisassemblerBackList(pointer(memorybrowser.disassemblerview.SelectedAddress));
           memorybrowser.disassemblerview.SelectedAddress:=address;
         end
         else
@@ -145,15 +223,19 @@ var bp: Pbreakpoint;
 begin
   if listview1.Selected<>nil then
   begin
-    debuggerthread.lockbplist; //prevent the list from updating/deleting bp's
-    try
-      if listview1.Selected<>nil then
-      begin
-        bp:=listview1.Selected.Data;
-        debuggerthread.UnsetBreakpoint(bp);
+    if debuggerthread<>nil then
+    begin
+      debuggerthread.lockbplist; //prevent the list from updating/deleting bp's
+      try
+        if listview1.Selected<>nil then
+        begin
+          bp:=listview1.Selected.Data;
+          debuggerthread.UnsetBreakpoint(bp);
+        end;
+      finally
+        debuggerthread.unlockbplist;
       end;
-    finally
-      debuggerthread.unlockbplist;
+
     end;
 
   end;
@@ -193,24 +275,36 @@ begin
 end;
 
 procedure TfrmBreakpointlist.miDelBreakpointClick(Sender: TObject);
-var bp: Pbreakpoint;
+var
+  bp: Pbreakpoint;
+  dbvmbpinfo: tdbvmbpinfo;
 begin
-
   if listview1.Selected<>nil then
   begin
-    debuggerthread.lockbplist; //prevent the list from updating/deleting bp's
-    try
-      if listview1.Selected<>nil then
+    if listview1.selected.data=pointer(-1) then
+    begin
+      dbvmbpinfo:=getDBVMInfo(listview1.selected.Caption);
+      dbvm_cloak_removechangeregonbp(dbvmbpinfo.PhysicalAddress);
+    end
+    else
+    begin
+      if debuggerthread<>nil then
       begin
-        bp:=listview1.Selected.Data;
+        debuggerthread.lockbplist; //prevent the list from updating/deleting bp's
+        try
+          if listview1.Selected<>nil then
+          begin
+            bp:=listview1.Selected.Data;
 
-        //bp.active:=false;
+            //bp.active:=false;
 
-        if not bp.markedfordeletion then
-          debuggerthread.RemoveBreakpoint(bp);
+            if not bp.markedfordeletion then
+              debuggerthread.RemoveBreakpoint(bp);
+          end;
+        finally
+          debuggerthread.unlockbplist;
+        end;
       end;
-    finally
-      debuggerthread.unlockbplist;
     end;
   end;
 end;
@@ -272,24 +366,32 @@ end;
 procedure TfrmBreakpointlist.pmBreakpointPopup(Sender: TObject);
 var bp: Pbreakpoint;
 begin
-
   if listview1.selected<>nil then
   begin
-
     miDelBreakpoint.enabled:=true;
-    miSetCondition.enabled:=true;
 
     bp:=listview1.selected.Data;
-    debuggerthread.lockbplist;
-    try
-      if bp.breakpointMethod=bpmException then
-        miPageWide.visible:=true;
+    if bp=pointer(-1) then
+    begin
+      miSetCondition.enabled:=false;
+      miPageWide.visible:=false;
+    end
+    else
+    begin
+      miSetCondition.enabled:=true;
 
-    finally
-      debuggerthread.unlockbplist;
+      if debuggerthread<>nil then
+      begin
+        debuggerthread.lockbplist;
+        try
+          if bp.breakpointMethod=bpmException then
+            miPageWide.visible:=true;
+
+        finally
+          debuggerthread.unlockbplist;
+        end;
+      end;
     end;
-
-
   end
   else
   begin

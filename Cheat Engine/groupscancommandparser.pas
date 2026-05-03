@@ -8,38 +8,46 @@ This unit contains the class that reads a groupscan command and parses it. The r
 
 interface
 
-{$ifdef windows}
-uses Classes, SysUtils, cefuncproc, CustomTypeHandler, strutils, commonTypeDefs;
-{$endif}
 
-{$ifdef unix}
+
+
+{$ifdef jni}
 uses Classes, SysUtils, strutils, CustomTypeHandler, commonTypeDefs;
+{$else}
+uses Classes, SysUtils, cefuncproc, CustomTypeHandler, strutils, commonTypeDefs;
 {$endif}
 
 resourcestring
   rsGSCPCustomTypeNotRecognized = 'Custom type not recognized: ';
   rsGSCPInvalidGroupscanCommand = 'Invalid groupscan command';
   rsGSCPWildcardsEmptyAreNotAllowedForOutOfOrderScans = 'Wildcards/Empty are not allowed for Out of Order scans';
+  rsARangeTypeNeedsARangeForValue = 'A range type needs a range for value';
+  rsARangeCantBeAWildcard = 'A range can''t be a wildcard';
 
 type
   TGroupscanCommandParser=class
   private
     calculatedBlocksize: integer;
+    function parseFloat(const s: string): double;
+    function splitRange(const s: string): TStringArray;
     procedure parseToken(s: string);
   public
     FloatSettings: TFormatSettings;
 
     elements: array of record
-      wildcard: boolean;
+      wildcard: boolean; //for vtPointer means it has to be a valid pointer, so not nil
       offset: integer;
       vartype: TVariabletype;
-      uservalue: string;
-      valueint: qword;
-      valuefloat: double;
+      uservalue, uservalue2: string;
+      valueint, valueint2: qword;
+      valuefloat, valuefloat2: double;
       customtype: TCustomType;
       bytesize: integer;
       command: string;
       picked: boolean;
+      range: boolean;
+      signed: boolean;
+      pointertypes: TPointerTypes; // for vtPointer this restricts whether the pointer is static, dynamic, executable
     end;
 
     blocksize: integer;
@@ -54,33 +62,76 @@ type
 
 implementation
 
-uses Parsers;
+uses Parsers, ProcessHandlerUnit;
+
+function TGroupscanCommandParser.parseFloat(const s: string): double;
+begin
+  try
+    result:=StrToFloat(s, FloatSettings);
+  except
+    if FloatSettings.DecimalSeparator='.' then
+      FloatSettings.DecimalSeparator:=',' else
+      FloatSettings.DecimalSeparator:='.';
+
+    result:=StrToFloat(s, FloatSettings);
+  end;
+end;
+
+function TGroupscanCommandParser.SplitRange(const s: string): TStringArray;
+var
+  i: integer;
+  sa: TStringArray;
+  temps: string;
+begin
+  sa:=s.Split('-');
+  temps:='';
+  result:=[];
+  for i:=0 to length(sa)-1 do
+  begin
+    sa[i]:=trim(sa[i]);
+    if sa[i]='' then
+      temps:=temps+'-'
+    else
+    begin
+      temps:=temps+sa[i];
+      setlength(result, length(result)+1);
+      result[length(result)-1]:=temps;
+      temps:='';
+    end;
+  end;
+end;
 
 procedure TGroupscanCommandParser.parseToken(s: string);
 var i,j,k: integer;
   command,value: string;
+  values: array of string;
   ctn: string;
   bracketcount: integer;
-
-
   nextchar: integer;
+  tempq: dword;
+  tempd: double;
 begin
 
   //deal with custom types with a ':' and don't mess up strings
   bracketcount:=0;
-  for i:=1 to length(s)-1 do
+  j:=0;
+  for i:=1 to length(s) do
   begin
     case s[i] of
-      ':': if bracketcount=0 then break; //found it
+      ':': if bracketcount=0 then
+      begin
+        j:=i;
+        break; //found it
+      end;
       '(': inc(bracketcount);
       ')': dec(bracketcount);
     end;
   end;
 
-  if i=length(s) then exit;
+  if j=0 then exit;
 
-  command:=uppercase(copy(s,1,i-1));
-  value:=copy(s,i+1, length(s));
+  command:=uppercase(copy(s,1,j-1));
+  value:=copy(s,j+1, length(s));
 
 
 
@@ -96,15 +147,29 @@ begin
     typeAligned:=value='A';
   end;
 
-  if (length(command)>=1) and (command[1] in ['1','2','4','8','F','D','C','S','W']) then
+  if (length(command)>=1) and (command[1] in ['1','2','4','8','F','D','C','S','W','P']) then
   begin
     j:=length(elements);
     setlength(elements, j+1);
 
+    //init the element to 0
+    elements[j].wildcard:=false;
+    elements[j].vartype:=vtByte;
+    elements[j].uservalue:='';
+    elements[j].uservalue2:='';
+    elements[j].valueint:=0;
+    elements[j].valueint2:=0;
+    elements[j].valuefloat:=0;
+    elements[j].valuefloat2:=0;
+    elements[j].customtype:=nil;
+    elements[j].bytesize:=1;
+    elements[j].pointertypes:=[ptStatic, ptDynamic];
     elements[j].offset:=calculatedBlocksize;
     elements[j].command:=command;
 
     elements[j].picked:=false;
+    elements[j].range:=false;
+    elements[j].signed:=false;
 
     nextchar:=2;
 
@@ -131,6 +196,12 @@ begin
       begin
         elements[j].vartype:=vtQword;
         elements[j].bytesize:=8;
+      end;
+
+      'P':   //pointer
+      begin
+        elements[j].vartype:=vtPointer;
+        elements[j].bytesize:=processhandler.pointersize;
       end;
 
       'F':
@@ -198,17 +269,34 @@ begin
         raise exception.create(rsGSCPInvalidGroupscanCommand);
     end;
 
-    if length(command)>=nextchar then
+    elements[j].uservalue:=value;
+
+    while length(command)>=nextchar do
     begin
       case command[nextchar] of
         'P': elements[j].picked:=true; //elements marked picked will be added when doubleclicked in the addresslist
+        'R':
+        begin
+          if elements[j].wildcard then raise exception.create(rsARangeCantBeAWildcard+'');
+          elements[j].range:=true;
+          values:=splitRange(value);
+          if length(values)<>2 then
+            raise exception.create(rsARangeTypeNeedsARangeForValue);
+
+          if (values[0][1]='-') or (values[1][1]='-') then elements[j].signed:=true;
+
+          elements[j].uservalue:=values[0];
+          elements[j].uservalue2:=values[1];
+        end
         else
           raise exception.create(rsGSCPInvalidGroupscanCommand);
       end;
+
+      inc(nextchar);
     end;
 
 
-    elements[j].uservalue:=value;
+
 
     inc(calculatedBlocksize, elements[j].bytesize);
 
@@ -217,19 +305,73 @@ begin
     if not elements[j].wildcard then
     begin
       case elements[j].vartype of
-        vtByte..vtQword, vtCustom: elements[j].valueint:=StrToQWordEx(value);
+        vtByte..vtQword, vtCustom:
+        begin
+          if elements[j].range then
+          begin
+            elements[j].valueint:=StrToQwordEx(values[0]);
+            elements[j].valueint2:=StrToQwordEx(values[1]);
 
+            if (elements[j].signed and (int64(elements[j].valueint2)<int64(elements[j].valueint))) or
+               (not elements[j].signed and (elements[j].valueint2<elements[j].valueint)) //swap
+            then
+            begin
+              tempq:=elements[j].valueint;
+              elements[j].valueint:=elements[j].valueint2;
+              elements[j].valueint2:=tempq;
+            end;
+          end
+          else
+            elements[j].valueint:=StrToQWordEx(value);
+        end;
+
+        vtPointer:
+        begin
+          if value = 'S' then
+          begin
+            elements[j].pointertypes:=[ptStatic];
+            elements[j].wildcard:=true;
+          end
+          else if value = 'D' then
+          begin
+            elements[j].pointertypes:=[ptDynamic];
+            elements[j].wildcard:=true;
+          end
+          else if value = 'E' then
+          begin
+            elements[j].pointertypes:=[ptExecutable];
+            elements[j].wildcard:=true;
+          end
+          else
+          begin
+            //convert it to a normal type
+            if processhandler.is64Bit then
+              elements[j].vartype:=vtQword
+            else
+              elements[j].vartype:=vtDword;
+
+            elements[j].valueint:=StrToQWordEx(value);
+          end;
+        end;
 
         vtSingle, vtDouble:
         begin
-          try
-            elements[j].valuefloat:=StrToFloat(value, FloatSettings);
-          except
-            if FloatSettings.DecimalSeparator='.' then
-              FloatSettings.DecimalSeparator:=',' else
-              FloatSettings.DecimalSeparator:='.';
-          end;
+          if elements[j].range then
+          begin
+            elements[j].valuefloat:=parsefloat(values[0]);
+            elements[j].valuefloat2:=parsefloat(values[1]);
 
+            if (elements[j].valuefloat2<elements[j].valuefloat) //swap
+            then
+            begin
+              tempd:=elements[j].valuefloat;
+              elements[j].valuefloat:=elements[j].valuefloat2;
+              elements[j].valuefloat2:=tempd;
+            end;
+
+          end
+          else
+            elements[j].valuefloat:=parseFloat(value);
         end;
       end;
     end;

@@ -6,12 +6,14 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ComCtrls, ExtCtrls, Menus,newkernelhandler,cefuncproc, commonTypeDefs;
+  StdCtrls, ComCtrls, ExtCtrls, Menus,newkernelhandler,cefuncproc, commonTypeDefs,
+  betterControls, DBK32functions;
 
 type TPageData=record
   level: integer;
   value: qword;
   va,pa: qword;
+  flags: qword;
 end;
 PPageData=^TPageData;
 
@@ -25,6 +27,7 @@ type
     cb64bit: TCheckBox;
     edtCR3: TEdit;
     FindDialog1: TFindDialog;
+    pImageList: TImageList;
     Label1: TLabel;
     frmPaging: TPanel;
     MenuItem1: TMenuItem;
@@ -125,7 +128,8 @@ procedure TfrmPaging.FormCreate(Sender: TObject);
 var cr3: QWORD;
   cr4: DWORD;
 begin
-  if getcr3(processhandle, cr3) then
+  {$ifdef windows}
+  if DBK32functions.getcr3(processhandle, cr3) then
     edtcr3.text:=inttohex(cr3,8);
 
   {$ifdef cpu64}
@@ -137,6 +141,7 @@ begin
   cr4:=GetCR4;
   cb8byteentries.checked:=((cr4 shr 5) and 1)=1;
 
+  {$endif}
 
 
 end;
@@ -194,6 +199,7 @@ var
 
 begin
   //page table
+  {$ifdef windows}
 
   if node=nil then
   begin
@@ -224,12 +230,13 @@ begin
             pd^.va:=a;
             pd^.level:=1;
             pd^.value:=q[i];
-            pd^.pa:=q[i] and qword($FFFFFFF000);
+            pd^.pa:=q[i] and qword(MAXPHYADDRMASKPB);
+            pd^.flags:=q[i] and not (qword(MAXPHYADDRMASKPB));
 
             if node=nil then
-              tn:=tvpage.Items.AddChild(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')')
+              tn:=tvpage.Items.AddChild(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  flags='+inttohex(pd^.flags,16)+')')
             else
-              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')');
+              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  flags='+inttohex(pd^.flags,16)+')');
 
             tn.Data:=pd;
             tn.HasChildren:=false;
@@ -250,12 +257,13 @@ begin
             pd^.va:=a;
             pd^.level:=1;
             pd^.value:=d[i];
-            pd^.pa:=d[i] and dword($FFFFF000);
+            pd^.pa:=d[i] and dword(MAXPHYADDRMASKPB);
+            pd^.flags:=d[i] and (not dword(MAXPHYADDRMASKPB));
 
             if node=nil then
-              tn:=tvpage.Items.AddChild(nil,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'('+inttohex(pd^.pa,8)+')')
+              tn:=tvpage.Items.AddChild(nil,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'(PA='+inttohex(pd^.pa,16)+'  flags='+inttohex(pd^.flags,16)+')')
             else
-              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'('+inttohex(pd^.pa,8)+')');
+              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'(PA='+inttohex(pd^.pa,16)+'  flags='+inttohex(pd^.flags,16)+')');
 
             tn.HasChildren:=false;
             tn.data:=pd;
@@ -265,13 +273,14 @@ begin
     end;
 
   finally
-    freemem(buf);
+    freememandnil(buf);
   end;
+  {$endif}
 end;
 
 procedure TfrmPaging.FillNodeLevel2(node: TTreenode);
 var
-  pd: PPageData;
+  pd: PPageData=nil;
   buf: pointer;
   q: Puint64Array absolute buf;
   d: PDwordArray absolute buf;
@@ -287,6 +296,7 @@ var
 
 begin
   //fill in the pagedir table
+  {$ifdef windows}
   if node=nil then
   begin
     virtualbase:=0;
@@ -319,17 +329,23 @@ begin
             bigpage:=((q[i] shr 7) and 1)=1;
 
             if bigpage then
-              pd^.pa:=q[i] and qword($FFFFE00000)
+            begin
+              pd^.pa:=q[i] and qword(MAXPHYADDRMASKPBBIG);
+              pd^.flags:=q[i] and (not qword(MAXPHYADDRMASKPBBIG));
+            end
             else
-              pd^.pa:=q[i] and qword($FFFFFFF000);
+            begin
+              pd^.pa:=q[i] and qword(MAXPHYADDRMASKPB);
+              pd^.flags:=q[i] and (not qword(MAXPHYADDRMASKPB));
+            end;
 
             pd^.value:=q[i];
             pd^.level:=2;
 
             if node=nil then
-              tn:=tvpage.Items.Add(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')')
+              tn:=tvpage.Items.Add(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')')
             else
-              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')');
+              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')');
 
             tn.data:=pd;
 
@@ -356,17 +372,23 @@ begin
             bigpage:=((d[i] shr 7) and 1)=1;
 
             if bigpage then
-              pd^.pa:=d[i] and dword($FFC00000)
+            begin
+              pd^.pa:=d[i] and dword(MAXPHYADDRMASKPBBIG);
+              pd^.flags:=d[i] and (not dword(MAXPHYADDRMASKPBBIG));
+            end
             else
-              pd^.pa:=d[i] and dword($FFFFF000);
+            begin
+              pd^.pa:=d[i] and dword(MAXPHYADDRMASKPB);
+              pd^.flags:=d[i] and (not dword(MAXPHYADDRMASKPB));
+            end;
 
             pd^.value:=d[i];
             pd^.level:=2;
 
             if node=nil then
-              tn:=tvpage.Items.Add(nil,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'('+inttohex(pd^.pa,8)+')')
+              tn:=tvpage.Items.Add(nil,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')')
             else
-              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'('+inttohex(pd^.pa,8)+')');
+              tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,8)+'-'+inttohex(b,8)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')');
 
             tn.data:=pd;
 
@@ -377,16 +399,13 @@ begin
       end;
     end;
   finally
-    freemem(buf);
+    freememandnil(buf);
   end;
-
-  if node=nil then
-    freemem(pd);
-
+  {$endif}
 end;
 
 procedure TfrmPaging.FillNodeLevel3(node: TTreenode);
-var pd: PPageData;
+var
   buf: pointer;
   q: Puint64Array absolute buf;
   max: integer;
@@ -398,8 +417,10 @@ var pd: PPageData;
 
   virtualbase: qword;
   physicalbase: qword;
+  pd: PPageData=nil;
 begin
   //fill in the pagedir pointer table
+  {$ifdef windows}
   if node=nil then
   begin
     virtualbase:=0;
@@ -433,22 +454,20 @@ begin
         a:=virtualbase+qword(i*qword($40000000));
         b:=a+qword($3fffffff);
 
-
-
-
-        pd:=getmem(sizeof(TPageData));
+        getmem(pd,sizeof(TPageData));
+        FillByte(pd^,sizeof(TPageData),0);
         pd^.va:=a;
-        pd^.pa:=q[i] and qword($FFFFFFF000);
+        pd^.pa:=q[i] and qword(MAXPHYADDRMASKPB);
+        pd^.flags:=q[i] and (not qword(MAXPHYADDRMASKPB));
         pd^.value:=q[i];
         pd^.level:=3;
 
         if node=nil then
-          tn:=tvpage.Items.Add(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')')
+          tn:=tvpage.Items.Add(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')')
         else
-          tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')');
+          tn:=tvpage.Items.AddChild(node,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')');
 
         tn.data:=pd;
-
         tn.HasChildren:=true;
       end;
     end;
@@ -456,12 +475,10 @@ begin
   end;
 
   finally
-    freemem(buf);
+    freememandnil(buf);
   end;
 
-  if node=nil then
-    freemem(pd);
-
+  {$endif}
 
 end;
 
@@ -499,6 +516,7 @@ var x: ptrUint;
   pd: PPageData;
   cr4: ptruint;
 begin
+  {$ifdef windows}
   base:=StrToQWordEx('$'+edtcr3.text);
 
   cleanup;
@@ -528,9 +546,10 @@ begin
             pd^.level:=4;
             pd^.value:=q[i];
             pd^.va:=a;
-            pd^.pa:=q[i] and qword($FFFFFFF000);
+            pd^.pa:=q[i] and qword(MAXPHYADDRMASKPB);
+            pd^.flags:=q[i] and (not qword(MAXPHYADDRMASKPB));
 
-            tn:=tvpage.Items.AddChild(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'('+inttohex(pd^.pa,16)+')');
+            tn:=tvpage.Items.AddChild(nil,inttostr(i)+':'+inttohex(a,16)+'-'+inttohex(b,16)+'(PA='+inttohex(pd^.pa,16)+'  Flags='+inttohex(pd^.flags,16)+')');
             tn.Data:=pd;
             tn.HasChildren:=true;
 
@@ -542,8 +561,9 @@ begin
     else
       raise exception.create(rsFailureReadingPhysicalMemory);
   finally
-    freemem(buf);
+    freememandnil(buf);
   end;
+  {$endif}
 end;
 
 initialization

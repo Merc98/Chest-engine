@@ -8,6 +8,7 @@ unit xinput;
 
 interface
 
+{$ifdef windows}
 uses windows,classes, Controls;
 
   {**************************************************************************
@@ -205,9 +206,11 @@ var
   XInputGetCapabilities: function(dwUserIndex: dword; dwFlags: dword; pCapabilities: PXINPUT_CAPABILITIES): DWORD; stdcall;
   XInputGetKeystroke: function(dwUserIndex: dword; reserved: dword; pKeyStroke: PXINPUT_KEYSTROKE): DWORD; stdcall;
 
+  {$endif}
 
 implementation
 
+{$ifdef windows}
 uses forms;
 
 type TXBoxKeyDownThread=class(TThread)
@@ -229,6 +232,9 @@ var
   c: TWinControl;
   h: THandle;
   s: XINPUT_STATE;
+
+  fgw: thandle;
+  pid: dword;
 begin
   if not assigned(XInputGetKeystroke) then exit;
 
@@ -236,19 +242,26 @@ begin
   begin
     if XInputGetState(0,s)=0 then
     begin
-      i:=XInputGetKeystroke(0,0,@ks);
-      if i=ERROR_SUCCESS then
+      fgw:=GetForegroundWindow;
+      if GetWindowThreadProcessId(fgw, pid)<>0 then
       begin
-        c:=screen.ActiveControl;
-        if c<>nil then
+        if pid=GetCurrentProcessId then
         begin
-          h:=screen.ActiveControl.Handle;
+          i:=XInputGetKeystroke(0,0,@ks);
+          if i=ERROR_SUCCESS then
+          begin
+            c:=screen.ActiveControl;
+            if c<>nil then
+            begin
+              h:=screen.ActiveControl.Handle;
 
-          if (ks.Flags or XINPUT_KEYSTROKE_KEYDOWN)=XINPUT_KEYSTROKE_KEYDOWN then
-            SendMessage(h, WM_KEYDOWN, ks.VirtualKey, 0);
+              if (ks.Flags or XINPUT_KEYSTROKE_KEYDOWN)=XINPUT_KEYSTROKE_KEYDOWN then
+                SendMessage(h, WM_KEYDOWN, ks.VirtualKey, 0);
 
-          if (ks.Flags or XINPUT_KEYSTROKE_KEYUP)=XINPUT_KEYSTROKE_KEYUP then
-            SendMessage(h, WM_KEYUP, ks.VirtualKey, 0);
+              if (ks.Flags or XINPUT_KEYSTROKE_KEYUP)=XINPUT_KEYSTROKE_KEYUP then
+                SendMessage(h, WM_KEYUP, ks.VirtualKey, 0);
+            end;
+          end;
         end;
       end;
 
@@ -314,6 +327,8 @@ begin
 
   result:=xih<>0;
 end;
+
+{$endif}
 
 end.
 

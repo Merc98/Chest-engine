@@ -3,23 +3,32 @@ unit Filehandler;
 {$MODE Delphi}
 
 {
-implement replaced handlers for ReadProcssMemory and WriteProcessMemory so it
+implement replaced handlers for ReadProcessMemory and WriteProcessMemory so it
 reads/writes to the file instead
 }
 
 interface
 
-uses jwawindows, windows, LCLIntf, syncobjs, sysutils, Classes;
+uses
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  jwawindows, windows,
+  {$endif}
+  LCLIntf, syncobjs, sysutils, Classes;
 
-function ReadProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer;  nSize: DWORD; var lpNumberOfBytesRead: DWORD): BOOL; stdcall;
-function WriteProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer; nSize: DWORD; var lpNumberOfBytesWritten: DWORD): BOOL; stdcall;
+function ReadProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer;  nSize: DWORD; var lpNumberOfBytesRead: ptruint): BOOL; stdcall;
+function WriteProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer; nSize: DWORD; var lpNumberOfBytesWritten: ptruint): BOOL; stdcall;
 function VirtualQueryExFile(hProcess: THandle; lpAddress: Pointer; var lpBuffer: TMemoryBasicInformation; dwLength: DWORD): DWORD; stdcall;
 procedure CommitChanges(fn: string='');
 
 var filename: string;
     filedata: TMemorystream;
+    filebaseaddress: ptruint;
     //filehandle: thandle;
     bigendianfileaccess: boolean=false;
+    blockfilehandlerpopup: boolean=false;
 
 implementation
 
@@ -37,7 +46,7 @@ begin
 end;
 
 var filecs: tcriticalsection; //only 1 filehandle, so make sure rpm does not change the filepointer while another is still reading it
-function ReadProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer;  nSize: DWORD; var lpNumberOfBytesRead: DWORD): BOOL; stdcall;
+function ReadProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer;  nSize: DWORD; var lpNumberOfBytesRead: ptruint): BOOL; stdcall;
 var filesize,ignore:dword;
 
     i: integer;
@@ -53,20 +62,34 @@ var filesize,ignore:dword;
 
 begin
 //ignore hprocess
+  if filedata=nil then
+  begin
+    exit(false);
+    lpNumberOfBytesRead:=0;
+  end;
+
+  {$ifdef windows}
+
+  if hprocess=GetCurrentProcess then
+    exit(windows.ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead));
+  {$endif}
+
   result:=false;
   ba:=ptruint(lpBaseAddress);
   inc(ba,ptruint(filedata.Memory));
+  dec(ba,filebaseaddress);
 
   filesize:=filedata.Size;
 
-  if ptrUint(lpbaseaddress)>=filesize then exit;
+  if ptruint(lpbaseaddress)<filebaseaddress then exit;
+  if ptrUint(lpbaseaddress)>=filebaseaddress+filesize then exit;
 
   s:=nsize;
 
-  if ptrUint(lpbaseaddress)+s>=filesize then
+  if ptrUint(lpbaseaddress)+s>=filebaseaddress+filesize then
   begin
     ZeroMemory(lpBuffer, nsize);
-    dec(s, ((ptrUint(lpbaseaddress)+s)-filesize));
+    dec(s, ((ptrUint(lpbaseaddress)+s)-(filebaseaddress+filesize)));
   end;
 
   if s<=0 then exit;
@@ -77,7 +100,7 @@ begin
   lpNumberOfBytesRead:=nsize;
 
   result:=true;
-
+  {$ifndef CPUAARCH64}
   if bigendianfileaccess then
   begin
     i:=0;
@@ -115,13 +138,14 @@ begin
       inc(i, 4);
     end;
   end;
-
+  {$endif}
 end;
 
-function WriteProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer; nSize: DWORD; var lpNumberOfBytesWritten: DWORD): BOOL; stdcall;
+function WriteProcessMemoryFile(hProcess: THandle; const lpBaseAddress: Pointer; lpBuffer: Pointer; nSize: DWORD; var lpNumberOfBytesWritten: ptruint): BOOL; stdcall;
 var filesize,ignore:dword;
 
-    i: integer;
+    i,o: integer;
+
 
     b: pdword;
 
@@ -133,25 +157,39 @@ var filesize,ignore:dword;
 
 begin
 //ignore hprocess
+  {$ifdef windows}
+  if hprocess=GetCurrentProcess then
+    exit(windows.WriteProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten));
+  {$endif}
+
+  if filedata=nil then
+  begin
+    exit(false);
+    lpNumberOfBytesWritten:=0;
+  end;
+
+
   result:=false;
   ba:=ptruint(lpBaseAddress);
   inc(ba,ptruint(filedata.Memory));
+  dec(ba,filebaseaddress);
 
   filesize:=filedata.Size;
 
 
   s:=nsize;
 
-  if ptrUint(lpbaseaddress)+s>filesize then
-  begin
-    if MainThreadID=GetCurrentThreadId then
-    begin
-      if MessageDlg('Change the file size to '+inttostr(ptrUint(lpbaseaddress)+s)+' bytes?',mtConfirmation,[mbyes,mbno],0)=mryes then
-      begin
-        i:=(ptrUint(lpbaseaddress)+s)-filesize;
+  if ptrUint(lpbaseaddress)<filebaseaddress then exit(False);
 
-        filedata.SetSize(ptrUint(lpbaseaddress)+s);
-        ZeroMemory(pointer(ptruint(filedata.Memory)+filesize), i);
+  if ptrUint(lpbaseaddress)+s>(filebaseaddress+filesize) then
+  begin
+    if (MainThreadID=GetCurrentThreadId) and (not blockfilehandlerpopup) then
+    begin
+      i:=ptrUint(lpbaseaddress-filebaseaddress)+s;
+      if MessageDlg('Change the file size to '+inttostr(i)+' bytes?',mtConfirmation,[mbyes,mbno],0)=mryes then
+      begin
+        filedata.SetSize(i);
+        ZeroMemory(pointer(ptruint(filedata.Memory)+filesize), i-filesize);
         filesize:=filedata.size;
       end
       else
@@ -170,6 +208,7 @@ begin
 
   result:=true;
 
+  {$ifndef CPUAARCH64}
   if bigendianfileaccess then
   begin
     i:=0;
@@ -207,33 +246,47 @@ begin
       inc(i, 4);
     end;
   end;
-
+  {$endif}
 end;
 
 function VirtualQueryExFile(hProcess: THandle; lpAddress: Pointer; var lpBuffer: TMemoryBasicInformation; dwLength: DWORD): DWORD; stdcall;
 var ignore: dword;
     filesize: ptrUint;
 begin
-  filesize:=getfilesize(hprocess,@ignore);
   lpBuffer.BaseAddress:=pointer((ptrUint(lpAddress) div $1000)*$1000);
-  lpbuffer.AllocationBase:=lpbuffer.BaseAddress;
-  lpbuffer.AllocationProtect:=PAGE_EXECUTE_READWRITE;
-  lpbuffer.RegionSize:=filesize-ptrUint(lpBuffer.BaseAddress);
-  lpbuffer.RegionSize:=lpbuffer.RegionSize+($1000-lpbuffer.RegionSize mod $1000);
 
-
-  lpbuffer.State:=mem_commit;
-  lpbuffer.Protect:=PAGE_EXECUTE_READWRITE;
-  lpbuffer._Type:=MEM_PRIVATE;
-
-  if (ptrUint(lpAddress)>filesize) //bigger than the file
-  then
+  if ptruint(lpAddress)<filebaseaddress then
   begin
-    zeromemory(@lpbuffer,dwlength);
-    result:=0
+    lpbuffer.AllocationBase:=pointer(0);
+    lpbuffer.AllocationProtect:=0;
+    lpbuffer.State:=MEM_FREE;
+    lpbuffer.protect:=PAGE_NOACCESS;
+    lpbuffer._Type:=0;
+    lpbuffer.RegionSize:=filebaseaddress-ptruint(lpBuffer.BaseAddress);
+    result:=dwlength;
   end
   else
-    result:=dwlength;
+  begin
+    filesize:=filedata.Size; // getfilesize(hprocess,@ignore);
+    lpbuffer.AllocationBase:=pointer(filebaseaddress);
+    lpbuffer.AllocationProtect:=PAGE_EXECUTE_READWRITE;
+    lpbuffer.RegionSize:=filesize-ptruint(lpBuffer.BaseAddress-lpbuffer.AllocationBase);
+    if (lpbuffer.RegionSize mod 4096)>0 then
+      lpbuffer.RegionSize:=lpbuffer.RegionSize+($1000-lpbuffer.RegionSize mod $1000);
+
+    lpbuffer.State:=mem_commit;
+    lpbuffer.Protect:=PAGE_EXECUTE_READWRITE;
+    lpbuffer._Type:=MEM_PRIVATE;
+
+    if (ptrUint(lpAddress)>filesize+filebaseaddress) //bigger than the file
+    then
+    begin
+      zeromemory(@lpbuffer,dwlength);
+      result:=0
+    end
+    else
+      result:=dwlength;
+  end;
 
 end;
 

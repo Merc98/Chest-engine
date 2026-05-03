@@ -6,6 +6,18 @@ unit pointerscannerfrm;
 
 interface
 
+{$ifdef darwin}
+uses
+  macport, macportdefines, LCLIntf, lmessages, LResources, Messages, SysUtils, Variants,
+  Classes, Graphics, Controls, Forms, Dialogs, StdCtrls, ExtCtrls, ComCtrls,
+  syncobjs, syncobjs2, Menus, math, frmRescanPointerUnit, pointervaluelist,
+  rescanhelper, VirtualMemory, symbolhandler, MainUnit, disassembler,
+  CEFuncProc, NewKernelHandler, ValueFinder, PointerscanresultReader, maps,
+  zstream, Sockets, registry, PageMap, CELazySocket,
+  PointerscanNetworkCommands, resolve, pointeraddresslist, pointerscanworker,
+  PointerscanStructures, PointerscanController, sqlite3conn, sqldb,
+  frmSelectionlistunit, baseunix, commonTypeDefs;
+{$else}
 uses
   windows, LCLIntf, LResources, Messages, SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, StdCtrls, ExtCtrls, ComCtrls, syncobjs, syncobjs2,
@@ -14,8 +26,10 @@ uses
   NewKernelHandler, valuefinder, PointerscanresultReader, maps, zstream,
   WinSock2, Sockets, registry, PageMap, CELazySocket,
   PointerscanNetworkCommands, resolve, pointeraddresslist, pointerscanworker,
-  PointerscanStructures, PointerscanController, sqlite3conn, sqldb, frmSelectionlistunit, commonTypeDefs;
+  PointerscanStructures, PointerscanController, sqlite3conn, sqldb,
+  frmSelectionlistunit, commonTypeDefs, betterControls;
 
+{$endif}
 
 
 const staticscanner_done=wm_user+1;
@@ -166,12 +180,15 @@ type
     edtPassword: TEdit;
     edtPort: TEdit;
     gbNetwork: TGroupBox;
+    psImageList: TImageList;
     lblIP: TLabel;
     lblPort: TLabel;
     lblPassword: TLabel;
     lblThreadPriority: TLabel;
     lblProgressbar1: TLabel;
     MenuItem1: TMenuItem;
+    miSigned: TMenuItem;
+    miHexadecimal: TMenuItem;
     miDisconnect: TMenuItem;
     miForceDisconnect: TMenuItem;
     miExportTosqlite: TMenuItem;
@@ -197,6 +214,7 @@ type
     Method3Fastspeedandaveragememoryusage1: TMenuItem;   //I should probably rename this, it's not really, 'average memory usage' anymore...
     N1: TMenuItem;
     miInfoPopup: TPopupMenu;
+    pmType: TPopupMenu;
     ProgressBar1: TProgressBar;
     Rescanmemory1: TMenuItem;
     SaveDialog1: TSaveDialog;
@@ -219,6 +237,7 @@ type
     procedure cbPriorityChange(Sender: TObject);
     procedure cbTestCrappyConnectionChange(Sender: TObject);
     procedure cbNonResponsiveChange(Sender: TObject);
+    procedure cbTypeDropDown(Sender: TObject);
 
     procedure FormDestroy(Sender: TObject);
     procedure FormResize(Sender: TObject);
@@ -251,6 +270,7 @@ type
     procedure cbTypeChange(Sender: TObject);
   private
     { Private declarations }
+    loadedFormPosition: boolean;
     start:tdatetime;
 
     rescan: trescanpointers;
@@ -329,7 +349,7 @@ type
     procedure PointerscanStart(sender: TObject);
     procedure doneui;
     procedure resyncloadedmodulelist;
-    procedure OpenPointerfile(filename: string);
+    procedure OpenPointerfile(filename: widestring);
     procedure stopscan(savestate: boolean);
     procedure PointerscanDone(sender: TObject; hasError: boolean; errorstring: string); //called by the pointerscan controller thread when done
   public
@@ -351,11 +371,12 @@ type
 implementation
 
 
-uses PointerscannerSettingsFrm, frmMemoryAllocHandlerUnit, frmSortPointerlistUnit,
-  LuaHandler, lauxlib, lua, frmPointerscanConnectDialogUnit,
-  frmpointerrescanconnectdialogunit, frmMergePointerscanResultSettingsUnit,
-  ProcessHandlerUnit, frmResumePointerscanUnit, PointerscanConnector,
-  frmSetupPSNNodeUnit, PointerscanNetworkStructures, parsers;
+uses PointerscannerSettingsFrm, {$ifdef windows}frmMemoryAllocHandlerUnit,frmSortPointerlistUnit, {$endif}
+  LuaHandler, lauxlib, lua, {$ifdef windows}frmPointerscanConnectDialogUnit,
+  frmpointerrescanconnectdialogunit, frmMergePointerscanResultSettingsUnit,  {$endif}
+  ProcessHandlerUnit, {$ifdef windows}frmResumePointerscanUnit,{$endif} PointerscanConnector,
+  {$ifdef windows}frmSetupPSNNodeUnit,{$endif} PointerscanNetworkStructures, parsers, byteinterpreter,
+  CustomTypeHandler, ceregistry, vartypestrings, mainunit2;
 
 resourcestring
   rsErrorDuringScan = 'Error during scan';
@@ -394,6 +415,8 @@ resourcestring
   rsPSDoYouWishToResumeTheCurrentPointerscanAtaLaterTime = 'Do you wish to resume the current pointerscan at a later time?';
   rsPSGeneratingPointermap = 'Generating pointermap';
   rsPSExportToDatabase = 'Export to database';
+  rsPSExportToDatabaseBiggerSizeOrNot = 'Do you want "result" table with indexes and keys? It will take up additional disk space.';
+  rsPSExportToDatabaseBiggerSizeOrNot_resultid = 'Do you want resultid column filled? It will take up additional disk space.';
   rsPSGiveaNameForTheseResults = 'Give a name for these results';
   rsPSExporting = 'Exporting...';
   rsPSThisDatabaseDoesntContainAnyPointerFiles = 'This database does not contain any pointer files';
@@ -401,6 +424,8 @@ resourcestring
   rsPSThereIsAlreadyaPointerFileWithThsiNamePresentinThisDatabase = 'There is already a pointerfile with this name present in this database. Replace it''s content with this one ?';
   rsPSExportAborted = 'Export aborted';
   rsPSImporting = 'Importing...';
+  rsPSImporting_sortOrNot = 'Do you wish to sort pointerlist by level, then module, then offsets?';
+  rsPSImporting_sortMethod = 'Do you wish to use offsets sum for sorting?';
   rsPSStatistics = 'Statistics';
   rsPSUniquePointervaluesInTarget = 'Unique pointervalues in target:';
   rsPSScanDuration = 'Scan duration: ';
@@ -495,8 +520,10 @@ procedure Tfrmpointerscanner.m_staticscanner_done(var message: tmessage);
 begin
   if staticscanner=nil then exit;
 
+  {$ifdef windows}
   if staticscanner.useHeapData then
     frmMemoryAllocHandler.memrecCS.leave;  //continue adding new entries
+  {$endif}
 
   //update the treeview
   if staticscanner.haserror then
@@ -688,6 +715,7 @@ begin
 end;
 
 procedure Tfrmpointerscanner.miResumeClick(Sender: TObject);
+{$ifdef windows}
 var
   f: tfrmresumePointerScan;
   filename: string;
@@ -751,9 +779,10 @@ var
 
   pb: TProgressbar;
   lb: TLabel;
-
+{$endif}
 
 begin
+  {$ifdef windows}
   //show a dialog where the user can pick the number of threads to scan
   if (pointerscanresults<>nil) and Pointerscanresults.CanResume then
   begin
@@ -933,7 +962,7 @@ begin
   end
   else
     miResume.Visible:=false;
-
+  {$endif}
 end;
 
 procedure Tfrmpointerscanner.Method3Fastspeedandaveragememoryusage1Click(
@@ -1031,6 +1060,7 @@ begin
         al.free;
       end;
 
+      staticscanner.negativeOffsets:=frmpointerscannersettings.cbNegativeOffsets.checked;
       staticscanner.compressedptr:=frmpointerscannersettings.cbCompressedPointerscanFile.checked;
 
       staticscanner.noReadOnly:=frmpointerscannersettings.cbNoReadOnly.checked;
@@ -1077,6 +1107,7 @@ begin
       staticscanner.maxlevel:=frmpointerscannersettings.maxlevel-1;
 
 
+      staticscanner.progressbarLabel:=lblProgressbar1;
       staticscanner.progressbar:=progressbar1;
       staticscanner.threadcount:=frmpointerscannersettings.threadcount;
       staticscanner.scannerpriority:=frmpointerscannersettings.scannerpriority;
@@ -1092,6 +1123,8 @@ begin
         setlength(staticscanner.mustendwithoffsetlist, frmpointerscannersettings.offsetlist.count);
         for i:=0 to frmpointerscannersettings.offsetlist.count-1 do
           staticscanner.mustendwithoffsetlist[i]:=TOffsetEntry(frmpointerscannersettings.offsetlist[i]).offset;
+
+        staticscanner.mustEndWithSpecificOffsetMaxDeviation:=frmpointerscannersettings.maxOffsetDeviation;
       end;
 
       staticscanner.instantrescan:=frmpointerscannersettings.cbCompareToOtherPointermaps.checked;
@@ -1150,12 +1183,15 @@ begin
 
       staticscanner.onlyOneStaticInPath:=frmpointerscannersettings.cbOnlyOneStatic.checked;
 
+      staticscanner.scanPagedMemoryOnly:=frmpointerscannersettings.cbScanResidentMemory.checked;
+
       staticscanner.useHeapData:=frmpointerscannersettings.cbUseHeapData.Checked;
       staticscanner.useOnlyHeapData:=frmpointerscannersettings.cbHeapOnly.checked;
 
-
+       {$ifdef windows}
       if staticscanner.useHeapData then
         frmMemoryAllocHandler.memrecCS.enter; //stop adding entries to the list
+       {$endif}
 
       //check if the user choose to scan for addresses or for values
       staticscanner.findValueInsteadOfAddress:=frmpointerscannersettings.rbFindValue.checked;
@@ -1294,6 +1330,7 @@ var
   name: string;
   maxlevel: string;
   compressedptr, unalligned, MaxBitCountModuleIndex, MaxBitCountModuleOffset, MaxBitCountLevel, MaxBitCountOffset: string;
+  DidBaseRangeScan, BaseScanRange: string;
 
   tablenames: Tstringlist;
   fieldnames: tstringlist;
@@ -1302,6 +1339,7 @@ var
   ptrid: string;
   i: integer;
   j: qword;
+  resultidcolumnsave: boolean;
 
   p: PPointerscanResult;
   s: string;
@@ -1343,7 +1381,9 @@ begin
 	                      '`MaxBitCountModuleIndex`	INTEGER,'+
 	                      '`MaxBitCountModuleOffset`	INTEGER,'+
 	                      '`MaxBitCountLevel`	INTEGER,'+
-	                      '`MaxBitCountOffset`	INTEGER);');
+	                      '`MaxBitCountOffset`	INTEGER,'+
+	                      '`DidBaseRangeScan`	INTEGER,'+
+	                      '`BaseScanRange`	INTEGER);');
 
         sqlite3.ExecuteDirect('CREATE UNIQUE INDEX "id_idx" ON pointerfiles( "ptrid" );');
       end;
@@ -1357,7 +1397,7 @@ begin
       	                      '  PRIMARY KEY(ptrid,offsetnr)'+
                               ');');
 
-        sqlite3.ExecuteDirect('CREATE UNIQUE INDEX "ptrid_idx" ON pointerfiles( "ptrid" );');
+        sqlite3.ExecuteDirect('CREATE INDEX "ptrid_idx" ON pointerfiles_endwithoffsetlist( "ptrid" );');
       end;
 
 
@@ -1376,9 +1416,14 @@ begin
           offsetlist:=offsetlist+', offset'+inttostr(i)+' integer';
 
 
-        sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer not null, offsetcount integer, moduleid integer, moduleoffset integer '+offsetlist+', primary key (ptrid, resultid) );');
-        sqlite3.ExecuteDirect('CREATE UNIQUE INDEX "ptr_res_id_idx" ON "results"( ptrid, resultid );');
-        sqlite3.ExecuteDirect('CREATE INDEX "modid_modoff_idx" ON "results"( moduleid, moduleoffset );');
+       if messagedlg(rsPSExportToDatabaseBiggerSizeOrNot, mtConfirmation, [mbyes, mbno], 0) = mryes then
+       begin
+         sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer, offsetcount integer, moduleid integer, moduleoffset bigint '+offsetlist+', primary key (ptrid, resultid) );');
+         sqlite3.ExecuteDirect('CREATE INDEX "ptr_res_id_idx" ON "results"( ptrid, resultid );');
+         sqlite3.ExecuteDirect('CREATE INDEX "modid_modoff_idx" ON "results"( moduleid, moduleoffset );');
+       end
+       else
+         sqlite3.ExecuteDirect('create table results(ptrid integer not null, resultid integer, offsetcount integer, moduleid integer, moduleoffset bigint '+offsetlist+');');
       end
       else
       begin
@@ -1387,7 +1432,7 @@ begin
         sqlite3.GetFieldNames('results', fieldnames);
 
         for i:=1 to pointerscanresults.offsetCount do
-          if fieldnames.indexof('offset'+inttostr(i))=0 then
+          if fieldnames.indexof('offset'+inttostr(i))=-1 then
             sqlite3.ExecuteDirect('ALTER TABLE results ADD COLUMN offset'+inttostr(i)+' integer');
 
         fieldnames.free;
@@ -1456,28 +1501,32 @@ begin
         MaxBitCountOffset:='NULL';
       end;
 
+      DidBaseRangeScan:=inttostr(ifthen(Pointerscanresults.DidBaseRangeScan, 1, 0));
+      if Pointerscanresults.DidBaseRangeScan then
+        BaseScanRange:=inttostr(Pointerscanresults.BaseScanRange)
+      else
+        BaseScanRange:='NULL';
 
-      s:='INSERT INTO pointerfiles (name, maxlevel, compressedptr, unalligned, MaxBitCountModuleIndex, MaxBitCountModuleOffset, MaxBitCountLevel, MaxBitCountOffset) values ("'+name+'", '+maxlevel+','+compressedptr+','+unalligned+','+MaxBitCountModuleIndex+','+MaxBitCountModuleOffset+','+MaxBitCountLevel+','+MaxBitCountOffset+')';
-
+      s:='INSERT INTO pointerfiles (name, maxlevel, compressedptr, unalligned, MaxBitCountModuleIndex, MaxBitCountModuleOffset, MaxBitCountLevel, MaxBitCountOffset, DidBaseRangeScan, BaseScanRange) values ("'+name+'", '+maxlevel+','+compressedptr+','+unalligned+','+MaxBitCountModuleIndex+','+MaxBitCountModuleOffset+','+MaxBitCountLevel+','+MaxBitCountOffset+','+DidBaseRangeScan+','+BaseScanRange+')';
       sqlite3.ExecuteDirect(s);
+
+
+      SQLQuery.SQL.Text:='Select max(ptrid) as max from pointerfiles';
+      SQLQuery.Active:=true;
+      ptrid:=SQLQuery.FieldByName('max').AsString;
+      SQLQuery.active:=false;
+
       for i:=0 to Pointerscanresults.EndsWithOffsetListCount-1 do
       begin
         s:='INSERT INTO pointerfiles_endwithoffsetlist (ptrid, offsetnr, offsetvalue) values ("'+ptrid+'", '+inttostr(i)+','+inttostr(Pointerscanresults.EndsWithOffsetList[i])+')';
         sqlite3.ExecuteDirect(s);
       end;
 
-
-
-      SQLQuery.SQL.Text:='Select max(ptrid) as max from pointerfiles';
-      SQLQuery.Active:=true;
-
-      ptrid:=SQLQuery.FieldByName('max').AsString;
-
-      SQLQuery.active:=false;
-
-
       for i:=0 to Pointerscanresults.modulelistCount-1 do
         sqlite3.ExecuteDirect('INSERT INTO modules(ptrid, moduleid, name) values ('+ptrid+','+inttostr(i)+',"'+Pointerscanresults.getModulename(i)+'")');
+
+      resultidcolumnsave:=true;
+      if messagedlg(rsPSExportToDatabaseBiggerSizeOrNot_resultid, mtConfirmation, [mbyes, mbno], 0) = mrno then resultidcolumnsave:=false;
 
       //for j:=0 to Pointerscanresults.count-1 do
       j:=0;
@@ -1487,20 +1536,23 @@ begin
         offsetvalues:='';
         p:=Pointerscanresults.getPointer(j);
 
-        for i:=1 to p.offsetcount do
+        for i:=1 to p.offsetcount-Pointerscanresults.EndsWithOffsetListCount do
         begin
           offsetlist:=offsetlist+',offset'+inttostr(i);
-          offsetvalues:=offsetvalues+','+inttostr(p.offsets[i-1]);
+          offsetvalues:=offsetvalues+','+inttostr(p.offsets[i-1+Pointerscanresults.EndsWithOffsetListCount]);
         end;
 
-        s:='INSERT INTO results(ptrid, resultid, offsetcount, moduleid, moduleoffset'+offsetlist+') values ('+ptrid+','+inttostr(j)+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+offsetvalues+')';
+        if resultidcolumnsave then
+          s:='INSERT INTO results(ptrid, resultid, offsetcount, moduleid, moduleoffset'+offsetlist+') values ('+ptrid+','+inttostr(j)+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+offsetvalues+')'
+        else 
+          s:='INSERT INTO results(ptrid, offsetcount, moduleid, moduleoffset'+offsetlist+') values ('+ptrid+','+inttostr(p.offsetcount)+','+inttostr(p.modulenr)+','+inttostr(p.moduleoffset)+offsetvalues+')';
 
         sqlite3.ExecuteDirect(s);
 
         if j mod 50=0 then
         begin
           progressbar1.position:=ceil(j / Pointerscanresults.count * 100);
-          progressbar1.Update;
+          application.ProcessMessages;
         end;
         inc(j);
       end;
@@ -1529,7 +1581,7 @@ procedure Tfrmpointerscanner.miImportFromsqliteClick(Sender: TObject);
 var
   l: TStringList;
   f: TfrmSelectionList;
-  name, filename: string;
+  name, filename, offsetlist: string;
 
   query2: TSQLQuery;
 
@@ -1563,9 +1615,9 @@ var
 
   oldpb: string;
 begin
-  if (sdSqlite.execute) then
+  if (odSqlite.execute) then
   begin
-    filename:=utf8toansi(sdsqlite.FileName);
+    filename:=utf8toansi(odsqlite.FileName);
 
     SQLite3.DatabaseName:=filename;
     sqlite3.Connected:=true;
@@ -1598,6 +1650,7 @@ begin
         exit;
     finally
       f.free;
+      l.free;
     end;
 
     savedialog1.FileName:=name;
@@ -1707,6 +1760,16 @@ begin
         ptrfile.WriteByte(0);
       end;
 
+      l:=tstringlist.create;
+      sqlite3.GetFieldNames('pointerfiles', l);
+      if (l.indexof('DidBaseRangeScan')<>-1) and (SQLQuery.FieldByName('DidBaseRangeScan').AsInteger=1) then
+      begin
+        ptrfile.WriteByte(1);
+        ptrfile.WriteQWord(SQLQuery.FieldByName('BaseScanRange').AsLargeInt);
+      end
+      else
+        ptrfile.WriteByte(0);
+      l.free;
 
     finally
       if ptrfile<>nil then
@@ -1750,7 +1813,22 @@ begin
     sqlquery.Active:=false;
 
 
-    sqlquery.sql.text:='select * from results where ptrid='+ptrid;
+    offsetlist:='';
+
+    if messagedlg(rsPSImporting_sortOrNot, mtConfirmation, [mbyes, mbno], 0) = mryes then
+      if messagedlg(rsPSImporting_sortMethod, mtConfirmation, [mbyes, mbno], 0) = mryes then
+      begin
+        for i:=maxlevel downto 1 do offsetlist:=offsetlist+'+ coalesce(offset'+inttostr(i)+',0)';
+        sqlquery.sql.text:='select *,(0'+offsetlist+') as suma from results where ptrid='+ptrid+' order by offsetcount, suma, moduleid';
+      end
+      else
+      begin
+        for i:=maxlevel downto 1 do offsetlist:=offsetlist+', offset'+inttostr(i);
+        sqlquery.sql.text:='select * from results where ptrid='+ptrid+' order by offsetcount, moduleid'+offsetlist;
+      end
+    else
+      sqlquery.sql.text:='select * from results where ptrid='+ptrid;
+
     SQLQuery.active:=true;
     try
       resultptrfile:=tfilestream.create(filename+'.results.0', fmcreate);
@@ -1834,7 +1912,7 @@ begin
         if importedcount mod 25=0 then
         begin
           progressbar1.Position:=ceil(importedcount/totalcount*100);
-          progressbar1.update;
+          application.ProcessMessages;
         end;
       end;
     finally
@@ -1848,7 +1926,7 @@ begin
         freeandnil(resultptrfile);
 
       if compressedEntry<>nil then
-        freemem(compressedEntry);
+        freememandnil(compressedEntry);
     end;
 
 
@@ -1859,8 +1937,11 @@ begin
 end;
 
 procedure Tfrmpointerscanner.miCreatePSNnodeClick(Sender: TObject);
+{$ifdef windows}
 var f: TfrmSetupPSNNode;
+  {$endif}
 begin
+  {$ifdef windows}
   f:=TfrmSetupPSNNode.Create(self);
   if f.showmodal=mrok then
   begin
@@ -1910,6 +1991,7 @@ begin
   end;
 
   f.free;
+  {$endif}
 end;
 
 procedure Tfrmpointerscanner.miInfoPopupPopup(Sender: TObject);
@@ -1935,11 +2017,18 @@ end;
 
 
 procedure Tfrmpointerscanner.FormDestroy(Sender: TObject);
-var x: array of integer;
+var reg: Tregistry;
 begin
-  setlength(x,1);
-  x[0]:=cbtype.itemindex;
-  SaveFormPosition(self, x);
+  SaveFormPosition(self);
+
+  reg:=tregistry.create;
+  if reg.OpenKey('\Software\'+strCheatEngine+'\Pointerscan', true) then
+  begin
+    reg.writeInteger('Display Type', cbtype.itemindex);
+    reg.writeBool('Display Signed',miSigned.checked);
+    reg.writeBool('Display Hexadecimal',miHexadecimal.checked);
+  end;
+  reg.free;
 end;
 
 procedure Tfrmpointerscanner.btnStopRescanLoopClick(Sender: TObject);
@@ -2004,6 +2093,21 @@ begin
   debug_nonresponsiveconnection:=cbNonResponsive.checked;
 end;
 
+procedure Tfrmpointerscanner.cbTypeDropDown(Sender: TObject);
+var i: integer;
+begin
+  //fill in custom types
+  while cbtype.Items.Count>8 do
+  begin
+    cbtype.Items.Delete(8); //delete the ones in the list
+  end;
+
+  for i:=0 to customtypes.Count-1 do
+    cbtype.Items.AddObject(TcustomType(customtypes[i]).name,customtypes[i]);
+
+  cbtype.DropDownCount:=max(12, cbtype.Items.Count);
+end;
+
 
 procedure Tfrmpointerscanner.FormResize(Sender: TObject);
 begin
@@ -2020,10 +2124,19 @@ begin
   i:=max(i, pnlControl.ClientWidth-2);
   btnIncreaseThreadCount.width:=i;
   btnDecreaseThreadCount.width:=i;
+
+  if loadedFormPosition=false then
+  begin
+    width:=MainForm.width;
+    height:=mainform.height;
+
+    loadedFormPosition:=true;
+  end;
 end;
 
 procedure Tfrmpointerscanner.lvResultsColumnClick(Sender: TObject; Column: TListColumn);
 //Using dark byte's super secret "Screw this, I'll just split it into chunks" algorithm
+{$ifdef windows}
 var
   c: integer;
   frmSortPointerlist: TfrmSortPointerlist;
@@ -2036,7 +2149,10 @@ var
   newname: string;
   i: integer;
   s: string;
+  {$endif}
 begin
+
+  {$ifdef windows}
   c:=column.index;
   if c=lvResults.ColumnCount-1 then exit; //raise exception.create('The result/value list is unsortable');
   if Pointerscanresults.count<=1 then exit; //don't even bother
@@ -2076,6 +2192,7 @@ begin
   oldlist.free;
 
   frmSortPointerlist.free;
+  {$endif}
 end;
 
 procedure Tfrmpointerscanner.Timer2Timer(Sender: TObject);
@@ -2125,7 +2242,10 @@ var i,j: integer;
     sl: TStringList;
 begin
   if lvResults.Visible then
+  begin
+    lvResults.Update;
     lvResults.repaint;
+  end;
 
   try
     //collect data and then update the treeview
@@ -2424,7 +2544,7 @@ begin
 
 end;
 
-procedure Tfrmpointerscanner.OpenPointerfile(filename: string);
+procedure Tfrmpointerscanner.OpenPointerfile(filename: widestring);
 var
   i: integer;
 
@@ -2498,7 +2618,7 @@ end;
 procedure Tfrmpointerscanner.Open1Click(Sender: TObject);
 begin
   if opendialog1.Execute then
-    OpenPointerfile(utf8toansi(Opendialog1.filename));
+    OpenPointerfile(UTF8ToString(Opendialog1.filename));
 end;
 
 function TRescanWorker.isMatchToValue(p:pointer): boolean;
@@ -2723,50 +2843,55 @@ begin
               if filterOutAccessible and rangeAndStartOffsetsEndOffsets_Valid then
                 valid:=not valid;
 
+
+
               if (not filterOutAccessible) and valid then
               begin
-                if novaluecheck or forvalue then
+                if pointermap=nil then //if no pointermap is used, check the value or at least if it's readable
                 begin
-                  //evaluate the address (address must be accessible)
-                  if rescanhelper.ispointer(address) then
+                  if novaluecheck or forvalue then
                   begin
-
-                    if novaluecheck=false then //check if the value is correct
+                    //evaluate the address (address must be accessible)
+                    if rescanhelper.ispointer(address) then
                     begin
 
-                      value:=nil;
-                      pi:=rescanhelper.FindPage(address shr 12);
-                      if pi.data<>nil then
+                      if novaluecheck=false then //check if the value is correct
                       begin
-                        i:=address and $fff;
-                        j:=min(valuesize, 4096-i);
 
-                        copymemory(tempvalue, @pi.data[i], j);
-
-                        if j<valuesize then
+                        value:=nil;
+                        pi:=rescanhelper.FindPage(address shr 12);
+                        if pi.data<>nil then
                         begin
-                          pi:=rescanhelper.FindPage((address shr 12)+1);
-                          if pi.data<>nil then
-                            copymemory(pointer(ptruint(tempvalue)+j), @pi.data[0], valuesize-j)
-                          else
-                            valid:=false;
-                        end;
-                      end
-                      else
-                        valid:=false;
+                          i:=address and $fff;
+                          j:=min(valuesize, 4096-i);
 
-                      value:=tempvalue;
+                          copymemory(tempvalue, @pi.data[i], j);
 
-                      if (not valid) or (value=nil) or (not isMatchToValue(value)) then
-                        valid:=false; //invalid value
-                    end;
-                  end else valid:=false; //unreadable address
-                end
-                else
-                begin
-                  //check if the address matches
-                  if address<>PointerAddressToFind then
-                    valid:=false;
+                          if j<valuesize then
+                          begin
+                            pi:=rescanhelper.FindPage((address shr 12)+1);
+                            if pi.data<>nil then
+                              copymemory(pointer(ptruint(tempvalue)+j), @pi.data[0], valuesize-j)
+                            else
+                              valid:=false;
+                          end;
+                        end
+                        else
+                          valid:=false;
+
+                        value:=tempvalue;
+
+                        if (not valid) or (value=nil) or (not isMatchToValue(value)) then
+                          valid:=false; //invalid value
+                      end;
+                    end else valid:=false; //unreadable address
+                  end
+                  else
+                  begin
+                    //check if the address matches
+                    if address<>PointerAddressToFind then
+                      valid:=false;
+                  end;
                 end;
               end;
 
@@ -2816,7 +2941,7 @@ begin
 
       flushresults;
     finally
-      freemem(tempvalue);
+      freememandnil(tempvalue);
 
       if tempfile<>nil then
         freeandnil(tempfile);
@@ -2863,7 +2988,7 @@ var
 
   blocksize: qword;
 
-  threadhandles: array of Thandle;
+  threadhandles: array of TThreadID;
   result: tfilestream;
 
 
@@ -2881,6 +3006,8 @@ var
   oldfiles: TStringList;
 
   ml: Tstringlist;
+
+  alldone: boolean;
 
 begin
   progressbar.Min:=0;
@@ -2993,8 +3120,7 @@ begin
 
 
 
-
-
+    {$ifdef windows}
     while WaitForMultipleObjects(rescanworkercount, @threadhandles[0], true, 250) = WAIT_TIMEOUT do      //wait
     begin
       //query all threads the number of pointers they have evaluated
@@ -3004,8 +3130,26 @@ begin
 
       progressbar.Position:=PointersEvaluated div (TotalPointersToEvaluate div 100);
     end;
+    {$else}
+    repeat
+      alldone:=true;
+      PointersEvaluated:=0;
+      for i:=0 to rescanworkercount-1 do
+      begin
+        inc(PointersEvaluated,rescanworkers[i].evaluated);
+        if rescanworkers[i].Finished=false then
+          alldone:=false;
+      end;
+
+      progressbar.Position:=PointersEvaluated div (TotalPointersToEvaluate div 100);
+      if not alldone then sleep(250);
+
+    until alldone;
+
+    {$endif}
 
     //no timeout, so finished or crashed
+
 
     //destroy workers
     for i:=0 to rescanworkercount-1 do
@@ -3489,6 +3633,21 @@ var
   x: array of integer;
   reg: tregistry;
 begin
+  cbtype.Onchange:=nil;
+  cbtype.Items.clear;
+
+  cbtype.Items.Add(rs_vtByte);
+  cbtype.Items.Add(rs_vtWord);
+  cbtype.Items.Add(rs_vtDword);
+  cbtype.Items.Add(rs_vtQword);
+  cbtype.Items.Add(rs_vtSingle);
+  cbtype.Items.Add(rs_vtDouble);
+  cbtype.Items.Add(rs_vtString);
+  cbtype.Items.Add(rs_vtWidestring);
+
+  cbtype.itemindex:=2;
+
+
   {$ifdef cpu64}
     SQLiteLibraryName:='.\win64\sqlite3.dll';
   {$else}
@@ -3505,12 +3664,25 @@ begin
   lvResults.Visible:=true;
 
   setlength(x,1);
-  if loadformposition(self,x) then
-    cbtype.itemindex:=x[0];
+  loadedFormPosition:=loadformposition(self);
+
 
   reg:=TRegistry.Create;
 
+  if reg.OpenKey('\Software\'+strCheatEngine+'\Pointerscan', false) then
+  begin
+    if reg.ValueExists('Display Type') then
+      cbtype.itemindex:=reg.ReadInteger('Display Type');
+
+    if reg.ValueExists('Display Signed') then
+      miSigned.checked:=reg.ReadBool('Display Signed');
+
+    if reg.ValueExists('Display Hexadecimal') then
+      miHexadecimal.checked:=reg.readBool('Display Hexadecimal');
+  end;
+
   reg.free;
+  cbtype.onchange:=cbTypeChange;
 end;
 
 procedure Tfrmpointerscanner.lvResultsData(Sender: TObject;
@@ -3520,12 +3692,17 @@ var
   i: integer;
   s: string;
   check: boolean; 
-  doublevalue: double;
+{  doublevalue: double;
+  bytevalue: byte absolute doublevalue;
   dwordvalue: dword absolute doublevalue; //make sure of the same memory
-  floatvalue: single absolute doublevalue;
+  floatvalue: single absolute doublevalue;}
   x: ptruint;
 
   address: ptrUint;
+
+
+  vartype: TVariableType;
+  ct: TCustomType=nil;
 
 begin
   if Pointerscanresults<>nil then
@@ -3545,7 +3722,12 @@ begin
       end;
 
       for i:=p.offsetcount-1 downto 0 do
-        item.SubItems.Add(inttohex(p.offsets[i],1));
+      begin
+        if p.offsets[i]<0 then
+          item.SubItems.Add('-'+inttohex(-p.offsets[i],1))
+        else
+          item.SubItems.Add(inttohex(p.offsets[i],1));
+      end;
 
       for i:=p.offsetcount to Pointerscanresults.offsetCount-1 do
         item.SubItems.Add('');
@@ -3553,11 +3735,36 @@ begin
       if address=0 then
         item.SubItems.Add('-') else
       begin
-        s:=inttohex(address,8);
+        vartype:=vtDword;
+        case cbtype.itemindex of
+          0: vartype:=vtByte;
+          1: vartype:=vtWord;
+          2: vartype:=vtDWord;
+          3: vartype:=vtQword;
+          4: vartype:=vtSingle;
+          5: vartype:=vtDouble;
+          6: vartype:=vtString;
+          7: vartype:=vtUnicodeString;
+        end;
+
+        if cbtype.itemindex>=8 then
+        begin
+          vartype:=vtCustom;
+          ct:=TCustomType(cbtype.Items.Objects[cbtype.itemindex]);
+        end;
+
+        s:=inttohex(address,8) + ' = ' + readAndParseAddress(address, vartype, ct,miHexadecimal.checked, miSigned.checked, 128);
+
+       {
+
         if cbType.ItemIndex<>-1 then
         begin
           s:=s+' = ';
-          if cbType.ItemIndex=2 then
+
+          case cbType.ItemIndex of
+
+          end;
+          if cbType.ItemIndex in [3,8] then
             check:=readprocessmemory(processhandle, pointer(address),@doublevalue,8,x) else
             check:=readprocessmemory(processhandle, pointer(address),@doublevalue,4,x);
 
@@ -3569,7 +3776,7 @@ begin
               2: s:=s+floattostr(doublevalue);
             end;
           end else s:=s+'??';
-        end;
+        end;      }
 
         item.SubItems.Add(s);
 
@@ -3600,6 +3807,8 @@ var
   c: integer;
 
   vtype: TVariableType;
+  ct: TcustomType;
+  ctname: string;
 begin
   if lvResults.ItemIndex<>-1 then
   begin
@@ -3613,18 +3822,36 @@ begin
       for i:=li.SubItems.Count-2 downto 0 do
       begin
         if li.SubItems[i]='' then continue;
-        offsets[c]:=strtoint('$'+li.SubItems[i]);
+        if li.SubItems[i][1]='-' then
+          offsets[c]:=-strtoint('$'+copy(li.SubItems[i],2,length(li.SubItems[i])))
+        else
+          offsets[c]:=strtoint('$'+li.SubItems[i]);
+
         inc(c);
       end;
 
-
-      case cbType.ItemIndex of
-        1: vtype:=vtSingle;
-        2: vtype:=vtDouble;
-        else vtype:=vtDword;
+      vtype:=vtDword;
+      ctname:='';
+      case cbtype.itemindex of
+        0: vtype:=vtByte;
+        1: vtype:=vtWord;
+        2: vtype:=vtDWord;
+        3: vtype:=vtQword;
+        4: vtype:=vtSingle;
+        5: vtype:=vtDouble;
+        6: vtype:=vtString;
+        7: vtype:=vtUnicodeString;
       end;
 
-      mainform.addresslist.addaddress(rsPointerscanResult, t, offsets, c, vtype);
+      if cbtype.itemindex>=8 then
+      begin
+        vtype:=vtCustom;
+        ct:=TCustomType(cbtype.Items.Objects[cbtype.itemindex]);
+        ctname:=ct.name;
+      end;
+
+
+      mainform.addresslist.addaddress(rsPointerscanResult, t, offsets, c, vtype, ctname);
     except
 
     end;

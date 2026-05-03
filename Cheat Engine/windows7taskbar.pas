@@ -1,9 +1,10 @@
 unit windows7taskbar;
 
 {$MODE Delphi}
-
+{$WARN 5044 off : Symbol "$1" is not portable}   //Windows 7 taskbar, says enough
 interface
 
+{$IFDEF windows}
 //credits to http://alex.ciobanu.org/?p=215
 
 uses Forms,win32int, win32proc;
@@ -13,8 +14,10 @@ type
 
   procedure SetProgressState(const AState: TTaskBarProgressState);
   procedure SetProgressValue(const ACurrent, AMax: UInt64);
+{$ENDIF}
 
 implementation
+{$IFDEF windows}
 uses
   ComObj, Types, cefuncproc;
 
@@ -86,7 +89,9 @@ begin
   if WindowsVersion<wv7 then exit;
 
   { Make sure that COM is initialized }
-  CoInitializeEx(nil, 0);
+  //CoInitializeEx(nil, 0);
+  if assigned(InitProc) then
+    TProcedure(InitProc)();
 
   try
     { Obtain an IUnknown }
@@ -112,5 +117,6 @@ initialization
 finalization
   { Force interface release }
   GlobalTaskBarInterface := nil;
+{$ENDIF}
 
 end.

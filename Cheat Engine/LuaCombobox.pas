@@ -5,7 +5,10 @@ unit LuaCombobox;
 interface
 
 uses
-  Classes, SysUtils, lua, lualib, lauxlib, controls, StdCtrls, ExtCtrls, LuaWinControl;
+  {$ifdef windows}
+  windows,
+  {$endif}
+  Classes, SysUtils, lua, lualib, lauxlib, controls, StdCtrls, ExtCtrls, LuaWinControl, betterControls;
 
 procedure initializeLuaCombobox;
 
@@ -98,6 +101,49 @@ begin
   result:=1;
 end;
 
+function combobox_getDroppedDown(L: PLua_State): integer; cdecl;
+var
+  combobox: TCustomcombobox;
+begin
+  combobox:=luaclass_getClassObject(L);
+  lua_pushboolean(L, combobox.DroppedDown);
+  result:=1;
+end;
+
+function combobox_setDroppedDown(L: PLua_State): integer; cdecl;
+var
+  combobox: TCustomcombobox;
+  state: boolean;
+begin
+  result:=0;
+  combobox:=luaclass_getClassObject(L);
+  if lua_gettop(L)>=1 then
+    combobox.DroppedDown:=lua_toboolean(L,1);
+end;
+
+function combobox_getExtraWidth(L: PLua_State): integer; cdecl;
+var
+  combobox: TCustomcombobox;
+  {$ifdef windows}
+  cbi: TComboboxInfo;
+  {$endif}
+  extrasize: integer;
+begin
+  combobox:=luaclass_getClassObject(L);
+
+  {$ifdef windows}
+  zeromemory(@cbi,sizeof(cbi));
+  cbi.cbSize:=sizeof(cbi);
+  if GetComboBoxInfo(combobox.handle, @cbi) then
+    extrasize:=cbi.rcButton.Right-cbi.rcButton.Left+cbi.rcItem.Left
+  else
+  {$endif}
+    extrasize:=16;
+
+  lua_pushinteger(L, extrasize);
+  result:=1;
+end;
+
 procedure comboBox_addMetaData(L: PLua_state; metatable: integer; userdata: integer );
 begin
   wincontrol_addMetaData(L, metatable, userdata);
@@ -108,9 +154,13 @@ begin
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getItemIndex', combobox_getItemIndex);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'setItemIndex', combobox_setItemIndex);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getCanvas', combobox_getCanvas);
+  luaclass_addClassFunctionToTable(L, metatable, userdata, 'getExtraWidth', combobox_getExtraWidth);
+
 
   luaclass_addPropertyToTable(L, metatable, userdata, 'Items', combobox_getItems, combobox_setItems);
   luaclass_addPropertyToTable(L, metatable, userdata, 'ItemIndex', combobox_getItemIndex, combobox_setItemIndex);
+  luaclass_addPropertyToTable(L, metatable, userdata, 'Canvas', combobox_getCanvas, nil);
+  luaclass_addPropertyToTable(L, metatable, userdata, 'DroppedDown', combobox_getDroppedDown, combobox_setDroppedDown);
 end;
 
 procedure initializeLuaCombobox;

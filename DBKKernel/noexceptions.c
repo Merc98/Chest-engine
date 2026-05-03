@@ -45,7 +45,7 @@ BOOL NoExceptions_Enter()
 		{
 			//initialize the list
 			MaxCPUCount = (int)KeQueryActiveProcessorCount(NULL);
-			cpustate = ExAllocatePoolWithTag(NonPagedPool, MaxCPUCount*sizeof(CPUSTATE), 'cece');
+			cpustate = ExAllocatePool(NonPagedPool, MaxCPUCount*sizeof(CPUSTATE));
 
 			if (cpustate)
 			{
@@ -61,8 +61,8 @@ BOOL NoExceptions_Enter()
 					{
 						//alloc failed, cleanup and quit
 						int j;
-						for (j = i - 1; i >= 0; i--)
-							ExFreePool(cpustate[i].NoExceptionVectorList);
+						for (j = i - 1; j >= 0; j--)
+							ExFreePool(cpustate[j].NoExceptionVectorList);
 
 						cpustate = NULL;
 						return FALSE;
@@ -158,13 +158,7 @@ BOOL NoExceptions_Enter()
 int NoExceptions_CopyMemory(PVOID Destination, PVOID Source, int size)
 {
 	BOOL EnteredNoExceptions = FALSE;
-	EFLAGS e = getEflags();
-
-	int r = 0;
-	
-	//DbgPrint("NoExceptions_CopyMemory. KeGetCurrentIrql()=%d HIGH_LEVEL=%d ", KeGetCurrentIrql(), HIGH_LEVEL);
-	
-	
+	int r;
 	
 	if (KeGetCurrentIrql() <= DISPATCH_LEVEL)
 	{

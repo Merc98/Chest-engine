@@ -22,9 +22,13 @@ resourcestring
   rs_vtSingle='Float';
   rs_vtDouble='Double';
   rs_vtString='String';
+  rs_vtWidestring='Widestring';
   rs_vtUnicodeString='Unicode String';
   rs_vtCodePageString='CodePage String';
   rs_vtPointer='Pointer';
+  {$ifdef NESTEDSTRUCTURES}
+  rs_vtPointerOrNested='Pointer or Nested Structure';
+  {$endif}
   rs_vtAutoAssembler='Auto Assembler Script';
   rs_vtCustom='Custom';
   rs_vtGrouped='Grouped';
@@ -43,6 +47,9 @@ const
   eng_vtUnicodeString='Unicode String';
   eng_vtCodePageString='CodePage String';
   eng_vtPointer='Pointer';
+  {$ifdef NESTEDSTRUCTURES}
+  end_vtPointerOrNested='Pointer or Nested Structure';
+  {$endif}
   eng_vtAutoAssembler='Auto Assembler Script';
   eng_vtCustom='Custom';
   eng_vtGrouped='Grouped';

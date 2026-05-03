@@ -5,8 +5,14 @@ unit frmSetupPSNNodeUnit;
 interface
 
 uses
-  windows, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, math, registry;
+  {$ifdef darwin}
+  macport, lclintf,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
+  StdCtrls, ExtCtrls, math, registry, betterControls;
 
 type
 
@@ -71,7 +77,7 @@ var
 
 implementation
 
-uses CEFuncProc;
+uses CEFuncProc, mainunit2;
 
 {$R *.lfm}
 
@@ -99,27 +105,33 @@ begin
 
   getmem(compname, 256);
   compnamesize:=255;
+
+  {$IFDEF windows}
   if GetComputerName(compname, compnamesize) then
   begin
     compname[compnamesize]:=#0;
     edtPublicname.text:=compname;
   end
   else
+  {$ENDIF}
     edtPublicname.text:=GetUserNameFromPID(GetProcessID)+'-'+inttohex(random(65536),1);
 
 
-  freemem(compname);
+  FreeMemAndNil(compname);
 
   reg:=tregistry.Create;
   Reg.RootKey := HKEY_CURRENT_USER;
   try
-    if Reg.OpenKey('\Software\Cheat Engine\PSNNodeConfig', false) then
+    if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeConfig', false) then
     begin
       if reg.ValueExists('ThreadCount') then
         edtThreadCount.Text:=IntToStr(reg.ReadInteger('ThreadCount'));
 
       if reg.ValueExists('ThreadPriority') then
         cbPriority.ItemIndex:=reg.ReadInteger('ThreadPriority');
+
+      if reg.ValueExists('ListenPort') then
+        edtPort.Text:=reg.ReadInteger('ListenPort').ToString;
 
       if reg.ValueExists('PublicName') then
         edtPublicname.text:=reg.ReadString('PublicName');
@@ -225,10 +237,11 @@ begin
   reg:=tregistry.Create;
   Reg.RootKey := HKEY_CURRENT_USER;
   try
-    if Reg.OpenKey('\Software\Cheat Engine\PSNNodeConfig', true) then
+    if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeConfig', true) then
     begin
       reg.WriteInteger('ThreadCount', threadcount);
       reg.WriteInteger('ThreadPriority', cbPriority.itemindex);
+      reg.WriteInteger('ListenPort', listenport);
       reg.WriteString('PublicName', edtPublicname.text);
       reg.WriteBool('AllowIncomingParents', cbAllowParents.Checked);
       reg.WriteString('ParentPassword', edtParentPassword.text);

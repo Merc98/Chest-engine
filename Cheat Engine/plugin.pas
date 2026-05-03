@@ -4,8 +4,15 @@ unit plugin;
 
 interface
 
-uses lclproc, windows, classes, sysutils,LCLIntf,checklst,menus,dialogs,CEFuncProc,
-     NewKernelHandler, graphics, syncobjs, commonTypeDefs;
+uses lclproc,
+     {$ifdef darwin}
+     macport, dynlibs,
+     {$endif}
+     {$ifdef windows}
+     windows,
+     {$endif}
+     classes, sysutils,LCLIntf,checklst,menus,dialogs,CEFuncProc,
+     NewKernelHandler, graphics, syncobjs, commonTypeDefs, betterControls;
 
 const CurrentPluginVersion=6;
 
@@ -18,186 +25,206 @@ type TPluginVersion = record
 end;
 type PPluginVersion=^TPluginVersion;
 
-type TExportedFunctions5 = record
-  sizeofExportedFunctions: integer;
-  showmessage: pointer;
-  registerfunction: pointer;
-  unregisterfunction: pointer;
-  OpenedProcessID: ^dword;
-  OpenedProcessHandle: ^thandle;
+type
+  TPluginDotNetInitResult=packed record
+    name: pchar;
+    GetVersion: pointer;
+    EnablePlugin: pointer;
+    DisablePlugin: pointer;
+    version: dword;
 
-  GetMainWindowHandle: pointer;
-  AutoAssemble: pointer;
-  assembler: pointer;
-  disassembler: pointer;
-  ChangeRegistersAtAddress: pointer;
-  InjectDLL: pointer;
-  freezemem: pointer;
-  unfreezemem: pointer;
-  fixmem: pointer;
-  processlist: pointer;
-  reloadsettings: pointer;
-  getaddressfrompointer: pointer;
+  end;
 
-  //pointers to the address that contains the pointers to the functions
-  ReadProcessMemory     :pointer;
-  WriteProcessMemory    :pointer;
-  GetThreadContext      :pointer;
-  SetThreadContext      :pointer;
-  SuspendThread         :pointer;
-  ResumeThread          :pointer;
-  OpenProcess           :pointer;
-  WaitForDebugEvent     :pointer;
-  ContinueDebugEvent    :pointer;
-  DebugActiveProcess    :pointer;
-  StopDebugging         :pointer;
-  StopRegisterChange    :pointer;
-  VirtualProtect        :pointer;
-  VirtualProtectEx      :pointer;
-  VirtualQueryEx        :pointer;
-  VirtualAllocEx        :pointer;
-  CreateRemoteThread    :pointer;
-  OpenThread            :pointer;
-  GetPEProcess          :pointer;
-  GetPEThread           :pointer;
-  GetThreadsProcessOffset:pointer;
-  GetThreadListEntryOffset:pointer;
-  GetProcessnameOffset  :pointer;
-  GetDebugportOffset    :pointer;
-  GetPhysicalAddress    :pointer;
-  ProtectMe             :pointer;
-  GetCR4                :pointer;
-  GetCR3                :pointer;
-  SetCR3                :pointer;
-  GetSDT                :pointer;
-  GetSDTShadow          :pointer;
-  setAlternateDebugMethod: pointer;
-  getAlternateDebugMethod: pointer;
-  DebugProcess          :pointer;
-  ChangeRegOnBP         :pointer;
-  RetrieveDebugData     :pointer;
-  StartProcessWatch     :pointer;
-  WaitForProcessListData:pointer;
-  GetProcessNameFromID  :pointer;
-  GetProcessNameFromPEProcess:pointer;
-  KernelOpenProcess       :pointer;
-  KernelReadProcessMemory :pointer;
-  KernelWriteProcessMemory:pointer;
-  KernelVirtualAllocEx    :pointer;
-  IsValidHandle           :pointer;
-  GetIDTCurrentThread     :pointer;
-  GetIDTs                 :pointer;
-  MakeWritable            :pointer;
-  GetLoadedState          :pointer;
-  DBKSuspendThread        :pointer;
-  DBKResumeThread         :pointer;
-  DBKSuspendProcess       :pointer;
-  DBKResumeProcess        :pointer;
-  KernelAlloc             :pointer;
-  GetKProcAddress         :pointer;
-  CreateToolhelp32Snapshot:pointer;
-  Process32First          :pointer;
-  Process32Next           :pointer;
-  Thread32First           :pointer;
-  Thread32Next            :pointer;
-  Module32First           :pointer;
-  Module32Next            :pointer;
-  Heap32ListFirst         :pointer;
-  Heap32ListNext          :pointer;
+  TExportedFunctionsDotNetV1=record
+    sizeofExportedFunctions: integer;
+    GetLuaState: pointer;  //rest is kinda obsolete with lua, e.g hooking happens with AA scripts in the local CE
+    LuaRegister: pointer;
+    LuaPushClassInstance: pointer;
+    ProcessMessages: pointer; //in case it's a messy plugin that wants to run in the main thread
+    CheckSynchronize: pointer;
+  end;
 
-  //advanced for delphi 7 enterprise dll programmers only
-  mainform                :pointer;
-  memorybrowser           :pointer;
+  TExportedFunctions5 = record
+    sizeofExportedFunctions: integer;
+    showmessage: pointer;
+    registerfunction: pointer;
+    unregisterfunction: pointer;
+    OpenedProcessID: ^dword;
+    OpenedProcessHandle: ^thandle;
 
-  //version 2 extension:
-  sym_nameToAddress         : pointer;
-  sym_addressToName         : pointer;
-  sym_generateAPIHookScript : pointer;
+    GetMainWindowHandle: pointer;
+    AutoAssemble: pointer;
+    assembler: pointer;
+    disassembler: pointer;
+    ChangeRegistersAtAddress: pointer;
+    InjectDLL: pointer;
+    freezemem: pointer;
+    unfreezemem: pointer;
+    fixmem: pointer;
+    processlist: pointer;
+    reloadsettings: pointer;
+    getaddressfrompointer: pointer;
 
-  //version 3 extension
-  loadDBK32         : pointer;
-  loaddbvmifneeded  : pointer;
-  previousOpcode    : pointer;
-  nextOpcode        : pointer;
-  disassembleEx     : pointer;
-  loadModule        : pointer;
-  aa_AddExtraCommand: pointer;
-  aa_RemoveExtraCommand: pointer;
+    //pointers to the address that contains the pointers to the functions
+    ReadProcessMemory     :pointer;
+    WriteProcessMemory    :pointer;
+    GetThreadContext      :pointer;
+    SetThreadContext      :pointer;
+    SuspendThread         :pointer;
+    ResumeThread          :pointer;
+    OpenProcess           :pointer;
+    WaitForDebugEvent     :pointer;
+    ContinueDebugEvent    :pointer;
+    DebugActiveProcess    :pointer;
+    StopDebugging         :pointer;
+    StopRegisterChange    :pointer;
+    VirtualProtect        :pointer;
+    VirtualProtectEx      :pointer;
+    VirtualQueryEx        :pointer;
+    VirtualAllocEx        :pointer;
+    CreateRemoteThread    :pointer;
+    OpenThread            :pointer;
+    GetPEProcess          :pointer;
+    GetPEThread           :pointer;
+    GetThreadsProcessOffset:pointer;
+    GetThreadListEntryOffset:pointer;
+    GetProcessnameOffset  :pointer;
+    GetDebugportOffset    :pointer;
+    GetPhysicalAddress    :pointer;
+    ProtectMe             :pointer;
+    GetCR4                :pointer;
+    GetCR3                :pointer;
+    SetCR3                :pointer;
+    GetSDT                :pointer;
+    GetSDTShadow          :pointer;
+    setAlternateDebugMethod: pointer;
+    getAlternateDebugMethod: pointer;
+    DebugProcess          :pointer;
+    ChangeRegOnBP         :pointer;
+    RetrieveDebugData     :pointer;
+    StartProcessWatch     :pointer;
+    WaitForProcessListData:pointer;
+    GetProcessNameFromID  :pointer;
+    GetProcessNameFromPEProcess:pointer;
+    KernelOpenProcess       :pointer;
+    KernelReadProcessMemory :pointer;
+    KernelWriteProcessMemory:pointer;
+    KernelVirtualAllocEx    :pointer;
+    IsValidHandle           :pointer;
+    GetIDTCurrentThread     :pointer;
+    GetIDTs                 :pointer;
+    MakeWritable            :pointer;
+    GetLoadedState          :pointer;
+    DBKSuspendThread        :pointer;
+    DBKResumeThread         :pointer;
+    DBKSuspendProcess       :pointer;
+    DBKResumeProcess        :pointer;
+    KernelAlloc             :pointer;
+    GetKProcAddress         :pointer;
+    CreateToolhelp32Snapshot:pointer;
+    Process32First          :pointer;
+    Process32Next           :pointer;
+    Thread32First           :pointer;
+    Thread32Next            :pointer;
+    Module32First           :pointer;
+    Module32Next            :pointer;
+    Heap32ListFirst         :pointer;
+    Heap32ListNext          :pointer;
 
-  //version 4 extension
-  createTableEntry: pointer;
-  getTableEntry: pointer;
-  memrec_setDescription: pointer;
-  memrec_getDescription: pointer ;
-  memrec_getAddress: pointer;
-  memrec_setAddress: pointer;
-  memrec_getType: pointer;
-  memrec_setType: pointer;
-  memrec_getValue: pointer;
-  memrec_setValue: pointer;
-  memrec_getScript: pointer;
-  memrec_setScript: pointer;
-  memrec_isfrozen: pointer;
-  memrec_freeze: pointer;
-  memrec_unfreeze: pointer;
-  memrec_setColor: pointer;
-  memrec_appendtoentry: pointer;
-  memrec_delete: pointer;
+    //advanced for delphi 7 enterprise dll programmers only
+    mainform                :pointer;
+    memorybrowser           :pointer;
 
-  getProcessIDFromProcessName: pointer;
-  openProcessEx: pointer;
-  debugProcessEx: pointer;
-  pause: pointer;
-  unpause: pointer;
+    //version 2 extension:
+    sym_nameToAddress         : pointer;
+    sym_addressToName         : pointer;
+    sym_generateAPIHookScript : pointer;
 
-  debug_setBreakpoint: pointer;
-  debug_removeBreakpoint: pointer;
-  debug_continueFromBreakpoint: pointer;
+    //version 3 extension
+    loadDBK32         : pointer;
+    loaddbvmifneeded  : pointer;
+    previousOpcode    : pointer;
+    nextOpcode        : pointer;
+    disassembleEx     : pointer;
+    loadModule        : pointer;
+    aa_AddExtraCommand: pointer;
+    aa_RemoveExtraCommand: pointer;
 
-  closeCE: pointer;
-  hideAllCEWindows: pointer;
-  unhideMainCEwindow: pointer;
-  createForm: pointer;
-  form_centerScreen: pointer;
-  form_hide: pointer;
-  form_show: pointer;
-  form_onClose: pointer;
+    //version 4 extension
+    createTableEntry: pointer;
+    getTableEntry: pointer;
+    memrec_setDescription: pointer;
+    memrec_getDescription: pointer ;
+    memrec_getAddress: pointer;
+    memrec_setAddress: pointer;
+    memrec_getType: pointer;
+    memrec_setType: pointer;
+    memrec_getValue: pointer;
+    memrec_setValue: pointer;
+    memrec_getScript: pointer;
+    memrec_setScript: pointer;
+    memrec_isfrozen: pointer;
+    memrec_freeze: pointer;
+    memrec_unfreeze: pointer;
+    memrec_setColor: pointer;
+    memrec_appendtoentry: pointer;
+    memrec_delete: pointer;
 
-  createPanel: pointer;
-  createGroupBox: pointer;
-  createButton: pointer;
-  createImage: pointer;
-  image_loadImageFromFile: pointer;
-  image_transparent: pointer;
-  image_stretch: pointer;
+    getProcessIDFromProcessName: pointer;
+    openProcessEx: pointer;
+    debugProcessEx: pointer;
+    pause: pointer;
+    unpause: pointer;
 
-  createLabel: pointer;
-  createEdit: pointer;
-  createMemo: pointer;
-  createTimer: pointer;
-  timer_setInterval: pointer;
-  timer_onTimer: pointer;
-  control_setCaption: pointer;
-  control_getCaption: pointer;
-  control_setPosition: pointer;
-  control_getX: pointer;
-  control_getY: pointer;
-  control_setSize: pointer;
-  control_getWidth: pointer;
-  control_getHeight: pointer;
-  control_setAlign: pointer;
-  control_onClick: pointer;
+    debug_setBreakpoint: pointer;
+    debug_removeBreakpoint: pointer;
+    debug_continueFromBreakpoint: pointer;
 
-  object_destroy: pointer;
-  messageDialog: pointer;
-  speedhack_setSpeed: pointer;
+    closeCE: pointer;
+    hideAllCEWindows: pointer;
+    unhideMainCEwindow: pointer;
+    createForm: pointer;
+    form_centerScreen: pointer;
+    form_hide: pointer;
+    form_show: pointer;
+    form_onClose: pointer;
 
-  //version 5
-  ExecuteKernelCode: pointer;
-  UserdefinedInterruptHook: pointer;
-  GetLuaState: pointer;
-  MainThreadCall: pointer;
-end;
+    createPanel: pointer;
+    createGroupBox: pointer;
+    createButton: pointer;
+    createImage: pointer;
+    image_loadImageFromFile: pointer;
+    image_transparent: pointer;
+    image_stretch: pointer;
+
+    createLabel: pointer;
+    createEdit: pointer;
+    createMemo: pointer;
+    createTimer: pointer;
+    timer_setInterval: pointer;
+    timer_onTimer: pointer;
+    control_setCaption: pointer;
+    control_getCaption: pointer;
+    control_setPosition: pointer;
+    control_getX: pointer;
+    control_getY: pointer;
+    control_setSize: pointer;
+    control_getWidth: pointer;
+    control_getHeight: pointer;
+    control_setAlign: pointer;
+    control_onClick: pointer;
+
+    object_destroy: pointer;
+    messageDialog: pointer;
+    speedhack_setSpeed: pointer;
+
+    //version 5
+    ExecuteKernelCode: pointer;
+    UserdefinedInterruptHook: pointer;
+    GetLuaState: pointer;
+    MainThreadCall: pointer;
+  end;
+
 type PExportedFunctions5 = ^TExportedFunctions5;
 
 type TExportedFunctions = TExportedFunctions5; //<----adjust on new version
@@ -826,6 +853,7 @@ type TPlugin = record
   hmodule: thandle;
   name: string;
   pluginversion: integer;
+  dotnet: boolean;
   enabled: boolean;
   GetVersion: TGetVersion;
   EnablePlugin: TInitializePlugin;
@@ -848,6 +876,8 @@ type TPluginHandler=class
     pluginCS: TCriticalSection;
     plugins: array of TPlugin;
     function GetDLLFilePath(pluginid: integer):string;
+    function DotNetPluginGetPluginName(dllname: string): string;
+    function DotNetLoadPlugin(dllname:string):integer;
   public
     function GetPluginID(dllname:string):integer;
     function GetPluginName(dllname:string):string;
@@ -869,15 +899,23 @@ type TPluginHandler=class
     destructor destroy; override;
 end;
 
+
+
+
 var pluginhandler: TPluginhandler;
     exportedfunctions: TExportedFunctions;
+    exportedfunctionsdotnet: TExportedFunctionsDotNetV1;
+
 
     onAPIPointerChange: TNotifyEvent;
 
+
+
 implementation
 
-uses MainUnit,memorybrowserformunit,formsettingsunit, pluginexports, SynHighlighterAA,
-     DBK32functions, luahandler, processhandlerunit;
+uses {$ifndef macstandalone}MainUnit,{$endif}memorybrowserformunit,formsettingsunit, pluginexports, SynHighlighterAA,
+     {$ifdef windows}DBK32functions,{$endif} luahandler, processhandlerunit
+     {$ifdef windows}, BetterDLLSearchPath{$endif}, dotnethost, PEInfoFunctions, luaclass;
 
 resourcestring
   rsErrorEnabling = 'Error enabling %s';
@@ -1325,9 +1363,11 @@ end;
 
 procedure TPluginHandler.EnablePlugin(pluginid: integer);
 var e: texportedfunctions;
+    enet: TExportedFunctionsDotNetV1 absolute e;
     x: boolean;
 begin
   e:=exportedfunctions;  //save it to prevent plugins from fucking it up
+
 
   case plugins[pluginid].pluginversion of
     1: e.sizeofExportedFunctions:=sizeof(Texportedfunctions1);
@@ -1336,7 +1376,15 @@ begin
     4: e.sizeofExportedFunctions:=sizeof(Texportedfunctions4);
     5: e.sizeofExportedFunctions:=sizeof(Texportedfunctions5);
     else
-      e.sizeofExportedFunctions:=sizeof(Texportedfunctions);
+    begin
+      if plugins[pluginid].dotnet then
+      begin
+        enet:=exportedfunctionsdotnet;
+        enet.sizeofExportedFunctions:=sizeof(TExportedFunctionsDotNetV1)
+      end
+      else
+        e.sizeofExportedFunctions:=sizeof(Texportedfunctions);
+    end;
   end;
 
   pluginCS.Enter;
@@ -1346,7 +1394,9 @@ begin
     if not plugins[pluginid].enabled then
     begin
       OutputDebugString('Calling EnablePlugin');
+
       x:=plugins[pluginid].EnablePlugin(e,pluginid);
+
       if not x then raise exception.Create(Format(rsErrorEnabling, [plugins[pluginid].dllname]));
       plugins[pluginid].enabled:=true;
     end;
@@ -1361,6 +1411,9 @@ begin
   pluginCS.Enter;
   try
     DisablePlugin(pluginid); //disable the plugin if it was active
+
+
+
     FreeLibrary(plugins[pluginid].hmodule);
     plugins[pluginid].dllname:='';
     plugins[pluginid].filepath:='';
@@ -1416,17 +1469,44 @@ begin
   end;
 end;
 
+
+function TPluginHandler.DotNetPluginGetPluginName(dllname: string): string;
+var PInit: TPluginDotNetInitResult;
+begin
+  DotNetExecuteClassMethod(dllname,'CESDK','CESDK','CEPluginInitialize', inttostr(ptruint(@PInit)));
+  result:=PInit.name;
+end;
+
 function TPluginHandler.GetPluginName(dllname:string):string;
 var hmodule: thandle;
     GetVersion: TGetVersion;
     PluginVersion: TPluginVersion;
+    path: widestring;
+    isdotnet: boolean;
 begin
+
   result:='';
   if uppercase(extractfileext(dllname))<>'.DLL' then raise exception.Create(Format(rsErrorLoadingOnlyDLLFilesAreAllowed, [dllname]));
+
+    {$ifdef windows}
+  if peinfo_isdotnetfile(dllname, isdotnet) then
+    if isdotnet then
+      exit(DotNetPluginGetPluginName(dllname));
+    {$endif}
+
   hmodule:=loadlibrary(pchar(dllname));
+  {$ifdef windows}
+  if (hmodule=0) and assigned(AddDllDirectory) then
+  begin
+    path:=extractfiledir(dllname);
+    AddDllDirectory(pwidechar(@path[1]));
+    hmodule:=loadlibrary(pchar(dllname));
+  end;
+  {$endif}
 
   if hmodule=0 then
     raise exception.create(rsPlugThePluginDllCouldNotBeLoaded+inttostr(getlasterror));
+
 
   GetVersion:=getprocaddress(hmodule,'CEPlugin_GetVersion');
   if not assigned(GetVersion) then
@@ -1469,6 +1549,41 @@ begin
 
 end;
 
+function TPluginHandler.DotNetLoadPlugin(dllname:string):integer;
+var initresult: TPluginDotNetInitResult;
+begin
+  DotNetExecuteClassMethod(dllname,'CESDK','CESDK','CEPluginInitialize',inttostr(ptruint(@initresult)));
+  if initresult.version>currentpluginversion then
+    raise exception.Create(Format(rsErrorLoadingThisDllRequiresANewerVersionOfCeToFunc, [dllname]));
+
+  pluginCS.enter;
+  try
+    try
+      setlength(plugins,length(plugins)+1);
+      plugins[length(plugins)-1].dotnet:=true;
+      plugins[length(plugins)-1].pluginversion:=initresult.version;
+      plugins[length(plugins)-1].dllname:=extractfilename(dllname);
+      plugins[length(plugins)-1].filepath:=GetRelativeFilePath(dllname);
+      plugins[length(plugins)-1].hmodule:=0;
+      plugins[length(plugins)-1].name:=initresult.name;
+
+      plugins[length(plugins)-1].GetVersion:=initresult.GetVersion;
+      plugins[length(plugins)-1].EnablePlugin:=initresult.EnablePlugin;
+      plugins[length(plugins)-1].DisablePlugin:=initresult.DisablePlugin;
+      plugins[length(plugins)-1].nextid:=1;
+
+      result:=length(plugins)-1;
+    except
+      on e: exception do
+      begin
+        setlength(plugins,length(plugins)-1);
+        raise exception.create(e.message);
+      end;
+    end;
+  finally
+    pluginCS.leave;
+  end;
+end;
 
 function TPluginHandler.LoadPlugin(dllname:string):integer;
 var hmodule: thandle;
@@ -1476,6 +1591,8 @@ var hmodule: thandle;
     PluginVersion: TPluginVersion;
     s: string;
     i: integer;
+    path: widestring;
+    isdotnet: boolean;
 begin
   result:=-1;
   if uppercase(extractfileext(dllname))<>'.DLL' then raise exception.Create(Format(rsErrorLoadingOnlyDLLFilesAreAllowed, [dllname]));
@@ -1496,7 +1613,24 @@ begin
     pluginCS.Leave;
   end;
 
+  {$ifdef windows}
+  if peinfo_isdotnetfile(dllname, isdotnet) then
+    if isdotnet then
+      exit(DotNetLoadPlugin(dllname));
+
+  {$endif}
+
+
   hmodule:=loadlibrary(pchar(dllname));
+  {$ifdef windows}
+  if (hmodule=0) and assigned(AddDllDirectory) then
+  begin
+    path:=ExtractFiledir(dllname);
+    AddDllDirectory(pwidechar(@path[1]));
+    hmodule:=loadlibrary(pchar(dllname));
+  end;
+  {$endif}
+
   if hmodule=0 then
     exit;
 
@@ -1516,6 +1650,7 @@ begin
     try
       try
         setlength(plugins,length(plugins)+1);
+        plugins[length(plugins)-1].dotnet:=false;
         plugins[length(plugins)-1].pluginversion:=PluginVersion.version;
         plugins[length(plugins)-1].dllname:=extractfilename(dllname);
         plugins[length(plugins)-1].filepath:=GetRelativeFilePath(dllname);
@@ -1611,10 +1746,13 @@ begin
         s:=plugins[i].RegisteredFunctions6[j].menuitem.Caption;
         addressofmenuitemstring:=@s[1];
         show:=true;
-        if plugins[i].pluginversion<=5 then
-          Tpluginfuntion6OnContextVersion5(plugins[i].RegisteredFunctions6[j].callbackOnContext)(address, @addressofmenuitemstring)
-        else
-          plugins[i].RegisteredFunctions6[j].callbackOnContext(address, @addressofmenuitemstring, @show);
+        if assigned(plugins[i].RegisteredFunctions6[j].callbackOnContext) then
+        begin
+          if plugins[i].pluginversion<=5 then
+            Tpluginfuntion6OnContextVersion5(plugins[i].RegisteredFunctions6[j].callbackOnContext)(address, @addressofmenuitemstring)
+          else
+            plugins[i].RegisteredFunctions6[j].callbackOnContext(address, @addressofmenuitemstring, @show);
+        end;
 
         plugins[i].RegisteredFunctions6[j].menuitem.Caption:=addressofmenuitemstring;
         plugins[i].RegisteredFunctions6[j].menuitem.Visible:=show;
@@ -1631,7 +1769,8 @@ begin
   try
     for i:=0 to length(plugins)-1 do
       for j:=0 to length(plugins[i].RegisteredFunctions7)-1 do
-        plugins[i].RegisteredFunctions7[j].callback(address, addressStringPointer, bytestringpointer, opcodestringpointer, specialstringpointer, textcolor);
+        if assigned(plugins[i].RegisteredFunctions7[j].callback) then
+          plugins[i].RegisteredFunctions7[j].callback(address, addressStringPointer, bytestringpointer, opcodestringpointer, specialstringpointer, textcolor);
   finally
     pluginCS.Leave;
   end;
@@ -1645,7 +1784,8 @@ begin
   try
     for i:=0 to length(plugins)-1 do
       for j:=0 to length(plugins[i].RegisteredFunctions2)-1 do
-        if plugins[i].RegisteredFunctions2[j].callback(devent)=1 then result:=1;
+        if assigned(plugins[i].RegisteredFunctions2[j].callback) then
+          if plugins[i].RegisteredFunctions2[j].callback(devent)=1 then result:=1;
   finally
     pluginCS.Leave;
   end;
@@ -1736,7 +1876,8 @@ begin
 
 
   //pointers to the address that contains the pointers to the functions
-  exportedfunctions.ReadProcessMemory:=@@ReadProcessMemory;
+  {$ifdef windows}
+  exportedfunctions.ReadProcessMemory:=@@ReadProcessMemoryActual;
   exportedfunctions.WriteProcessMemory:=@@WriteProcessMemoryActual;
   exportedfunctions.GetThreadContext:=@@GetThreadContext;
   exportedfunctions.SetThreadContext:=@@SetThreadContext;
@@ -1750,7 +1891,7 @@ begin
   exportedfunctions.StopRegisterChange:=nil; //@@StopRegisterChange;
   exportedfunctions.VirtualProtect:=@@VirtualProtect;
   exportedfunctions.VirtualProtectEx:=@@VirtualProtectEx;
-  exportedfunctions.VirtualQueryEx:=@@VirtualQueryEx;
+  exportedfunctions.VirtualQueryEx:=@@VirtualQueryExActual;
   exportedfunctions.VirtualAllocEx:=@@VirtualAllocEx;
   exportedfunctions.CreateRemoteThread:=@@CreateRemoteThread;
   exportedfunctions.OpenThread:=@@OpenThread;
@@ -1801,6 +1942,7 @@ begin
   exportedfunctions.Module32Next:=@@Module32Next;
   exportedfunctions.Heap32ListFirst:=@@Heap32ListFirst;
   exportedfunctions.Heap32ListNext:=@@Heap32ListNext;
+  {$endif}
 
 
 
@@ -1814,8 +1956,10 @@ begin
   exportedfunctions.sym_generateAPIHookScript:=@ce_generateAPIHookScript;
 
   //version3 init
+  {$ifdef windows}
   exportedfunctions.loadDBK32:=@LoadDBK32;
   exportedfunctions.loaddbvmifneeded:=@loaddbvmifneeded;
+  {$endif}
   exportedfunctions.previousOpcode:=@ce_previousOpcode;
   exportedfunctions.nextOpcode:=@ce_nextOpcode;
   exportedfunctions.disassembleEx:=@ce_disassemble;
@@ -1893,11 +2037,22 @@ begin
   exportedfunctions.speedhack_setSpeed:=@ce_speedhack_setSpeed;
 
   //version 5
+  {$ifdef windows}
   exportedfunctions.ExecuteKernelCode:=@ExecuteKernelCode;
   exportedfunctions.UserdefinedInterruptHook:=@UserdefinedInterruptHook;
-  exportedfunctions.GetLuaState:=@GetLuaState;
+  {$endif}
+  exportedfunctions.GetLuaState:=@plugin_GetLuaState;
   exportedfunctions.MainThreadCall:=@pluginsync;
+
+
+  exportedfunctionsdotnet.sizeofExportedFunctions:=sizeof(exportedfunctionsdotnet);
+  exportedfunctionsdotnet.GetLuaState:=@plugin_GetLuaState;
+  exportedfunctionsdotnet.LuaRegister:=@lua_register;
+  exportedfunctionsdotnet.LuaPushClassInstance:=@luaclass_pushClass;
+  exportedfunctionsdotnet.ProcessMessages:=@plugin_processMessages;
+  exportedfunctionsdotnet.CheckSynchronize:=@plugin_CheckSynchronize;
 end;
+
 
 end.
 

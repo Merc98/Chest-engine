@@ -5,14 +5,19 @@ unit PointerscanStructures;
 interface
 
 uses
-  windows, Classes, SysUtils, winsock, CELazySocket;
+  {$ifdef darwin}
+  macport, Classes, SysUtils, Sockets, CELazySocket, commonTypeDefs;
+  {$endif}
+  {$ifdef windows}
+  windows, Classes, SysUtils, winsock, CELazySocket, commonTypeDefs;
+  {$endif}
 
 const
   MAXQUEUESIZE=64;
   pointerscanfileversion=2;
 
 type
-  TDynDwordArray=array of dword;
+
 
 
   TPathQueueElement=record
@@ -50,7 +55,7 @@ type
 
   PPointerscanControllerParent=^TPointerscanControllerParent;
 
-  TPointerscancontrollerchild=record
+  TPointerscancontrollerchild=record   //todo: maybe turn this into a class with methods to call child commands ?
     socket: TSocketstream;
     MissingSince: qword; //holds the time when the connection was lost. If this is set to 0 the child info will be deleted
     Error: string;

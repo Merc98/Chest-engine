@@ -85,7 +85,6 @@ procedure stringlist_addMetaData(L: PLua_state; metatable: integer; userdata: in
 begin
   strings_addMetaData(L, metatable, userdata);
 
-  luaclass_addClassFunctionToTable(L, metatable, userdata, 'createStringlist', createStringlist);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getDuplicates', stringlist_getDuplicates);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'setDuplicates', stringlist_setDuplicates);
   luaclass_addClassFunctionToTable(L, metatable, userdata, 'getSorted', stringlist_getSorted);
@@ -101,6 +100,7 @@ end;
 procedure initializeLuaStringlist;
 begin
   lua_register(LuaVM, 'createStringlist', createStringlist);
+  lua_register(LuaVM, 'createStringList', createStringList);
   lua_register(LuaVM, 'stringlist_getDuplicates', stringlist_getDuplicates);
   lua_register(LuaVM, 'stringlist_setDuplicates', stringlist_setDuplicates);
   lua_register(LuaVM, 'stringlist_getSorted', stringlist_getSorted);

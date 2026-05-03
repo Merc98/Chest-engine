@@ -6,19 +6,21 @@ interface
 
 uses
   LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, LResources, SynEdit;
+  Dialogs, StdCtrls, ExtCtrls, LResources, SynEdit, synedittypes, betterControls;
 
 type
 
   { TfrmAAEditPrefs }
 
   TfrmAAEditPrefs = class(TForm)
+    cbFontQuality: TComboBox;
     cbShowGutter: TCheckBox;
     cbShowLineNumbers: TCheckBox;
     cbSmartTab: TCheckBox;
     cbTabsToSpace: TCheckBox;
     edtTabWidth: TEdit;
     Label1: TLabel;
+    Label2: TLabel;
     Panel2: TPanel;
     Button1: TButton;
     Button2: TButton;
@@ -28,6 +30,7 @@ type
     Panel3: TPanel;
     Panel4: TPanel;
     procedure btnFontClick(Sender: TObject);
+    procedure cbFontQualitySelect(Sender: TObject);
     procedure edtTabWidthChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -39,17 +42,18 @@ type
     procedure Panel1Click(Sender: TObject);
   private
     { Private declarations }
-    fSynEdit: TSynEdit;
+    fSynEdit: TCustomSynEdit;
     oldsettings: record
       font: tfont;
       showlinenumbers: boolean;
       showgutter: boolean;
       options: TSynEditorOptions;
+      tabwidth: integer;
     end;
 
   public
     { Public declarations }
-    function execute(synedit: TSynEdit): boolean;
+    function execute(synedit: TCustomSynEdit): boolean;
   end;
 
 var
@@ -58,22 +62,26 @@ var
 implementation
 
 
-function TfrmAAEditPrefs.execute(synedit: TSynEdit): boolean;
+function TfrmAAEditPrefs.execute(synedit: TCustomSynEdit): boolean;
 begin
   fSynEdit:=synedit;
   FontDialog1.Font.Assign(fSynEdit.Font);
+
+  cbFontQuality.ItemIndex:=integer(fSynEdit.Font.Quality);
 
   //save all parameters that could get changed
   oldsettings.font.Assign(fSynEdit.Font);
   oldsettings.showlinenumbers:=fSynEdit.Gutter.LineNumberPart.Visible;
   oldsettings.showgutter:=fSynEdit.Gutter.Visible;
   oldsettings.options:=fSynEdit.options;
+  oldsettings.tabwidth:=fSynEdit.TabWidth;
 
   //setup GUI
   cbShowLineNumbers.Checked:=fSynEdit.Gutter.linenumberpart.visible;
   cbShowGutter.Checked:=fSynEdit.Gutter.Visible;
   cbSmartTab.Checked:=eoSmartTabs in fSynEdit.Options;
   cbTabsToSpace.Checked:=eoTabsToSpaces in fSynEdit.Options;
+  edtTabWidth.Text:=inttostr(fSynEdit.TabWidth);
   btnFont.Caption:=fontdialog1.Font.Name+' '+inttostr(fontdialog1.Font.Size);
 
 
@@ -86,6 +94,7 @@ begin
     fsynedit.Gutter.linenumberpart.visible:=oldsettings.showlinenumbers;
     fsynedit.Gutter.visible:=oldsettings.showgutter;
     fsynedit.Options:=oldsettings.options;
+    fSynEdit.TabWidth:=oldsettings.tabwidth;
   end;
   //else leave it and let the caller save to registry, ini, or whatever
 end;
@@ -98,6 +107,12 @@ begin
     fsynedit.font.size:=fontdialog1.Font.size;
     btnFont.Caption:=fontdialog1.Font.Name+' '+inttostr(fontdialog1.Font.Size);
   end;
+end;
+
+procedure TfrmAAEditPrefs.cbFontQualitySelect(Sender: TObject);
+begin
+  if cbFontQuality.itemindex<>-1 then
+    fsynedit.font.Quality:=TFontQuality(cbFontQuality.ItemIndex);
 end;
 
 procedure TfrmAAEditPrefs.edtTabWidthChange(Sender: TObject);

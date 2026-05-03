@@ -9,7 +9,13 @@ With some fiddling it might be used for some other stuff as well
 
 interface
 
+{$ifdef windows}
 uses windows, LCLIntf, classes, sysutils, symbolhandler, math, cefuncproc,newkernelhandler, commonTypeDefs;
+{$endif}
+
+{$ifdef darwin}
+uses macport, LCLIntf, classes, sysutils, symbolhandler, math, cefuncproc,newkernelhandler, commonTypeDefs;
+{$endif}
 
 type TValueFinder=class
   private
@@ -164,6 +170,15 @@ begin
           continue;
         end;
 
+      {$ifdef windows}
+      if Skip_PAGE_WRITECOMBINE then
+        if (mbi.AllocationProtect and PAGE_WRITECOMBINE)=PAGE_WRITECOMBINE then
+        begin
+          address:=ptrUint(mbi.BaseAddress)+mbi.RegionSize;
+          continue;
+        end;
+      {$endif}
+
       setlength(memregions,length(memregions)+1);
 
       memregions[length(memregions)-1].BaseAddress:=ptrUint(mbi.baseaddress);  //just remember this location
@@ -215,7 +230,7 @@ end;
 destructor TValueFinder.destroy;
 begin
   if buffer<>nil then
-    freemem(buffer);
+    freememandnil(buffer);
   inherited destroy;
 end;
 

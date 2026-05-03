@@ -1,10 +1,18 @@
 /*
  cepluginsdk.h
- Updated May 14, 2012
+ Updated July 4, 2017
 
- v4.0.0
+ v5.0.0
 */
+#ifndef CEPLUGINSDK_H
+#define CEPLUGINSDK_H
+
 #include <windows.h>
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
+
+
 #define CESDK_VERSION 6
 
 typedef enum {ptAddressList=0, ptMemoryView=1, ptOnDebugEvent=2, ptProcesswatcherEvent=3, ptFunctionPointerchange=4, ptMainMenu=5, ptDisassemblerContext=6, ptDisassemblerRenderLine=7, ptAutoAssembler=8} PluginType;
@@ -30,14 +38,14 @@ typedef struct _PLUGINTYPE0_RECORD
 
 //callback routines efinitions for registered plugin functions:
 typedef BOOL (__stdcall *CEP_PLUGINTYPE0)(PPLUGINTYPE0_RECORD SelectedRecord);
-typedef BOOL (__stdcall *CEP_PLUGINTYPE1)(ULONG *disassembleraddress, ULONG *selected_disassembler_address, ULONG *hexviewaddress);
+typedef BOOL (__stdcall *CEP_PLUGINTYPE1)(UINT_PTR *disassembleraddress, UINT_PTR *selected_disassembler_address, UINT_PTR *hexviewaddress);
 typedef int (__stdcall *CEP_PLUGINTYPE2)(LPDEBUG_EVENT DebugEvent);
 typedef void (__stdcall *CEP_PLUGINTYPE3)(ULONG processid, ULONG peprocess, BOOL Created);
 typedef void (__stdcall *CEP_PLUGINTYPE4)(int reserved);
 typedef void (__stdcall *CEP_PLUGINTYPE5)(void);
-typedef BOOL (__stdcall *CEP_PLUGINTYPE6ONPOPUP)(ULONG selectedAddress, char **addressofname, BOOL *show);
-typedef BOOL (__stdcall *CEP_PLUGINTYPE6)(ULONG *selectedAddress);
-typedef void (__stdcall *CEP_PLUGINTYPE7)(ULONG address, char **addressStringPointer, char **bytestringpointer, char **opcodestringpointer, char **specialstringpointer, ULONG *textcolor);
+typedef BOOL (__stdcall *CEP_PLUGINTYPE6ONPOPUP)(UINT_PTR selectedAddress, char **addressofname, BOOL *show);
+typedef BOOL (__stdcall *CEP_PLUGINTYPE6)(UINT_PTR *selectedAddress);
+typedef void (__stdcall *CEP_PLUGINTYPE7)(UINT_PTR address, char **addressStringPointer, char **bytestringpointer, char **opcodestringpointer, char **specialstringpointer, ULONG *textcolor);
 typedef void (__stdcall *CEP_PLUGINTYPE8)(char **line, AutoAssemblerPhase phase, int id);
 
 
@@ -80,8 +88,8 @@ typedef struct _PLUGINTYPE5_INIT
 typedef struct _PLUGINTYPE6_INIT
 {
   char* name; //0 terminated string describing the name for the user's menu item
-  CEP_PLUGINTYPE6ONPOPUP callbackroutineOnPopup; 
   CEP_PLUGINTYPE6 callbackroutine; 
+  CEP_PLUGINTYPE6ONPOPUP callbackroutineOnPopup; 
   char* shortcut; //0 terminated string containing the shortcut in textform. CE will try it's best to parse it to a valid shortcut
 } PLUGINTYPE6_INIT, DISASSEMBLERCONTEXT_INIT, *PPLUGINTYPE6_INIT, *PDISASSEMBLERCONTEXT_INIT;
 
@@ -167,17 +175,17 @@ typedef BOOL (__stdcall *CEP_UNFREEZEMEM) (int freezeID);
 typedef BOOL (__stdcall *CEP_FIXMEM) (void);
 typedef BOOL (__stdcall *CEP_PROCESSLIST) (char *listbuffer, int listsize);
 typedef BOOL (__stdcall *CEP_RELOADSETTINGS) (void);
-typedef DWORD (__stdcall *CEP_GETADDRESSFROMPOINTER) (UINT_PTR baseaddress, int offsetcount, int* offsets);  
+typedef UINT_PTR (__stdcall *CEP_GETADDRESSFROMPOINTER) (UINT_PTR baseaddress, int offsetcount, int* offsets);  
 typedef BOOL (__stdcall *CEP_GENERATEAPIHOOKSCRIPT) (char *address, char *addresstojumpto, char *addresstogetnewcalladdress, char *script, int maxscriptsize);
 typedef BOOL (__stdcall *CEP_ADDRESSTONAME) (UINT_PTR address, char *name, int maxnamesize);
 typedef BOOL (__stdcall *CEP_NAMETOADDRESS) (char *name, UINT_PTR *address);
 
 typedef VOID (__stdcall *CEP_LOADDBK32)(void);
 typedef BOOL (__stdcall *CEP_LOADDBVMIFNEEDED)(void);
-typedef DWORD (__stdcall *CEP_PREVIOUSOPCODE)(ULONG address);
-typedef DWORD (__stdcall *CEP_NEXTOPCODE)(ULONG address);
+typedef DWORD (__stdcall *CEP_PREVIOUSOPCODE)(UINT_PTR address);
+typedef DWORD (__stdcall *CEP_NEXTOPCODE)(UINT_PTR address);
 typedef BOOL (__stdcall *CEP_LOADMODULE)(char *modulepath, char *exportlist, int *maxsize);
-typedef BOOL (__stdcall *CEP_DISASSEMBLEEX)(ULONG address, char *output, int maxsize);
+typedef BOOL (__stdcall *CEP_DISASSEMBLEEX)(UINT_PTR address, char *output, int maxsize);
 typedef VOID (__stdcall *CEP_AA_ADDCOMMAND)(char *command);
 typedef VOID (__stdcall *CEP_AA_DELCOMMAND)(char *command);
 
@@ -254,6 +262,10 @@ typedef VOID (__stdcall *CEP_OBJECT_DESTROY)(PVOID object);
 
 typedef int (__stdcall *CEP_MESSAGEDIALOG)(char *massage, int messagetype, int buttoncombination);
 typedef BOOL (__stdcall *CEP_SPEEDHACK_SETSPEED)(float speed);
+typedef lua_State *(__fastcall *CEP_GETLUASTATE)();
+
+
+typedef BOOL(__stdcall **CEP_READPROCESSMEMORY)(HANDLE hProcess, LPCVOID lpBaseAddress, LPVOID lpBuffer, SIZE_T nSize, SIZE_T * lpNumberOfBytesRead);
 
 /*
 function ce_messageDialog(message: pchar; messagetype: integer; buttoncombination: integer): integer; stdcall;
@@ -284,7 +296,7 @@ typedef struct _ExportedFunctions
 
   //pointers to the address that contains the pointers to the functions
   //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  PVOID ReadProcessMemory;			//pointer to the pointer of ReadProcessMemory (Change it to hook that api, or use it yourself)
+  CEP_READPROCESSMEMORY ReadProcessMemory;			//pointer to the pointer of ReadProcessMemory (Change it to hook that api, or use it yourself)
   PVOID WriteProcessMemory;			//pointer to the pointer of WriteProcessMemory (Change it to hook that api, or use it yourself)
   PVOID GetThreadContext;			//   ...
   PVOID SetThreadContext;			//   ...
@@ -351,13 +363,13 @@ typedef struct _ExportedFunctions
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
   //advanced for delphi 7 enterprise dll programmers only
-  PVOID mainform; //pointer to the Tmainform object. (main window) Compatible with TFORM of D7 Enterprise
+  PVOID mainform; //pointer to the Tmainform object.
   PVOID memorybrowser; //pointer to the TMemoryBrowser object (memory view windows), same as mainform
 
   //Plugin Version 2+
-  CEP_GENERATEAPIHOOKSCRIPT sym_nameToAddress;
+  CEP_NAMETOADDRESS sym_nameToAddress;
   CEP_ADDRESSTONAME sym_addressToName;
-  CEP_NAMETOADDRESS sym_generateAPIHookScript;
+  CEP_GENERATEAPIHOOKSCRIPT sym_generateAPIHookScript;
 
   //Plugin version 3+
   CEP_LOADDBK32 loadDBK32;
@@ -440,7 +452,7 @@ typedef struct _ExportedFunctions
 //V5: Todo, implement function declarations
   VOID *ExecuteKernelCode;
   VOID *UserdefinedInterruptHook;
-  VOID *GetLuaState;
+  CEP_GETLUASTATE GetLuaState;
   VOID *MainThreadCall;
 
 } ExportedFunctions, *PExportedFunctions;
@@ -450,3 +462,6 @@ BOOL __stdcall CEPlugin_GetVersion(PPluginVersion pv , int sizeofpluginversion);
 BOOL __stdcall CEPlugin_InitializePlugin(PExportedFunctions ef , int pluginid);
 BOOL __stdcall CEPlugin_DisablePlugin(void);
 //old versions without CEPlugin_ in front also work but are not recommended due to bugbrained compilers...
+
+
+#endif //CEPLUGINSDK_H

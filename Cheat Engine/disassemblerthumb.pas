@@ -290,6 +290,9 @@ uses
 {$ifndef armdev}
 ,ProcessHandlerUnit, NewKernelHandler
 {$endif}
+  {$ifdef darwin}
+  ,macport, macportdefines
+  {$endif}
   ;
 
 
@@ -1895,6 +1898,8 @@ begin
     13: m:='EET';
     14: m:='EE';
     15: m:='EEE';
+    else
+      m:='';
   end;
 
   LastDisassembleData.opcode:='IT'+m;
@@ -3449,7 +3454,7 @@ end;
 procedure TThumbDisassembler.TEQ_R_T1;
 var  rn, imm3, imm2, _type, Rm: byte;
   v: byte;
-  shift_s: string;
+  shift_s: string='';
 begin
   rn:=opcode and $f;
   imm3:=(opcode2 shr 12) and 3;
@@ -3696,7 +3701,7 @@ procedure TThumbDisassembler.ADD_R_T3;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -3741,7 +3746,7 @@ procedure TThumbDisassembler.SUB_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -3787,7 +3792,7 @@ procedure TThumbDisassembler.ADC_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -3831,7 +3836,7 @@ procedure TThumbDisassembler.AND_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -3875,7 +3880,7 @@ procedure TThumbDisassembler.EOR_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -3919,7 +3924,7 @@ procedure TThumbDisassembler.SBC_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -3963,7 +3968,7 @@ procedure TThumbDisassembler.TST_R_T2;
 var rn, imm3, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   rn:=opcode and $f;
   imm3:=(opcode2 shr 12) and 3;
@@ -4002,7 +4007,7 @@ procedure TThumbDisassembler.RSB_R_T1;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4060,7 +4065,7 @@ procedure TThumbDisassembler.CMP_R_T3;
 var  rn, imm3, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   rn:=opcode and $f;
   imm3:=(opcode2 shr 12) and 3;
@@ -4100,7 +4105,7 @@ procedure TThumbDisassembler.CMN_R_T2;
 var  rn, imm3, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   rn:=opcode and $f;
   imm3:=(opcode2 shr 12) and 3;
@@ -4140,7 +4145,7 @@ procedure TThumbDisassembler.ORR_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4174,7 +4179,7 @@ procedure TThumbDisassembler.ORN_R_T1;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4229,7 +4234,7 @@ procedure TThumbDisassembler.BIC_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4273,7 +4278,7 @@ procedure TThumbDisassembler.MVN_R_T2;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4321,7 +4326,7 @@ procedure TThumbDisassembler.MOV_RSR_T1;
 var
   op: byte;
   rs,rdm: byte;
-  shiftname: string;
+  shiftname: string='';
 begin
   op:=(opcode shr 6) and 3;
   rs:=(opcode shr 3) and 7;
@@ -4342,7 +4347,7 @@ end;
 procedure TThumbDisassembler.MOV_RSR_T2;
 var
   _type, s, rm, rd, rs: byte;
-  shift_s: string;
+  shift_s: string='';
 begin
   _type:=(opcode shr 5) and $f;
   s:=(opcode shr 4) and 1;
@@ -4369,7 +4374,7 @@ procedure TThumbDisassembler.PKHBT_T1;
 var  rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   rn:=opcode and $f;
   imm3:=(opcode2 shr 12) and 3;
@@ -4397,7 +4402,7 @@ var
   op: byte;
   rn,rd: byte;
   imm5: byte;
-  shiftname: string;
+  shiftname: string='';
 begin
   if ((opcode shr 13)=0) and (((opcode shr 11) and 3)<>3) then
   begin
@@ -4428,7 +4433,7 @@ procedure TThumbDisassembler.MOV_R_T3;
 var s, rn, imm3, rd, imm2, _type, Rm: byte;
   v: byte;
 
-  shift_s: string;
+  shift_s: string='';
 begin
   s:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4461,7 +4466,7 @@ end;
 
 procedure TThumbDisassembler.MSR_BR_T1;
 var R, Rn, M1, m: byte;
-  bankedreg: string;
+  bankedreg: string='';
 begin
   r:=(opcode shr 4) and 1;
   rn:=opcode and $f;
@@ -4556,7 +4561,7 @@ end;
 
 procedure TThumbDisassembler.MRS_BR_T1;
 var R, M1, Rd, m: byte;
-  bankedreg: string;
+  bankedreg: string='';
 begin
   r:=(opcode shr 4) and 1;
   m1:=(opcode2 shr 8) and $f;
@@ -5063,7 +5068,7 @@ begin
   {$else}
   x:=0;
 
-  if readprocessmemory(processhandle, pointer(address-1), @opcode, sizeof(opcode), x) then
+  if readprocessmemory(processhandle, pointer(address and $fffffffe), @opcode, sizeof(opcode), x) then
     puint16(@LastDisassembleData.Bytes[0])^:=opcode;
   {$endif}
 
@@ -5268,6 +5273,9 @@ begin
 
   inc(address, length(LastDisassembleData.Bytes));
 end;
+
+initialization
+  OutputDebugString('DisassemblerThumb init');  //runs
 
 end.
 

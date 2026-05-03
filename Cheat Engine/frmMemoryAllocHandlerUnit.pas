@@ -8,10 +8,16 @@ ZwVirtualAllocEx
 interface
 
 uses
-  windows, LCLIntf, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, symbolhandler, CEFuncProc,NewKernelHandler, autoassembler,
-  ExtCtrls, ComCtrls, stacktrace2, math, Menus, syncobjs, Contnrs, circularbuffer,
-  LResources, commonTypeDefs;
+  {$ifdef darwin}
+  macport,
+  {$endif}
+  {$ifdef windows}
+  windows,
+  {$endif}
+  LCLIntf, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, symbolhandler, symbolhandlerstructs, CEFuncProc,NewKernelHandler,
+  autoassembler, ExtCtrls, ComCtrls, stacktrace2, math, Menus, syncobjs, Contnrs, circularbuffer,
+  LResources, commonTypeDefs, betterControls;
 
 
 const
@@ -180,7 +186,8 @@ type
     HookEventDataAddress: ptrUint;
 
     hookscript: tstringlist;
-    hookallocarray: TCEAllocArray;
+
+    disableinfo: TDisableInfo;
 
     maxlevel: integer;
     pointermask: integer;
@@ -480,8 +487,9 @@ end;  }
 
 procedure TAllocWatcher.allocEvent;
 var s: integer;
-var o: TMemoryAllocEvent;
+    o: TMemoryAllocEvent;
 begin
+  {$IFDEF windows}
   o:=TmemoryAllocevent.create;
   o.HookEvent:=hookevent;
   o.BaseAddress:=hookevent.AllocEvent.baseaddress;
@@ -498,23 +506,27 @@ begin
 
   setevent(CEHasHandledItEvent); //tell the hooked app to continue
   addObjectToList(o);
+  {$ENDIF}
 end;
 
 procedure TAllocWatcher.freeEvent;
 var o: TMemoryAllocEvent;
 begin
+  {$IFDEF windows}
   o:=TmemoryAllocevent.create;
   o.HookEvent:=hookevent;
   o.BaseAddress:=hookevent.FreeEvent.baseaddress;
-  
+
   setevent(CEHasHandledItEvent);
   addObjectToList(o);
+  {$ENDIF}
 end;
 
 procedure TAllocWatcher.heapAllocEvent;
 var o: TMemoryAllocEvent;
 var s: integer;
 begin
+  {$IFDEF windows}
   o:=TmemoryAllocevent.create;
   o.HookEvent:=hookevent;
   o.BaseAddress:=ptrUint(hookevent.HeapAllocEvent.address);
@@ -529,32 +541,38 @@ begin
 
   setevent(CEHasHandledItEvent);
   addObjectToList(o);
+  {$ENDIF}
 end;
 
 procedure TAllocWatcher.heapFreeEvent;
 var o: TMemoryAllocEvent;
 begin
+  {$IFDEF windows}
   o:=TmemoryAllocevent.create;
   o.HookEvent:=hookevent;
   o.BaseAddress:=ptrUint(hookevent.HeapFreeEvent.HeapBase);
   setevent(CEHasHandledItEvent);
   addObjectToList(o);
+  {$ENDIF}
 end;
 
 procedure TAllocWatcher.headpDestroyEvent;
 var o: TMemoryAllocEvent;
 begin
+  {$IFDEF windows}
   o:=TmemoryAllocevent.create;
   o.HookEvent:=hookevent;
   o.BaseAddress:=$0;
 
   setevent(CEHasHandledItEvent);
   addObjectToList(o);
+  {$ENDIF}
 end;
 
 procedure TAllocWatcher.execute;
 var x: PtrUInt;
 begin
+  {$IFDEF windows}
   while not terminated do
   begin
     try
@@ -577,6 +595,7 @@ begin
       OutputDebugString('Error in TAllocWatcher.execute');
     end;
   end;
+  {$ENDIF}
 end;
 
 constructor TAllocWatcher.create(suspended: boolean; HasSetupDataEvent: THandle; CEHasHandledItEvent: THandle; HookEventDataAddress: ptrUint);
@@ -603,6 +622,8 @@ var
   mi: tmoduleinfo;
   mname: string;
 begin
+  {$ifdef windows}
+
   if processhandler.is64Bit then
   begin
     maxlevel:=15;
@@ -679,7 +700,7 @@ begin
     injectionscript.Free;
   end;
 
-
+  {$endif}
 end;
 
 procedure TfrmMemoryAllocHandler.cbHookAllocsChange(Sender: TObject);
@@ -832,7 +853,9 @@ end;
 
 function TfrmMemoryAllocHandler.WaitForInitializationToFinish: boolean;
 begin
-  result:=WaitForSingleObject(CEInitializationFinished,5000)=WAIT_OBJECT_0;
+  {$IFDEF windows}
+    result:=WaitForSingleObject(CEInitializationFinished,5000)=WAIT_OBJECT_0;
+  {$ENDIF}
 end;
 
 function TfrmMemoryAllocHandler.FindAddress(addresslist: PMemrecTableArray; address: ptrUint): TMemoryAllocEvent;
@@ -919,8 +942,8 @@ begin
       if addresslist[i].MemrecArray<>nil then
       begin
         deletepath(addresslist[i].MemrecArray,level+1, maxlevel);
-        freemem(addresslist[i].MemrecArray);
-        addresslist[i].MemrecArray:=nil;
+        freememandnil(addresslist[i].MemrecArray);
+
       end;
     end;
 
@@ -937,6 +960,7 @@ var
   injectionscript: TStringlist;
   i: integer;
 begin
+  {$IFDEF windows}
   WaitForInitializationToFinish;
 
   injectionscript:=TStringList.Create;
@@ -956,13 +980,16 @@ begin
     memrecCS.Leave;
     injectionscript.Free;
   end;
+  {$ENDIF}
 
 end;
 
 procedure TfrmMemoryAllocHandler.cbHookAllocsClick(Sender: TObject);
 begin
+  {$ifdef windows}
   if cbHookAllocs.Checked then
   begin
+
     if hookscript=nil then
       hookscript:=tstringlist.Create;
 
@@ -974,24 +1001,25 @@ begin
 
 
     //hook apis
+
     generateAPIHookScript(hookscript,'NtAllocateVirtualMemory','CeAllocateVirtualMemory', 'NtAllocateVirtualMemoryOrig','0');
     generateAPIHookScript(hookscript,'NtFreeVirtualMemory','CeFreeVirtualMemory', 'NtFreeVirtualMemoryOrig','1');
     generateAPIHookScript(hookscript,'RtlAllocateHeap','CeRtlAllocateHeap', 'RtlAllocateHeapOrig','2');
     generateAPIHookScript(hookscript,'RtlFreeHeap','CeRtlFreeHeap', 'RtlFreeHeapOrig','3');
     generateAPIHookScript(hookscript,'RtlDestroyHeap','CeRtlDestroyHeap', 'RtlDestroyHeapOrig','4');
 
-    if not autoassemble(hookscript,false,true,false,false,hookallocarray) then raise exception.Create(rsFailureToHook);
+    if not autoassemble(hookscript,false,true,false,false,disableinfo) then raise exception.Create(rsFailureToHook);
   end
   else
   begin
     //unload
     if hookscript=nil then exit; //should never happen
 
-    if not autoassemble(hookscript,false,false,false,false,hookallocarray) then raise exception.Create(rsFailureToHook);
+    if not autoassemble(hookscript,false,false,false,false,disableinfo) then raise exception.Create(rsFailureToHook);
 
     freeandnil(hookscript);
   end;
-
+  {$endif}
 
 
 

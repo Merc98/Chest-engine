@@ -5,9 +5,15 @@ unit CEDebugger;
 
 interface
 
-uses windows, Classes,LCLIntf,sysutils,CEFuncProc,Messages,forms,SyncObjs,
+uses {$ifdef darwin}
+     macport, macportdefines,
+     {$endif}
+     {$ifdef windows}
+     windows,
+     {$endif}
+     Classes,LCLIntf,sysutils,CEFuncProc,Messages,forms,SyncObjs,
      dialogs,controls,Graphics,NewKernelHandler,symbolhandler,StrUtils,
-     ComCtrls ,Assemblerunit,addressparser, debughelper;
+     ComCtrls ,Assemblerunit,addressparser, vmxfunctions;
 
 
 type TReadonly = record
@@ -40,8 +46,8 @@ type TDebugBreakProcess = function(processhandle:THandle):boolean; stdcall;
 type TDebugActiveProcessStop= function(pid: dword):boolean; stdcall;
 type TDebugSetProcessKillOnExit=function(KillOnExit: boolean):boolean; stdcall;
 type TIsDebuggerPresent=function:boolean; stdcall;
-type TntSuspendProcess=function(ProcessID:Dword):DWORD; stdcall;
-type TntResumeProcess=function(ProcessID:Dword):DWORD; stdcall;
+type TntSuspendProcess=function(ProcessID:HANDLE):DWORD; stdcall;
+type TntResumeProcess=function(ProcessID:HANDLE):DWORD; stdcall;
 
 
 
@@ -53,7 +59,7 @@ type
       HandleAttributes: UCHAR;
       HandleValue: USHORT;
       obj: pointer;
-      GrantedAccess: ACCESS_MASK;
+      GrantedAccess: DWORD;
     end;
 
     SYSTEM_HANDLE_INFORMATION=record
@@ -72,14 +78,7 @@ type
   end;
 
   NTSTATUS = LONG;
-  _CLIENT_ID = record
-    UniqueProcess: HANDLE;
-    UniqueThread: HANDLE;
-  end;
-  CLIENT_ID = _CLIENT_ID;
-  PCLIENT_ID = ^CLIENT_ID;
-  TClientID = CLIENT_ID;
-  PClientID = ^TClientID;
+
 
   KPRIORITY = LONG;
   KAFFINITY = ULONG_PTR;
@@ -142,7 +141,9 @@ type TNtQuerySystemInformation=function(infoClass : dword; systemInformation : P
 type TNtQueryInformationProcess=function(Handle : THandle; infoClass : TProcessInfoClass; processInformation : Pointer; processInformationLength : ULONG; returnLength : PULONG) : DWORD; stdcall;
 type TNtQueryInformationThread=function(Handle : THandle; infoClass : TThreadinfoClass; ThreadInformation: pointer; processInformationLength : ULONG; returnLength : PULONG) : DWORD; stdcall;
 
+
 var //DebuggerThread: TDebugger;
+   {$ifdef windows}
 
     DbgUIDebugActiveProcess:TDbgUIDebugActiveProcess;
     DebugBreakProcess:TDebugBreakProcess;
@@ -160,8 +161,10 @@ var //DebuggerThread: TDebugger;
 
     krn: thandle;
     ntdlllib: thandle;
-
+     {$endif}
     CRDebugging: TCriticalSection;
+
+
 
 
   function startdebuggerifneeded: boolean; overload;
@@ -170,17 +173,17 @@ var //DebuggerThread: TDebugger;
 
 implementation
 
-uses debuggertypedefinitions, debugeventhandler, MainUnit,frmFloatingPointPanelUnit,
+uses debughelper,debuggertypedefinitions, debugeventhandler, MainUnit,frmFloatingPointPanelUnit,
      Memorybrowserformunit,disassembler,frmTracerUnit,foundcodeunit,kerneldebugger,
      advancedoptionsunit,formChangedAddresses,frmstacktraceunit,frmThreadlistunit,
-     formdebugstringsunit,formsettingsunit,processwindowunit,plugin,processhandlerunit(*,frmCreatedProcessListUnit*);
+     formdebugstringsunit,formsettingsunit,processwindowunit,plugin,processhandlerunit(*,frmCreatedProcessListUnit*), mainunit2;
 
 
 resourcestring
   rsPleaseTargetAnotherProcess = 'Please target another process';
   rsYouMustFirstOpenAProcess = 'You must first open a process';
-  rsThisWillAttachTheDebuggerOfCheatEngineToTheCurrent = 'This will attach the debugger of Cheat Engine to the current process.';
-  rsDoNotCloseCE = 'If you close Cheat Engine while the game is running, the game will close too. Are you sure you want to do this?';
+  rsThisWillAttachTheDebuggerOfCheatEngineToTheCurrent = 'This will attach the debugger of '+strCheatEngine+' to the current process.';
+  rsDoNotCloseCE = 'If you close '+strCheatEngine+' while the game is running, the game will close too. Are you sure you want to do this?';
   rsContinue = 'Continue?';
   rsDebugError = 'I couldn''t attach the debugger to this process! You could try to open the process using the processpicker and try that! If that also doesn''t work check if '
     +'you have debugging rights.';
@@ -206,16 +209,30 @@ var mes: string;
     i: integer;
 begin
   result:=false;
-  if processid=GetCurrentProcessId then raise exception.create(rsPleaseTargetAnotherProcess);
+  if processid=GetCurrentProcessId then
+  begin
+    if MainThreadID=GetCurrentThreadId then
+      MessageDlg(rsPleaseTargetAnotherProcess,mtError,[mbOK],0);
+
+    exit(false);
+  end;
 
 
-  if processhandle=0 then raise exception.create(rsYouMustFirstOpenAProcess);
+  if processhandle=0 then
+  begin
+    if MainThreadID=GetCurrentThreadId then
+      MessageDlg(rsYouMustFirstOpenAProcess,mtError,[mbOK],0);
+
+    exit(false);
+  end;
 
   if (debuggerthread=nil) then
   begin
+    {$ifdef windows}
     if @DebugActiveProcessStop=@DebugActiveProcessStopProstitute then
       mes:=rsThisWillAttachTheDebuggerOfCheatEngineToTheCurrent+' '+rsDoNotCloseCE
     else
+    {$endif}
       mes:=rsThisWillAttachTheDebuggerOfCheatEngineToTheCurrent+' '+rsContinue;
 
     if ask then
@@ -231,7 +248,7 @@ begin
       try
         Debuggerthread:=TDebuggerThread.MyCreate2(processid);
       except
-        raise exception.Create(rsDebugError);
+        raise EDebuggerAttachException.Create(rsDebugError);
       end;
 
       result:=true;
@@ -254,6 +271,7 @@ end;
 
 
 initialization
+  {$ifdef windows}
   CRDebugging:=TCriticalSection.Create;
 
   krn := LoadLibrary('Kernel32.dll');
@@ -297,6 +315,7 @@ initialization
     freelibrary(ntdlllib);
   end;
 
+  {$endif}
 
 finalization
   if CRDebugging<>nil then

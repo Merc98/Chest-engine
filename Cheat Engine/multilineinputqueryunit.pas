@@ -5,7 +5,14 @@ unit multilineinputqueryunit;
 interface
 
 uses
-  win32proc, windows, Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls;
+  {$ifdef darwin}
+  macport, LCLIntf,
+  {$endif}
+  {$ifdef windows}
+  win32proc, windows,
+  {$endif}
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
+  LCLType, math, betterControls;
 
 { TfrmMultilineInputQuery }
 
@@ -70,6 +77,9 @@ procedure TfrmMultilineInputQuery.Memo1KeyDown(Sender: TObject; var Key: Word;
 begin
   if key=VK_ESCAPE then
     modalresult:=mrcancel;
+
+  if (key=VK_RETURN) and (ssCtrl in shift) then
+    modalresult:=mrok;
 end;
 
 procedure TfrmMultilineInputQuery.FormShow(Sender: TObject);
@@ -91,7 +101,9 @@ begin
 
   Memo1.Constraints.MinHeight:=canvas.TextHeight('X')*3;
   constraints.MinWidth:=max(button1.Width+button2.width+panel2.width+32, widthneeded+GetSystemMetrics(SM_CXSIZE)*2+GetSystemMetrics(SM_CXMENUSIZE));
+  constraints.MinHeight:=lblPrompt.height+panel1.height+Memo1.Constraints.MinHeight;
 
+  {$ifdef windows}
   if WindowsVersion>=wvVista then
   begin
     tbi.cbSize:=sizeof(tbi);
@@ -109,6 +121,7 @@ begin
 
     Width:=width+(widthneeded-i);
   end;
+  {$endif}
 end;
 
 end.

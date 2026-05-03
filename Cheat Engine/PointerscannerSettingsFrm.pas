@@ -1,14 +1,20 @@
 unit PointerscannerSettingsFrm;
 
 {$MODE Delphi}
+{$warn 3057 off}
 
 interface
 
 uses
-  windows, LCLIntf, Messages, SysUtils, Classes, Graphics, Controls, Forms,
+  {$ifdef darwin}
+  macport,
+  {$else}
+  windows,
+  {$endif}
+  LCLIntf, LMessages, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ComCtrls, ExtCtrls, LResources, EditBtn, Buttons, Contnrs,
   CEFuncProc, NewKernelHandler, symbolhandler, multilineinputqueryunit,
-  registry, resolve, math, PointerscanSettingsIPConnectionList, types, commonTypeDefs;
+  registry, resolve, math, PointerscanSettingsIPConnectionList, types, commonTypeDefs, betterControls;
 
 
 type
@@ -78,6 +84,7 @@ type TOffsetEntry=class(Tedit)
     procedure setOffset(x: dword);
   protected
     procedure KeyPress(var Key: Char); override;
+    procedure SetParent(NewParent: TWinControl); override;
   public
     constructor create(AOwner: TComponent); override;
   published
@@ -114,6 +121,8 @@ type
     cbCompareToOtherPointermaps: TCheckBox;
     cbShowAdvancedOptions: TCheckBox;
     cbAddress: TComboBox;
+    cbNegativeOffsets: TCheckBox;
+    cbScanResidentMemory: TCheckBox;
     ComboBox1: TComboBox;
     editMaxLevel: TEdit;
     editStructsize: TEdit;
@@ -169,6 +178,7 @@ type
     procedure cbAllowRuntimeWorkersChange(Sender: TObject);
     procedure cbMaxOffsetsPerNodeChange(Sender: TObject);
     procedure cbMustEndWithSpecificOffsetChange(Sender: TObject);
+    procedure cbNegativeOffsetsChange(Sender: TObject);
     procedure cbShowAdvancedOptionsChange(Sender: TObject);
     procedure cbStaticOnlyChange(Sender: TObject);
     procedure cbStaticStacksChange(Sender: TObject);
@@ -214,9 +224,13 @@ type
     codescan: boolean;
     threadcount: integer;
 
+    maxOffsetDeviation: integer;
+
 
     baseAddressRange: TComponentList;
 
+    lblOffsetListMaxDeviation: TLabel;
+    edtOffsetListMaxDeviation: tedit;
     offsetlist: TComponentList;
     btnAddOffset: TButton;
     btnRemoveOffset: TButton;
@@ -240,8 +254,8 @@ var frmpointerscannersettings: tfrmpointerscannersettings;
 
 implementation
 
-uses MainUnit, frmMemoryAllocHandlerUnit, MemoryBrowserFormUnit, ProcessHandlerUnit,
-  Globals, parsers;
+uses MainUnit, {$ifdef windows}frmMemoryAllocHandlerUnit,{$endif} MemoryBrowserFormUnit, ProcessHandlerUnit,
+  Globals, parsers{$ifdef windows}, DPIHelper{$endif}, mainunit2;
 
 
 
@@ -259,7 +273,7 @@ resourcestring
   strMaxOffsetsIsStupid = 'Sorry, but the max offsets should be 1 or higher, or else disable the checkbox'; //'Are you a fucking retard?';
   rsUseLoadedPointermap = 'Use saved pointermap';
 
-  rsNoCompareFiles = 'You will get billions of useless results and giga/terrabytes of wasted diskspace if you do not use the compare results with other saved pointermap option. Are you sure ?';
+  rsNoCompareFiles = 'If you do not use the compare results with other saved pointermap option you will get billions of useless results and giga/terrabytes of wasted diskspace and rescans will take hours if not days. Are you sure ?';
   rsSelectAFile = '<Select a file>';
   rsScandataFilter = 'All files (*.*)|*.*|Scan Data (*.scandata)|*.scandata';
   rsReusedTheSameFile = 'This file is already in the list of scandata files to be used'; //alternatively: 'For fucks sake dude. You already picked this file. Pick something else!'
@@ -274,6 +288,9 @@ resourcestring
   rsLastOffset = 'Last offset';
   rsHasNotBeenGivenAValidAddress = '%s has not been given a valid address';
   rsLimitScanToSpecifiedRegionFile = 'Limit scan to specified region file';
+  rsMaxDeviation = 'Max deviation';
+  rsMaxDeviationExplentation = 'The maximum offset size by which the ending '
+    +'offset can differ';
 
 
 //helper
@@ -284,6 +301,8 @@ var
   list: tstringlist;
 begin
   list:=tstringlist(combobox.tag);
+  if list=nil then exit;
+
   combobox.Items.Clear;
 
   maxwidth:=combobox.clientwidth-combobox.Left;
@@ -296,7 +315,9 @@ begin
 
   combobox.DropDownCount:=max(16, combobox.Items.Count);
 
+  {$ifdef windows}
   SendMessage(combobox.Handle, CB_SETDROPPEDWIDTH, maxwidth+10, 0);
+  {$endif}
 end;
 
 
@@ -339,6 +360,7 @@ begin
 
   btnDelete:=TSpeedButton.Create(self);
   btnDelete.OnClick:=btnDeleteClick;
+
   cbAddress:=TComboBox.Create(self);
   cbAddress.Enabled:=false;
 
@@ -348,6 +370,8 @@ begin
   btnDelete.Anchors:=[aktop, akRight];
   btnDelete.BorderSpacing.Right:=4;
 
+
+
   bm:=tbitmap.Create;
   imagelist.GetBitmap(0, bm);
   btnDelete.Glyph:=bm;
@@ -356,11 +380,11 @@ begin
   cbAddress.parent:=self;
   cbAddress.AnchorSideRight.Control:=btnDelete;
   cbAddress.AnchorSideRight.side:=asrLeft;
-  cbAddress.Constraints.MinWidth:=TPointerFileList(aowner).canvas.TextWidth('DDDDDDDDDDDD');
+  cbAddress.Constraints.MinWidth:=TPointerFileList(aowner).canvas.TextWidth(' DDDDDDDDDDDDDDDD ');
   //cbAddress.clientwidth:=tcustomform(aowner).canvas.TextWidth('DDDDDDDDDDDD');
   cbAddress.anchors:=[aktop, akright];
   cbAddress.BorderSpacing.Right:=8;
-  cbAddress.style:=csOwnerDrawFixed;
+  cbAddress.style:=csOwnerDrawEditableFixed;
   cbAddress.OnDrawItem:=cbAddressDrawItem;
   cbAddress.ItemHeight:=TfrmPointerScannerSettings(TPointerFileList(aowner).Owner).cbAddress.ItemHeight;
   //cbAddress.Height:=btnDelete.Height;
@@ -401,6 +425,13 @@ begin
   lblFilename.Caption:=rsSelectAFile;
 
   height:=cbAddress.Height+2;
+
+
+
+  {$ifdef windows}
+  DPIHelper.AdjustSpeedButtonSize(btnSetFile);
+  DPIHelper.AdjustSpeedButtonSize(btnDelete);
+  {$endif}
 
 
 end;
@@ -476,6 +507,9 @@ begin
 
   if assigned(fonsetfilename) then
     fonSetFileName(self);
+
+  if (cbAddress.Text='') and (cbAddress.items.count=1) then
+    cbAddress.ItemIndex:=0;
 end;
 
 
@@ -662,6 +696,14 @@ begin
     key:=#0;
 end;
 
+procedure TOffsetEntry.SetParent(NewParent: TWinControl);
+begin
+  inherited SetParent(newparent);
+
+  if (newparent<>nil) and (newparent is TCustomControl) then
+    Constraints.MinWidth:=TCustomControl(newparent).canvas.TextWidth(' XXX ');
+end;
+
 function TOffsetEntry.getOffset: dword;
 var o: integer;
 begin
@@ -676,11 +718,14 @@ end;
 procedure TfrmPointerScannerSettings.btnOkClick(Sender: TObject);
 var
   i,j: integer;
-  r: THostResolver;
-  p: ptruint;
-  comparecount: integer;
-  reg: TRegistry;
+  r: THostResolver=nil;
+  p: ptruint=0;
+  comparecount: integer=0;
+  reg: TRegistry=nil;
 begin
+  if edtOffsetListMaxDeviation<>nil then
+    maxOffsetDeviation:=strtoint('$'+edtOffsetListMaxDeviation.Text);
+
   if cbMaxOffsetsPerNode.checked then
   begin
     maxOffsetsPerNode:=strtoint(edtMaxOffsetsPerNode.text);
@@ -711,10 +756,10 @@ begin
       end;
     end;
 
-    if comparecount=0 then
+    if (rbGeneratePointermap.checked=false) and (comparecount=0) then
     begin
       //bug the user one time about this
-      if (not warnedAboutDisablingInstantRescan) and (MessageDlg(rsNoCompareFiles, mtConfirmation, [mbyes, mbno], 0)<>mryes) then
+      if (not warnedAboutDisablingInstantRescan) and (MessageDlg(rsNoCompareFiles, mtWarning, [mbyes, mbno], 0)<>mryes) then
         exit;
 
       warnedAboutDisablingInstantRescan:=true;
@@ -722,9 +767,9 @@ begin
   end
   else
   begin
-    if (cbMustStartWithBase.Checked=false) then
+    if (rbGeneratePointermap.checked=false) and (cbMustStartWithBase.Checked=false) then
     begin
-      if  (not warnedAboutDisablingInstantRescan) and (MessageDlg(rsNoCompareFiles, mtConfirmation, [mbyes, mbno], 0)<>mryes) then
+      if  (not warnedAboutDisablingInstantRescan) and (MessageDlg(rsNoCompareFiles, mtWarning, [mbyes, mbno], 0)<>mryes) then
         exit;
 
       warnedAboutDisablingInstantRescan:=true;
@@ -957,6 +1002,33 @@ begin
     btnAddOffset.Width:=i;
     btnRemoveOffset.Width:=i;
 
+    lblOffsetListMaxDeviation:=TLabel.create(Self);
+    lblOffsetListMaxDeviation.parent:=panel10;
+    lblOffsetListMaxDeviation.Caption:=rsMaxDeviation;
+    lblOffsetListMaxDeviation.AutoSize:=true;
+    lblOffsetListMaxDeviation.AnchorSideLeft.Control:=cbMustEndWithSpecificOffset;
+    lblOffsetListMaxDeviation.AnchorSideLeft.Side:=asrRight;
+    lblOffsetListMaxDeviation.BorderSpacing.Left:=8;
+
+
+    edtOffsetListMaxDeviation:=TEdit.Create(self);
+    edtOffsetListMaxDeviation.parent:=panel10;
+    edtOffsetListMaxDeviation.AnchorSideLeft.Control:=lblOffsetListMaxDeviation;
+    edtOffsetListMaxDeviation.AnchorSideLeft.Side:=asrLeft;
+    edtOffsetListMaxDeviation.AnchorSideTop.Control:=offsetentry;
+    edtOffsetListMaxDeviation.AnchorSideTop.Side:=asrtop;
+    edtOffsetListMaxDeviation.Text:='0';
+    edtOffsetListMaxDeviation.Hint:=rsMaxDeviationExplentation;
+    edtOffsetListMaxDeviation.ShowHint:=true;
+
+    edtOffsetListMaxDeviation.Constraints.MinWidth:=canvas.TextWidth(' xxx ');
+
+    lblOffsetListMaxDeviation.AnchorSideBottom.Control:=edtOffsetListMaxDeviation;
+    lblOffsetListMaxDeviation.AnchorSideBottom.Side:=asrTop;
+
+    lblOffsetListMaxDeviation.Anchors:=[akLeft, akBottom];
+    edtOffsetListMaxDeviation.Anchors:=[akTop, akLeft];
+
   end
   else
   begin
@@ -966,10 +1038,27 @@ begin
     btnAddOffset.Visible:=false;
     btnRemoveOffset.Visible:=false;
     lblInfoLastOffset.Visible:=false;
+
+    if edtOffsetListMaxDeviation<>nil then
+      edtOffsetListMaxDeviation.free;
+
+    if lblOffsetListMaxDeviation<>nil then
+      lblOffsetListMaxDeviation.free;
+
+    edtOffsetListMaxDeviation:=nil;
+    lblOffsetListMaxDeviation:=nil;
+
   end;
 
   updatepositions;
 
+end;
+
+procedure TfrmPointerScannerSettings.cbNegativeOffsetsChange(Sender: TObject);
+begin
+  cbCompressedPointerscanFile.enabled:=not cbNegativeOffsets.checked;
+  if cbNegativeOffsets.checked then
+    cbCompressedPointerscanFile.checked:=false;
 end;
 
 procedure TfrmPointerScannerSettings.cbShowAdvancedOptionsChange(Sender: TObject);
@@ -1017,6 +1106,9 @@ begin
         begin
           tstrings(cbAddress.tag).LoadFromFile(odLoadPointermap.FileName+'.addresslist');
           UpdateAddressList(cbAddress);
+
+          if (cbAddress.Text='') and (cbAddress.Items.Count=1) then
+            cbAddress.ItemIndex:=0;
         end;
 
       end
@@ -1054,24 +1146,27 @@ begin
   if cbCompareToOtherPointermaps.checked then
   begin
     pdatafilelist:=TPointerFileList.create(il, self, cbShowAdvancedOptions.left-cbCompareToOtherPointermaps.left-8);
+    pdatafilelist.Color:=clWindow;
+    pdatafilelist.BevelOuter:=bvNone;
+    pdatafilelist.BorderStyle:=bsSingle;
     pdatafilelist.AnchorSideTop.Control:=cbCompareToOtherPointermaps;
     pdatafilelist.AnchorSideTop.Side:=asrBottom;
     pdatafilelist.AnchorSideLeft.Control:=cbCompareToOtherPointermaps;
     pdatafilelist.AnchorSideLeft.Side:=asrLeft;
 
-    pdatafilelist.AnchorSideRight.Control:=cbShowAdvancedOptions;
-    pdatafilelist.AnchorSideRight.Side:=asrLeft;
+    //pdatafilelist.AnchorSideRight.Control:=self;
+    //pdatafilelist.AnchorSideRight.Side:=asrRight;
 
     pdatafilelist.OnEmptyList:=PointerFileListEmpty;
     pdatafilelist.OnResize:=PointerFileListResize;
 
-    pdatafilelist.Anchors:=[akTop, akLeft, akRight];
+    pdatafilelist.Anchors:=[akTop, akLeft]; //, akRight];
 
     pdatafilelist.AutoSize:=true;
+    pdatafilelist.DoAutoSize;
+    pdatafilelist.AdjustPos(pdatafilelist);
 
-    panel3.AnchorSideTop.Control:=pdatafilelist;
-    panel3.AnchorSideTop.Side:=asrBottom;
-    panel3.BorderSpacing.Top:=50;;
+    cbShowAdvancedOptions.AnchorSideTop.Control:=pdatafilelist;
   end
   else
   begin
@@ -1082,9 +1177,7 @@ begin
     pdatafilelist.free;
     pdatafilelist:=nil;
 
-    panel3.AnchorSideTop.Control:=cbCompareToOtherPointermaps;
-    panel3.AnchorSideTop.Side:=asrBottom;
-        panel3.BorderSpacing.Top:=0;;
+    cbShowAdvancedOptions.AnchorSideTop.Control:=cbCompareToOtherPointermaps;
   end;
 
   //UpdateGuiBasedOnSavedPointerScanUsage;
@@ -1103,16 +1196,26 @@ begin
     reg.RootKey := HKEY_CURRENT_USER;
 
 
-    if Reg.OpenKey('\Software\Cheat Engine\'+ClassName, true) then
+    if Reg.OpenKey('\Software\'+strCheatEngine+'\'+ClassName, true) then
     begin
       reg.WriteBool('Advanced', cbShowAdvancedOptions.checked);
       reg.WriteBool('warnedAboutDisablingInstantRescan', warnedAboutDisablingInstantRescan);
+
+      if TryStrToInt(edtMaxOffsetsPerNode.text,i) then
+      begin
+        reg.WriteBool('MaxOffsetsPerNode Checked', cbMaxOffsetsPerNode.checked);
+        reg.WriteInteger('MaxOffsetsPerNode Value', i);
+      end;
+
     end;
 
-    if Reg.OpenKey('\Software\Cheat Engine\PSNNodeList', false) then
+    if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList', false) then
     begin
       oldlist:=tstringlist.create;
-      reg.GetKeyNames(oldlist);
+      try
+        reg.GetKeyNames(oldlist);
+      except
+      end;
 
       for i:=0 to oldlist.count-1 do
         reg.DeleteKey(oldlist[i]);
@@ -1125,7 +1228,7 @@ begin
     begin
       if iplist[i].host<>'' then
       begin
-        if Reg.OpenKey('\Software\Cheat Engine\PSNNodeList\'+iplist[i].host+':'+iplist[i].port,true) then
+        if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList\'+iplist[i].host+':'+iplist[i].port,true) then
         begin
           reg.WriteString('Password', iplist[i].password);
           reg.WriteBool('StableConnection', iplist[i].stable);
@@ -1220,8 +1323,11 @@ begin
   edtReverseStart.clientwidth:=i;
   edtReverseStop.clientwidth:=i;
 
-  i:=max(canvas.TextWidth(editStructsize.text)+4, editStructsize.clientwidth);
+
+  {$ifdef windows}
+  i:=max(canvas.TextWidth('XXXX')+DPIHelper.GetEditBoxMargins(editStructsize), editStructsize.clientwidth);
   editStructsize.clientwidth:=i;
+  {$endif}
 
   i:=max(btnOk.width, btnCancel.width);
   btnok.autosize:=false;
@@ -1242,7 +1348,13 @@ begin
     MainForm.addresslist.getAddressList(tstrings(cbAddress.tag));
 
   UpdateAddressList(cbAddress);
+  {$ifdef windows}
+  AdjustComboboxSize(cbValueType, self.canvas);
+  {$endif}
   cbAddress.ItemHeight:=cbValueType.ItemHeight;
+  cbAddress.height:=cbValueType.Height;
+
+
 end;
 
 procedure TfrmPointerScannerSettings.FormCreate(Sender: TObject);
@@ -1252,6 +1364,7 @@ var
   i: integer;
   host, port: string;
 begin
+  panel3.color:=clWindow;
   ComboBox1.Items.Clear;
   with ComboBox1.items do
   begin
@@ -1282,24 +1395,34 @@ begin
   reg:=tregistry.Create;
   Reg.RootKey := HKEY_CURRENT_USER;
 
-  if Reg.OpenKey('\Software\Cheat Engine\'+ClassName, false) then
+  if Reg.OpenKey('\Software\'+strCheatEngine+'\'+ClassName, false) then
   begin
     if reg.ValueExists('Advanced') then
       cbShowAdvancedOptions.checked:=reg.ReadBool('Advanced');
 
     if reg.ValueExists('warnedAboutDisablingInstantRescan') then
       warnedAboutDisablingInstantRescan:=reg.ReadBool('warnedAboutDisablingInstantRescan');
+
+    if reg.ValueExists('MaxOffsetsPerNode Checked') then
+      cbMaxOffsetsPerNode.checked:=reg.ReadBool('MaxOffsetsPerNode Checked');
+
+    if reg.ValueExists('MaxOffsetsPerNode Value') then
+      edtMaxOffsetsPerNode.Text:=inttostr(reg.ReadInteger('MaxOffsetsPerNode Value'));
+
   end;
 
-  if Reg.OpenKey('\Software\Cheat Engine\PSNNodeList', false) then
+  if Reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList', false) then
   begin
     list:=tstringlist.create;
-    Reg.GetKeyNames(list);
+    try
+      Reg.GetKeyNames(list);
+    except
+    end;
 
 
     for i:=0 to list.count-1 do
     begin
-      if reg.OpenKey('\Software\Cheat Engine\PSNNodeList\'+list[i], false) then
+      if reg.OpenKey('\Software\'+strCheatEngine+'\PSNNodeList\'+list[i], false) then
       begin
         while iplist.count<=i do
           iplist.add;
@@ -1390,6 +1513,7 @@ end;
 
 procedure TfrmPointerScannerSettings.cbUseHeapDataClick(Sender: TObject);
 begin
+  {$ifdef windows}
   cbHeapOnly.Enabled:=cbUseHeapData.Checked;
   if (frmMemoryAllocHandler<>nil) and (frmMemoryAllocHandler.hookedprocessid<>processid) then
     freeandnil(frmMemoryAllocHandler);
@@ -1398,6 +1522,7 @@ begin
   frmMemoryAllocHandler.WaitForInitializationToFinish;
 
   edtAddressChange(cbAddress);
+  {$endif}
 end;
 
 procedure TfrmPointerScannerSettings.Panel1Click(Sender: TObject);
@@ -1455,7 +1580,10 @@ begin
   if gpm then
     cbUseLoadedPointermap.checked:=false
   else
-    cbAddress.SetFocus
+  begin
+    if fsVisible in FormState then
+      cbAddress.SetFocus
+  end;
 
 end;
 
@@ -1464,6 +1592,7 @@ var haserror: boolean;
 begin
   automaticaddress:=symhandler.getAddressFromName(cbAddress.text, false,haserror); //ignore error
 
+  {$ifdef windows}
 
   if cbHeapOnly.Checked then
   begin
@@ -1472,6 +1601,8 @@ begin
    else
      cbAddress.Font.Color:=clRed; //BAD
   end else cbAddress.Font.Color:=clWindowText;
+
+  {$endif}
 
 end;
 
