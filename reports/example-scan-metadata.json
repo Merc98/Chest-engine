@@ -1,0 +1,12 @@
+{
+  "session_id": "example-session",
+  "date": "YYYY-MM-DD",
+  "process": "example-process",
+  "scan_type": "exact-value",
+  "value_type": "dword",
+  "regions": [
+    "example-region"
+  ],
+  "result_count": 0,
+  "notes": "Replace this example with metadata from a documented session."
+}
