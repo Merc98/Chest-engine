@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chest-engine Scan Results Metadata",
+  "type": "object",
+  "properties": {
+    "session_id": { "type": "string" },
+    "date": { "type": "string" },
+    "process": { "type": "string" },
+    "scan_type": { "type": "string" },
+    "value_type": { "type": "string" },
+    "regions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "result_count": { "type": "integer" },
+    "notes": { "type": "string" }
+  },
+  "required": ["session_id", "date", "scan_type", "value_type"],
+  "additionalProperties": true
+}
